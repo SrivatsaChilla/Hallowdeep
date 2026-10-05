@@ -808,3 +808,8 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 /* The target number shown while aiming sits beside the name without taking space, so enemies don't shift. */
 .foe .fname { position: relative; }
 .foe .fname .tkey { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: .3em; }
+
+/* Tall desktop windows: fighters stand just above the hand instead of floating mid-screen. */
+@media (min-width: 761px) and (min-height: 521px) and (max-aspect-ratio: 1/1) {
+  .arena { align-items: flex-end; padding-bottom: clamp(8px, 4vh, 48px); }
+}

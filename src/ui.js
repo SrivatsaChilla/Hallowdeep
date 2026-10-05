@@ -983,12 +983,17 @@
     m = Math.max(m, -(cw * (1 - minShow)) / 2);
     m = Math.round(m * 10) / 10;
     if (m !== S.handM) { S.handM = m; hand.style.setProperty('--m', `${m}px`); }
-    // Desktop fan: the outer cards tilt below the hand box; reserve exactly that much room so they never leave the screen.
+    // Desktop fan: the outer cards tilt and dip below the hand box. Reserve room for the largest hand (10 cards) at this
+    // card size, so the room never changes as cards are played or drawn (and the fighters above never bob up and down).
     if (!compact()) {
-      const pad = parseFloat(getComputedStyle(hand).paddingBottom) || 0;
-      const over = Math.max(...[...cards].map((c) => c.getBoundingClientRect().bottom)) - hand.getBoundingClientRect().bottom;
-      const want = Math.max(10, Math.ceil(pad + over + 3));
-      if (Math.abs(want - pad) > 1) hand.style.paddingBottom = `${want}px`;
+      const w = cards[0].offsetWidth, h = cards[0].offsetHeight;
+      let drop = 0;
+      for (let k = 1; k <= 10; k++) {
+        const step = Math.min(5, 26 / k), mm = (k - 1) / 2, th = (mm * step * Math.PI) / 180;
+        drop = Math.max(drop, 0.15 * h * (1 - Math.cos(th)) + (w / 2) * Math.abs(Math.sin(th)) + mm * mm * (k > 6 ? 1.2 : 1.9));
+      }
+      const want = `${Math.ceil(drop + 6)}px`;
+      if (hand.style.paddingBottom !== want) hand.style.paddingBottom = want;
     }
   }
   function flushFx() {
