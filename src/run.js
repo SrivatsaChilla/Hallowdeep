@@ -71,6 +71,7 @@
       this.seed = seedStr;
       this.charId = charId;
       this.asc = Math.max(0, Math.min(10, asc | 0)); // Ascension level (each level includes the ones below it)
+      this.playMs = 0; // run timer: time spent in this run while the page was visible
       this.color = HD.CHARS[charId].color;
       const mk = (k) => HD.makeRng(HD.hashSeed(`${seedStr}:${k}`));
       this.rng = { map: mk('map'), combat: mk('combat'), monster: mk('monster'), cards: mk('cards'), shop: mk('shop'),

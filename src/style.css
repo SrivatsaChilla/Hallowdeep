@@ -464,7 +464,7 @@ button.choice.gift.bane { border-color: var(--blood); border-style: dashed; }
 .chip[role="button"], .foe[role="button"]:not(.targetable) { cursor: pointer; }
 .vial .vshort { display: none; }
 @media (max-width: 1100px) {
-  .bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .3rem .9rem; }
+  .bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: .3rem .9rem; }
   .bar .inv {
     grid-column: 1 / -1; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
     scrollbar-width: none; padding-bottom: 1px; -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
@@ -473,7 +473,7 @@ button.choice.gift.bane { border-color: var(--blood); border-style: dashed; }
   .bar .belt, .bar .relics { flex: 0 0 auto; flex-wrap: nowrap; }
 }
 @media (max-width: 760px) {
-  .bar { grid-template-columns: minmax(0, 1fr) auto; gap: .3rem .5rem; padding: .35rem .5rem .4rem; }
+  .bar { grid-template-columns: minmax(0, 1fr) auto auto; gap: .3rem .5rem; padding: .35rem .5rem .4rem; }
   .bar .who { display: none; }
   .bar .stats { gap: .75rem; font-size: .92rem; white-space: nowrap; }
   .bar .deckbtn { padding: .2em .7em; font-size: .85rem; }
@@ -633,7 +633,7 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
   /* only the hand shrinks; rewards, the shop and the deck keep full-size cards */
   .dock { --cw: 96px; --ch: 140px; --ah: 46px; }
   #app:has(> main.combat) { height: 100dvh; min-height: 0; overflow: hidden; }
-  .bar { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: .2rem .6rem; padding-top: max(.25rem, env(safe-area-inset-top, 0px)); padding-bottom: .25rem; }
+  .bar { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: .2rem .6rem; padding-top: max(.25rem, env(safe-area-inset-top, 0px)); padding-bottom: .25rem; }
   .bar .who { display: none; }
   .bar .stats { font-size: .9rem; gap: .7rem; }
   .bar .inv { grid-column: auto; }
@@ -829,3 +829,14 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .herobox .ascpick { align-self: start; }
   .roster > .hero.locked { grid-row: span 2; width: auto; }
 }
+
+/* Run timer: right end of the top bar. Grid layouts pin it to the last column of the first row. */
+.bar .runtime { display: inline-flex; align-items: center; gap: .3em; margin-left: auto; order: 99; color: var(--ink2); font-size: .95rem;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar .runtime .clock { width: 1em; height: 1em; }
+@media (max-width: 1100px) { .bar .runtime { grid-row: 1; grid-column: -2 / -1; margin-left: 0; order: 0; } }
+@media (max-height: 520px) and (orientation: landscape) { .bar .runtime { grid-row: 1; grid-column: -2 / -1; font-size: .85rem; } }
+@media (max-width: 760px) { .bar .runtime { font-size: .85rem; } }
+.bar .stats .ascbadge { margin-left: 0; }
+/* The top bar stays on screen when a page scrolls (map, shop, rewards), as in the original; overlays still cover it. */
+.bar { position: sticky; top: 0; z-index: 40; }

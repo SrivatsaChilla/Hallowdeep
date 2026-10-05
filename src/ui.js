@@ -233,13 +233,14 @@
     }).join('');
     const hp = S.g && S.screen === 'combat' ? S.g.p : r;
     return `<header class="bar" data-key="bar">
-      <span class="who">${esc(HD.charName(r.charId))}</span>${r.asc ? `<span class="ascbadge" tabindex="0" ${tip(`Ascension ${r.asc}`, HD.ASCENSIONS.slice(1, r.asc + 1).map((a, i) => `${i + 1}. ${HD.ascName(i + 1)}: ${HD.ascText(i + 1)}`).join(' '), 'Active levels')}>A${r.asc}</span>` : ''}
-      <span class="stats">
+      <span class="who">${esc(HD.charName(r.charId))}</span>
+      <span class="stats">${r.asc ? `<span class="ascbadge" tabindex="0" ${tip(`Ascension ${r.asc}`, HD.ASCENSIONS.slice(1, r.asc + 1).map((a, i) => `${i + 1}. ${HD.ascName(i + 1)}: ${HD.ascText(i + 1)}`).join(' '), 'Active levels')}>A${r.asc}</span>` : ''}
         <span class="stat hp"><span class="lbl">HP</span> ${hp.hp}/${hp.maxHp}</span>
         <span class="stat gold"><span class="lbl">Gold</span> ${r.gold}</span>
         <span class="stat"><span class="lbl">${T('Depth')}</span> ${r.floor}</span>
       </span>
       <button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>
+      <span class="runtime" data-key="runtime" title="Run time" aria-label="Run time ${fmtTime(r.playMs)}">${CLOCK}<span class="t">${fmtTime(r.playMs)}</span></span>
       <span class="inv">${belt()}<span class="relics">${relics}</span></span>
     </header>`;
   }
@@ -284,6 +285,31 @@
     HD.setNames(mode);
     try { localStorage.setItem(NAME_KEY, HD.nameMode); } catch (e) { /* storage unavailable */ }
   }
+
+  // ---------- run timer ----------
+  const CLOCK = '<svg class="clock" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8l2.5 1.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  function fmtTime(ms) {
+    const t = Math.floor((ms || 0) / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+  let lastTick = null;
+  function timing() { return !!S.run && S.screen !== 'title' && S.screen !== 'end' && !document.hidden; }
+  function tickTime() {
+    const now = performance.now();
+    if (timing()) { if (lastTick != null) S.run.playMs = (S.run.playMs || 0) + (now - lastTick); lastTick = now; } else lastTick = null;
+    const el = document.querySelector('.bar .runtime');
+    if (el && S.run) { const txt = fmtTime(S.run.playMs); const t = el.querySelector('.t'); if (t.textContent !== txt) { t.textContent = txt; el.setAttribute('aria-label', `Run time ${txt}`); } }
+  }
+  // Keep the saved run's time current when the page is hidden or closed, so Continue resumes the clock.
+  function saveTime() {
+    tickTime();
+    if (!S.run || S.screen === 'end') return;
+    try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return; const o = JSON.parse(raw); if (o.run && o.run.data) { o.run.data.playMs = S.run.playMs; localStorage.setItem(SAVE_KEY, JSON.stringify(o)); } } catch (e) { /* storage unavailable */ }
+  }
+  setInterval(tickTime, 500);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveTime(); else { lastTick = null; tickTime(); } });
+  window.addEventListener('pagehide', saveTime);
 
   // ---------- Ascension progress: win a run at level N to unlock N + 1, per character ----------
   const ASC_KEY = 'hollowdeep.ascUnlocked';
@@ -574,7 +600,7 @@
       <h1>${won ? 'Victory' : 'You fell'}</h1>
       ${won && S.unlocked ? `<p class="unlock"><b>Ascension ${S.unlocked} unlocked</b> for ${esc(HD.charName(r.charId))}: ${esc(HD.ascName(S.unlocked))}.</p>` : ''}
       <p>${won ? `All three acts are behind you${r.asc ? ` on Ascension ${r.asc}` : ''}. The run is won.` : `${T('Depth')} ${r.floor}, ${S.g ? `against ${esc(HD.ENC[S.g.encId].name)}` : `at ${esc(S.deathBy || 'an event')}`}.`}</p>
-      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
+      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Time ${fmtTime(r.playMs)}. Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
       <button class="primary" data-act="title">New descent</button>
     </main>`;
   }
