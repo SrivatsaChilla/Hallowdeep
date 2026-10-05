@@ -130,6 +130,8 @@ and each item of the official v0.111 patch notes that applies to built content.
 
 `python3 dev/qa_resize.py` starts fights at one size and then resizes the window or rotates the device through a chain of sizes (desktop windows, phones and tablets), running the same layout check after every change.
 
+`test/extra/` holds more regression scripts: fuzzing (`invariants.js`), a full-run click bot (`bot.py`), card, event and keyword checks against the data (`cardtest.js`, `evcheck.js`, `kwcheck.js`; set `CODEX_STABLE` / `CODEX_BETA` to the data folders), and browser tests for phone layouts, card text fit, tooltips, saving and touch inspect.
+
 `node test/regent_engine.js` checks the engine pieces the Regent needs (Stars, Forge and the Sovereign Blade, creating and transforming cards, when-drawn effects, self-playing cards, Reflect) with stand-in cards.
 
 `node test/triggers.js` plays out every card trigger that is built: Sly from each discard source (cards, Tools of the Trade, Gambler's Brew, Gambling Chip), exhaust triggers, end-of-turn effects of cards held in hand, draw, shuffle and replay effects. `dev/TRIGGERS.md` lists each trigger type, the rule from the data, the engine function it must go through, and the triggers the remaining characters need.
