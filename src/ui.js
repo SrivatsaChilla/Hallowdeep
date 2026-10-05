@@ -3,7 +3,7 @@
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;
   const S = {
-    asc: (() => { try { return Math.max(0, Math.min(10, Number(localStorage.getItem('hollowdeep-asc')) || 0)); } catch (e) { return 0; } })(),
+    ascBy: (() => { try { return JSON.parse(localStorage.getItem('hollowdeep.ascChoice')) || {}; } catch (e) { return {}; } })(),
     screen: 'title', run: null, g: null, sel: null, selPotion: null, busy: false, overlay: null, acting: null, showLog: false,
     mouse: null, dragUid: null, hidden: new Set(), gone: new Set(), dying: new Set(), prevHand: new Set(), prevEnergy: null,
     bannerTurn: 0, bannerEnemy: 0, suppressClick: false,
@@ -285,16 +285,45 @@
     try { localStorage.setItem(NAME_KEY, HD.nameMode); } catch (e) { /* storage unavailable */ }
   }
 
+  // ---------- Ascension progress: win a run at level N to unlock N + 1, per character ----------
+  const ASC_KEY = 'hollowdeep.ascUnlocked';
+  const ascUnlocked = () => { try { return JSON.parse(localStorage.getItem(ASC_KEY)) || {}; } catch (e) { return {}; } };
+  const ascMax = (id) => Math.max(0, Math.min(10, ascUnlocked()[id] || 0));
+  const ascChosen = (id) => Math.min(S.ascBy[id] || 0, ascMax(id));
+  // Called when a run is won. Returns the newly unlocked level, or 0.
+  function unlockAscension(id, won) {
+    const all = ascUnlocked();
+    const next = Math.min(10, won + 1);
+    if (won >= 10 || (all[id] || 0) >= next) return 0;
+    all[id] = next;
+    try { localStorage.setItem(ASC_KEY, JSON.stringify(all)); } catch (e) { /* storage unavailable */ }
+    S.ascBy[id] = next;
+    try { localStorage.setItem('hollowdeep.ascChoice', JSON.stringify(S.ascBy)); } catch (e) { /* storage unavailable */ }
+    return next;
+  }
+  function ascPicker(id) {
+    const max = ascMax(id), lvl = ascChosen(id), name = HD.charName(id);
+    const goal = max >= 10 ? 'Every level unlocked.' : `Win a run on ${max ? `Ascension ${max}` : 'no Ascension'} to unlock Ascension ${max + 1}.`;
+    return `<div class="ascpick" data-key="asc-${id}" role="group" aria-label="Ascension for ${esc(name)}">
+        <span class="lbl">Ascension</span>
+        <button class="ghost" data-act="asc" data-arg="${id}:-1" aria-label="Lower Ascension for ${esc(name)}" ${lvl <= 0 ? 'disabled' : ''}>&minus;</button>
+        <b class="lvl">${lvl}</b>
+        <button class="ghost" data-act="asc" data-arg="${id}:1" aria-label="Raise Ascension for ${esc(name)}" ${lvl >= max ? 'disabled' : ''}>+</button>
+        <span class="desc">${lvl ? `<b>${esc(HD.ascName(lvl))}</b> ${esc(HD.ascText(lvl))}${lvl > 1 ? ' Includes every level below.' : ''}` : esc(HD.ascText(0))} <span class="goal">${goal}</span></span>
+      </div>`;
+  }
+
   // ---------- screens ----------
   function titleScreen() {
     const locked = ['Third descender', 'Fourth descender', 'Fifth descender'];
     const hero = (id) => { const ch = HD.CHARS[id], rl = HD.RELICS[ch.relic];
-      return `<button class="hero" data-act="start" data-arg="${id}">
+      const lvl = ascChosen(id);
+      return `<div class="herobox"><button class="hero" data-act="start" data-arg="${id}">
           ${playerSigil(84, id)}
           <span class="hname">${esc(HD.charName(id))}</span>
           <span class="hsub">${ch.hp} HP, ${ch.energy} Energy. Starts with ${esc(rl.name)}: ${esc(rl.text)}</span>
-          <span class="go">Descend</span>
-        </button>`; };
+          <span class="go">Descend${lvl ? ` (A${lvl})` : ''}</span>
+        </button>${ascPicker(id)}</div>`; };
     if (!S.seedDefault) S.seedDefault = S.lastSeed || Math.random().toString(36).slice(2, 8);
     return `<main class="title" data-key="scr-title">
       <h1>HallowDeep</h1>
@@ -305,13 +334,6 @@
         ${locked.map((n) => `<div class="hero locked" aria-disabled="true"><span class="hname">${n}</span><span class="hsub">Not built yet</span></div>`).join('')}
       </div>
       <label class="seed">Seed <input id="seed" value="${esc(S.seedDefault)}" spellcheck="false" autocomplete="off"></label>
-      <div class="ascpick" data-key="ascpick">
-        <span class="lbl">Ascension</span>
-        <button class="ghost" data-act="asc" data-arg="-1" aria-label="Lower Ascension" ${S.asc <= 0 ? 'disabled' : ''}>&minus;</button>
-        <b class="lvl">${S.asc}</b>
-        <button class="ghost" data-act="asc" data-arg="1" aria-label="Raise Ascension" ${S.asc >= 10 ? 'disabled' : ''}>+</button>
-        <span class="desc">${S.asc ? `<b>${esc(HD.ascName(S.asc))}</b> ${esc(HD.ascText(S.asc))}${S.asc > 1 ? ' Includes every level below.' : ''}` : esc(HD.ascText(0))}</span>
-      </div>
       <div class="toggles">${namesToggle()}</div>
       <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, Esc cancels.</p>
     </main>`;
@@ -550,6 +572,7 @@
     const won = S.result === 'won';
     return `<main class="panel end" data-key="scr-end">
       <h1>${won ? 'Victory' : 'You fell'}</h1>
+      ${won && S.unlocked ? `<p class="unlock"><b>Ascension ${S.unlocked} unlocked</b> for ${esc(HD.charName(r.charId))}: ${esc(HD.ascName(S.unlocked))}.</p>` : ''}
       <p>${won ? `All three acts are behind you${r.asc ? ` on Ascension ${r.asc}` : ''}. The run is won.` : `${T('Depth')} ${r.floor}, ${S.g ? `against ${esc(HD.ENC[S.g.encId].name)}` : `at ${esc(S.deathBy || 'an event')}`}.`}</p>
       <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
       <button class="primary" data-act="title">New descent</button>
@@ -1189,7 +1212,8 @@
     const seed = (input && input.value.trim()) || Math.random().toString(36).slice(2, 8);
     S.lastSeed = seed;
     S.seedDefault = null;
-    S.run = new HD.Run(seed, HD.CHARS[charId] ? charId : 'OATHBURNER', S.asc);
+    const cid = HD.CHARS[charId] ? charId : 'OATHBURNER';
+    S.run = new HD.Run(seed, cid, ascChosen(cid));
     S.run.feed = [];
     S.offer = S.run.neowOffer();
     S.screen = 'ancient';
@@ -1355,7 +1379,12 @@
     const r = S.run, g = S.g, o = S.overlay;
     switch (act) {
       case 'start': return startRun(arg);
-      case 'asc': S.asc = Math.max(0, Math.min(10, S.asc + Number(arg))); try { localStorage.setItem('hollowdeep-asc', String(S.asc)); } catch (e) { /* storage may be off */ } return render();
+      case 'asc': {
+        const [id, step] = arg.split(':');
+        S.ascBy[id] = Math.max(0, Math.min(ascMax(id), ascChosen(id) + Number(step)));
+        try { localStorage.setItem('hollowdeep.ascChoice', JSON.stringify(S.ascBy)); } catch (e) { /* storage may be off */ }
+        return render();
+      }
       case 'resume': return resumeRun();
       case 'names': setNames(arg); return render();
       case 'reroll': case 'sacrifice': {
@@ -1446,6 +1475,7 @@
           if (r.act >= HD.LAST_ACT) {
             const second = r.secondBossFor();
             if (second) return startCombat(second, 'boss');
+            S.unlocked = unlockAscension(r.charId, r.asc || 0);
             S.result = 'won'; S.screen = 'end'; clearSave(); return render();
           }
           r.startAct(r.act + 1);

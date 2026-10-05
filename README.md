@@ -92,7 +92,7 @@ The game follows the v0.111 data. Cards and monsters first written from the olde
 
 The run saves in the browser after every change outside combat and at the start of each fight. The title screen offers "Continue your run"; resuming mid-fight restarts that fight from its first turn (the random draws replay the same way). Winning or dying clears the save.
 
-Choose an Ascension level (0 to 10) on the title screen; each level adds one modifier on top of the ones below it, as in the original. The top bar shows the level during a run.
+Ascension (0 to 10) is unlocked one level at a time, per character, as in the original: win a run on a level to unlock the next one for that character. Each character card on the title screen has its own Ascension picker, capped at its highest unlocked level. Each level adds one modifier on top of the ones below it, and the top bar shows the level during a run. `python3 dev/ascension_unlock.py` tests the unlock flow in a browser.
 
 Hover anything that mentions another thing (a relic that enchants a card, adds a card, gives a potion, or uses a keyword) and a panel explains it: enchantments and keywords as text, cards drawn as cards. On touch screens, tap a relic or potion, or press and hold a choice, shop item or reward, to read the same.
 
