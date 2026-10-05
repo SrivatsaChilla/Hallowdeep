@@ -842,6 +842,28 @@
     rafPending = true;
     requestAnimationFrame(() => { rafPending = false; render(); });
   }
+  // Re-fit the hand, card names and card text whenever the window or panel changes size, and once web fonts finish
+  // loading (they change text widths). Without this the hand keeps the spacing it had at the old size.
+  let refitQueued = false;
+  function refit() {
+    if (refitQueued) return;
+    refitQueued = true;
+    requestAnimationFrame(() => {
+      refitQueued = false;
+      if (!document.querySelector('.card')) return;
+      fitNames(); fitHand(); fitHandText(); liftCard();
+      // cards animate their tilt for a moment; measure the room they need again once they've settled
+      clearTimeout(refit.settle);
+      refit.settle = setTimeout(() => { if (document.querySelector('.hand .card')) { fitHand(); liftCard(); } }, 260);
+    });
+  }
+  window.addEventListener('resize', refit);
+  if (window.ResizeObserver) new ResizeObserver(refit).observe(document.documentElement);
+  if (document.fonts) {
+    const fontsChanged = () => { nameFit.clear(); textFit.clear(); S.handM = null; refit(); };
+    if (document.fonts.ready) document.fonts.ready.then(fontsChanged);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', fontsChanged);
+  }
   function afterRender() {
     flushFx();
     showcase();
