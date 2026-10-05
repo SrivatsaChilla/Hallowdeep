@@ -2,7 +2,7 @@
 // Usage: node test/triggers.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'neow2', 'ascension_data', 'ascension'])
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension'])
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
 HD.setVersion('0.111');
@@ -186,6 +186,45 @@ const play = async (g, id, t) => { const c = g.hand.find((x) => x.id === id); aw
     const g = await fight('OATHBURNER', { hand: [], draw: [], discard: ['CUT', 'BRACE'], relics: ['BIG_HUG'] });
     await g.drawCards(1);
     eq('Biiig Hug: shuffling adds a Soot to the draw pile', g.draw.concat(g.hand).some((c) => c.id === 'ASHFALL'), true);
+  }
+
+  // ---------- the Regent (the Crowned) ----------
+  {
+    const g = await fight('CROWNED', { hand: [], draw: ['ROYAL_BOOT', 'ROYAL_FIST'], discard: [] });
+    await g.drawCards(2);
+    const boot = g.hand.find((c) => c.id === 'ROYAL_BOOT'), fist = g.hand.find((c) => c.id === 'ROYAL_FIST');
+    eq('Kingly Kick: drawing it lowers its cost by 1', g.costOf(boot), 3);
+    eq('Kingly Punch: drawing it adds 4 damage this combat', HD.vals(fist).dmg, 12);
+    g.discard.push(...g.hand.splice(0)); g.draw = []; await g.drawCards(2);
+    eq('Kingly Kick and Kingly Punch keep growing with each draw', [g.costOf(boot), HD.vals(fist).dmg], [2, 16]);
+  }
+  {
+    const g = await fight('CROWNED', { hand: ['BLADEMASTER', 'THE_ARMORER'], draw: [], discard: [] });
+    g.stars = 9; await play(g, 'BLADEMASTER'); await play(g, 'THE_ARMORER');
+    const blade = g.hand.find((c) => c.id === 'REGAL_BLADE');
+    await play(g, 'REGAL_BLADE');
+    eq('Sword Sage: a Blade created later has Replay 1 and hits twice (40 + 40)', [blade.replay, hp(g)[0]], [1, 80]);
+  }
+  {
+    const g = await fight('CROWNED', { hand: ['BRIGHT_SMITE', 'MOTE_WALL'], draw: [], discard: [] });
+    g.stars = 2; await play(g, 'BRIGHT_SMITE'); await play(g, 'MOTE_WALL');
+    eq('Shining Strike goes on top of the draw pile; Particle Wall returns to hand', [g.draw[g.draw.length - 1].id, g.hand.map((c) => c.id)], ['BRIGHT_SMITE', ['MOTE_WALL']]);
+  }
+  {
+    const g = await fight('CROWNED', { hand: ['SKYFALL_VOLLEY'], draw: [], discard: [] });
+    g.enemyTurn = async () => {}; await play(g, 'SKYFALL_VOLLEY'); const once = hp(g)[0]; await g.endTurn();
+    eq('Bombardment: plays itself from the Exhaust pile at the start of your turn', [once, hp(g).reduce((a, b) => a + b, 0), g.ash.some((c) => c.id === 'SKYFALL_VOLLEY')], [18, 36, true]);
+  }
+  {
+    const g = await fight('CROWNED', { hand: [], draw: ['SMITE', 'UNBOWED'], discard: [] });
+    g.enemyTurn = async () => {}; g.hand = []; await g.endTurn();
+    eq('I Am Invincible: plays itself from the top of the draw pile at the end of your turn', g.discard.some((c) => c.id === 'UNBOWED') || g.hand.some((c) => c.id === 'UNBOWED'), true);
+  }
+  {
+    const g = await fight('CROWNED', { hand: ['SO_DECREED', 'WARD_OFF', 'WARD_OFF', 'WARD_OFF'], draw: [], discard: [] });
+    await play(g, 'SO_DECREED'); const before = g.hand.some((c) => c.id === 'SO_DECREED');
+    await play(g, 'WARD_OFF'); await play(g, 'WARD_OFF'); await play(g, 'WARD_OFF');
+    eq('Make It So: back to hand after the third Skill of the turn', [before, g.hand.some((c) => c.id === 'SO_DECREED')], [false, true]);
   }
 
   console.log(fails ? `${fails} of ${n} FAILED` : `all ${n} trigger checks passed`);

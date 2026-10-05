@@ -3,7 +3,7 @@ const _path = require('path');
 const _ROOT = _path.join(__dirname, '..', '..');
 const fs = require('fs'), vm = require('vm');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','neow2','ascension_data','ascension','names','naming']) vm.runInContext(fs.readFileSync(_path.join(_ROOT, 'src') + '/'+f+'.js','utf8'), ctx);
+for (const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','neow2','ascension_data','ascension','names','naming']) vm.runInContext(fs.readFileSync(_path.join(_ROOT, 'src') + '/'+f+'.js','utf8'), ctx);
 const HD = ctx.HD; HD.setVersion(process.argv[3] || '0.111'); HD.setNames('original');
 const N = +process.argv[2] || 200;
 const problems = new Map(); const bump = (k) => problems.set(k, (problems.get(k) || 0) + 1);

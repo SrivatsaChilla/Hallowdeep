@@ -3,15 +3,13 @@
 // the draw pile, Reflect, ending the turn from a card, playing a card several times.  Usage: node test/regent_engine.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'neow2', 'ascension_data', 'ascension'])
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension'])
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD; HD.setVersion('0.111');
 let fails = 0, n = 0;
 const eq = (name, got, want) => { n++; const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) fails++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : `  got ${JSON.stringify(got)} want ${JSON.stringify(want)}`}`); };
 // stand-in cards
 const C = HD.CARDS, base = { color: 'test', rarity: 'Common', target: 'self', v: {}, up: {}, kw: [], tags: [], text: () => '' };
-C.T_BLADE = C.SOVEREIGN_BLADE || Object.assign({}, base, { id: 'SOVEREIGN_BLADE', type: 'Attack', cost: 2, upCost: 1, target: 'enemy', kw: ['Retain'], play: (g, c, t) => g.attack(t, 10 + (c.forged || 0), 1, c) });
-if (!C.SOVEREIGN_BLADE) C.SOVEREIGN_BLADE = C.T_BLADE;
 C.T_STAR2 = Object.assign({}, base, { id: 'T_STAR2', type: 'Attack', cost: 0, star: 2, target: 'enemy', play: (g, c, t) => g.attack(t, 8, 1, c) });
 C.T_STARX = Object.assign({}, base, { id: 'T_STARX', type: 'Attack', cost: 0, star: 'X', target: 'enemy', play: async (g, c, t, v, x) => { for (let i = 0; i < x; i++) await g.attack(t, 5, 1, c); } });
 C.T_GAIN3 = Object.assign({}, base, { id: 'T_GAIN3', type: 'Skill', cost: 1, play: (g) => g.gainStars(3) });
@@ -47,21 +45,21 @@ const dealt = (g) => 500 - g.enemies[0].hp;
   // Forge and the Sovereign Blade
   const created = []; HD.onEngine('created', async (gg, c) => created.push(c.id));
   g = await fight(['T_FORGE', 'T_FORGE']); await g.playCard(g.hand[0], null);
-  const blade = g.hand.find((c) => c.id === 'SOVEREIGN_BLADE');
-  eq('First Forge creates a Sovereign Blade in hand at 10 + Forge', [!!blade, blade && 10 + blade.forged, g.t.created, created.slice(-1)], [true, 17, 1, ['SOVEREIGN_BLADE']]);
+  const blade = g.hand.find((c) => c.id === 'REGAL_BLADE');
+  eq('First Forge creates a Regal Blade in hand at 10 + Forge', [!!blade, blade && 10 + blade.forged, g.t.created, created.slice(-1)], [true, 17, 1, ['REGAL_BLADE']]);
   await g.playCard(g.hand.find((c) => c.id === 'T_FORGE'), null);
   eq('Later Forges add to the existing Blade, no second Blade', [g.blades().length, 10 + blade.forged], [1, 24]);
   g.discard.push(...g.hand.splice(g.hand.indexOf(blade), 1)); await g.forge(3);
   eq('A Blade in the discard pile still gains Forge', 10 + blade.forged, 27);
   g.ash.push(...g.discard.splice(g.discard.indexOf(blade), 1)); await g.forge(5);
-  const fresh = g.hand.find((c) => c.id === 'SOVEREIGN_BLADE');
+  const fresh = g.hand.find((c) => c.id === 'REGAL_BLADE');
   eq('After the Blade is Exhausted, Forge makes a new one (10 + 5) and still feeds the exhausted one', [!!fresh, fresh && 10 + fresh.forged, 10 + blade.forged], [true, 15, 32]);
   await g.playCard(fresh, g.enemies[0]);
   eq('Playing the Blade deals 10 + Forged', dealt(g), 15);
 
   // creating and transforming
   g = await fight(['T_GAIN3', 'T_GAIN3']); const before = g.rs.created || 0;
-  await g.create(g.makeCard('MINION_STRIKE' in HD.CARDS ? 'MINION_STRIKE' : 'CUT', false), 'hand'); await g.create(g.makeCard('SCORCH', false), 'discard');
+  await g.create(g.makeCard('THRALL_STRIKE', false), 'hand'); await g.create(g.makeCard('SCORCH', false), 'discard');
   eq('Creating counts cards, but not status cards', [(g.rs.created || 0) - before, g.t.created], [1, 1]);
   const old = g.hand[0]; const nw = await g.transformInCombat(old, 'CUT', true);
   eq('Transforming in combat replaces the card in place and counts as created', [g.hand.includes(old), g.hand.includes(nw), nw.up, g.t.created], [false, true, true, 2]);
