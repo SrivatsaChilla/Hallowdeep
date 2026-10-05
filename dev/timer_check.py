@@ -51,7 +51,7 @@ async def main():
         await pg.click('[data-act=resume]'); await pg.wait_for_timeout(300)
         after = await pg.evaluate("HD.state.run.playMs")
         eq('Closing the page and pressing Continue resumes from the saved time', abs(after - before) < 1500 and after > 3000, True)
-        await pg.evaluate("() => { const S = HD.state, r = S.run; r.act = HD.LAST_ACT; S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }")
+        await pg.evaluate("() => { const S = HD.state, r = S.run; r.act = HD.LAST_ACT; S.overlay = null; S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }")
         await pg.click('[data-act=continue]'); await pg.wait_for_timeout(300)
         endtxt = await pg.evaluate("document.querySelector('.end .fine').textContent")
         eq('The end screen shows the final time', bool(re.search(r'Time \d+:\d\d', endtxt)), True)

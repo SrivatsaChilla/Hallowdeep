@@ -10,7 +10,7 @@ def eq(name, got, want):
     ok = got == want; fails += 0 if ok else 1
     print(('ok   ' if ok else 'FAIL ') + name + ('' if ok else f'  got {got!r} want {want!r}'))
 PICK = "(id) => { const b = document.querySelector(`[data-key=asc-${id}]`); return { lvl: +b.querySelector('.lvl').textContent, minus: !b.querySelector('[data-arg$=\":-1\"]').disabled, plus: !b.querySelector('[data-arg$=\":1\"]').disabled, goal: b.querySelector('.goal').textContent }; }"
-WIN = """() => { const S = HD.state, r = S.run; r.act = HD.LAST_ACT; r.secondBoss = r.asc >= 10 ? 'DONE' : r.secondBoss; S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }"""
+WIN = """() => { const S = HD.state, r = S.run; r.act = HD.LAST_ACT; r.secondBoss = r.asc >= 10 ? 'DONE' : r.secondBoss; S.overlay = null; S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }"""
 async def win(pg):
     await pg.evaluate(WIN); await pg.wait_for_timeout(200)
     await pg.click('[data-act=continue]'); await pg.wait_for_timeout(300)
@@ -45,7 +45,7 @@ async def main():
         eq('All 10 unlocked', await pg.evaluate(PICK, 'OATHBURNER'), {'lvl': 10, 'minus': True, 'plus': False, 'goal': 'Every level unlocked.'})
         await pg.evaluate("localStorage.setItem('hollowdeep.ascUnlocked', JSON.stringify({ OATHBURNER: 10 }))"); await title(pg)
         eq('An Ascension 10 run', await start(pg, 'OATHBURNER'), 10)
-        await pg.evaluate("() => { const S = HD.state, r = S.run; r.startAct(2); r.startAct(3); S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }"); await pg.wait_for_timeout(200)
+        await pg.evaluate("() => { const S = HD.state, r = S.run; r.startAct(2); r.startAct(3); S.overlay = null; S.kind = 'boss'; S.screen = 'reward'; S.reward = []; HD.render(); }"); await pg.wait_for_timeout(200)
         await pg.click('[data-act=continue]'); await pg.wait_for_timeout(400)
         eq('Ascension 10: beating the first Act 3 boss leads into the second boss, not a win', [await pg.evaluate("HD.state.screen"), await pg.evaluate("HD.state.kind")], ['combat', 'boss'])
         await title(pg)
