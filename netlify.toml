@@ -1,0 +1,4 @@
+# Netlify builds the game from source and serves dist/ (dist/index.html is the game).
+[build]
+  command = "python3 build.py"
+  publish = "dist"

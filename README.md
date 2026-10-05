@@ -2,15 +2,19 @@
 
 A deckbuilding roguelike descent. Mechanics and numbers mirror a reference game 1:1; names, text, characters, monsters, art and UI are original.
 
-Built so far: one full character (the Oathburner, all 87 cards), Act 1 (The Rootworks, 29 monsters, 22 encounters), map, rewards, rest sites, shop, treasure, 47 potions, and 113 relics across every regular tier.
+Built so far: two characters (the Oathburner and the Veiled), all three acts with their monsters, events and six Ancients, Ascension 0 to 10, enchantments, potions and relics, a v0.111 / stable card-set switch, original or HallowDeep names, and layouts tested on 16 screen sizes from desktops to small phones. The Regent is in progress (see dev/REGENT.md).
 
 ## Run it
 
-Open `dist/hallowdeep.html` in a browser. No server or install needed.
+Open `dist/hallowdeep.html` (or the identical `dist/index.html`) in a browser. No server or install needed.
 
 After editing anything in `src/`, rebuild:
 
     python3 build.py
+
+## Deploy
+
+Netlify builds from source using `netlify.toml`: it runs `python3 build.py` and publishes `dist/`, where `index.html` is the game. Pushing to `main` redeploys. The built files are not committed.
 
 ## Test it
 
