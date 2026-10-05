@@ -88,6 +88,8 @@ The title screen switches between the stable card set and the v0.111 beta set (t
 
 The run saves in the browser after every change outside combat and at the start of each fight. The title screen offers "Continue your run"; resuming mid-fight restarts that fight from its first turn (the random draws replay the same way). Winning or dying clears the save.
 
+Choose an Ascension level (0 to 10) on the title screen; each level adds one modifier on top of the ones below it, as in the original. The top bar shows the level during a run.
+
 Hover anything that mentions another thing (a relic that enchants a card, adds a card, gives a potion, or uses a keyword) and a panel explains it: enchantments and keywords as text, cards drawn as cards. On touch screens, tap a relic or potion, or press and hold a choice, shop item or reward, to read the same.
 
 On phones and other touch screens, cards are played only by dragging, as in the original: drag a targeted card onto the enemy you want (with one enemy left, dragging it up into the play area is enough), and drag Block, buff and all-enemy cards up past the dashed line. Drop a card back by the hand to cancel. A tap only lifts a card to read it; tap again or anywhere else to put it back. The whole hand fits as an overlapped fan, and landscape gets its own compact layout. With a mouse, clicking still plays cards.
@@ -117,6 +119,8 @@ coverage (every card, relic, potion, event and Act 1-3 monster in the data is bu
 numbers (both card sets), keywords, targets, types and keyword upgrades, whether each card, relic and potion text names the same
 mechanics as the data (reviewed wording differences are listed, not counted), monster move sequences and starting powers,
 and each item of the official v0.111 patch notes that applies to built content.
+
+`python3 dev/qa_devices.py [device names]` plays five real fights through the screen on 14 device sizes (1920x1080 down to a 320x568 phone and a 568x320 phone held sideways), with a mouse on desktops and touch on tablets and phones, and checks after every action for errors, stuck screens, cards that fail to play, page scrolling, and controls, cards or enemies that are off screen or covered.
 
 `node test/triggers.js` plays out every card trigger that is built: Sly from each discard source (cards, Tools of the Trade, Gambler's Brew, Gambling Chip), exhaust triggers, end-of-turn effects of cards held in hand, draw, shuffle and replay effects. `dev/TRIGGERS.md` lists each trigger type, the rule from the data, the engine function it must go through, and the triggers the remaining characters need.
 

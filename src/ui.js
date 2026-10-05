@@ -434,7 +434,7 @@
           ${hpBar(p)}
           <div class="chips">${chips(p)}</div>
         </div>
-        <div class="foes">${foes}</div>
+        <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${foes}</div>
       </section>
       <p class="hint" aria-live="polite">${hint}</p>
       <section class="dock">
@@ -961,6 +961,13 @@
     m = Math.max(m, -(cw * (1 - minShow)) / 2);
     m = Math.round(m * 10) / 10;
     if (m !== S.handM) { S.handM = m; hand.style.setProperty('--m', `${m}px`); }
+    // Desktop fan: the outer cards tilt below the hand box; reserve exactly that much room so they never leave the screen.
+    if (!compact()) {
+      const pad = parseFloat(getComputedStyle(hand).paddingBottom) || 0;
+      const over = Math.max(...[...cards].map((c) => c.getBoundingClientRect().bottom)) - hand.getBoundingClientRect().bottom;
+      const want = Math.max(10, Math.ceil(pad + over + 3));
+      if (Math.abs(want - pad) > 1) hand.style.paddingBottom = `${want}px`;
+    }
   }
   function flushFx() {
     const layer = fxLayer();

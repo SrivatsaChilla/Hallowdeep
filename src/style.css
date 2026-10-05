@@ -297,7 +297,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
   transform: translateY(var(--y, 0)) rotate(var(--r, 0));
   transform-origin: 50% 115%;
   transition: transform .16s ease-out, margin .2s ease-out, opacity .15s, filter .15s;
-  touch-action: pan-x;
+  touch-action: none; /* cards are dragged to play; the hand never scrolls */
   user-select: none; -webkit-user-select: none;
 }
 .hand .card:hover, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
@@ -632,7 +632,7 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
 @media (max-height: 520px) and (orientation: landscape) {
   /* only the hand shrinks; rewards, the shop and the deck keep full-size cards */
   .dock { --cw: 96px; --ch: 140px; --ah: 46px; }
-  #app { height: 100dvh; min-height: 0; overflow: hidden; }
+  #app:has(> main.combat) { height: 100dvh; min-height: 0; overflow: hidden; }
   .bar { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: .2rem .6rem; padding-top: max(.25rem, env(safe-area-inset-top, 0px)); padding-bottom: .25rem; }
   .bar .who { display: none; }
   .bar .stats { font-size: .9rem; gap: .7rem; }
@@ -727,3 +727,84 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
 .ascpick .desc { flex-basis: 100%; text-align: center; color: var(--ink2); font-size: .92rem; }
 .ascbadge { display: inline-grid; place-items: center; min-width: 1.9em; padding: .05em .4em; margin-left: .35rem; border-radius: 999px; font-size: .8rem; font-weight: 700;
   color: #fff4e0; background: linear-gradient(#b23a2a, #7d2218); border: 1px solid #e0a35a; vertical-align: middle; }
+
+/* The fanned hand tilts its outer cards below the hand box; give it room so the page never scrolls in combat. */
+@media (min-width: 761px) and (min-height: 521px) {
+  .dock .hand { padding-bottom: 22px; }
+}
+.combat { overflow: hidden; }
+
+/* Combat always fits the screen height: the fight area shrinks, the hand and controls stay put. */
+#app:has(> main.combat) { height: 100dvh; min-height: 0; overflow: hidden; }
+main.combat { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr) auto auto; }
+@media (min-width: 761px) and (max-height: 820px) {
+  .me .sigil { width: 96px; height: 96px; }
+  .foe .sigil { max-width: 112px; max-height: 112px; }
+  .me, .foe { padding: .25rem .45rem; gap: .15rem; }
+  .combat .fname { font-size: 1.02rem; }
+}
+/* Crowded fights (4 or more enemies): smaller enemies; on narrow screens they wrap onto a second row. */
+.foes.crowd .foe .sigil { width: min(100%, 84px); height: auto; max-height: 84px; }
+.foes.crowd .foe { min-width: 0; }
+@media (max-width: 760px) {
+  .foes.crowd { flex-wrap: wrap; row-gap: .15rem; max-width: 100%; }
+  .foes.crowd .foe { flex: 0 1 calc(33% - .3rem); }
+  .foes.crowd .foe .sigil { max-width: 48px; max-height: 48px; }
+  .foes.crowd .hpbar { width: 100%; max-width: 92px; }
+  .foes.crowd .fname { font-size: .74rem; }
+  .foes.crowd .chips { font-size: .7rem; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  /* sideways there is width to spare but no height: one row, smaller */
+  .foes.crowd { flex-wrap: nowrap; min-width: 0; }
+  .foes.crowd .foe { flex: 1 1 0; min-width: 0; max-width: 112px; }
+  .foes.crowd .hpbar { width: 100%; }
+  .foes.crowd .fname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .foes.crowd .chips { font-size: .66rem; }
+  .foes.crowd .foe .sigil { max-width: 40px; max-height: 40px; }
+  .foes.crowd .hpbar { width: 70px; }
+  .foes.crowd .fname { font-size: .72rem; }
+  .foes.crowd { gap: .3rem; }
+}
+/* Wider screens: crowded enemies stay in one row (narrower HP bars) so a second row never lands on the hand. */
+@media (min-width: 761px) {
+  .foes.crowd { flex-wrap: nowrap; gap: .5rem; }
+  .foes.crowd .hpbar { width: 92px; }
+  .foes.crowd .fname { font-size: .9rem; }
+}
+
+/* ---------- the smallest phones (about 320 to 380 wide, or under 700 tall) ---------- */
+@media (max-width: 760px) and (orientation: portrait) {
+  /* never let the bottom row stretch the screen: it may wrap instead */
+  .dock { grid-template-columns: auto minmax(0, 1fr); min-width: 0; }
+  .dock .right { min-width: 0; justify-content: flex-end; }
+  .arena { justify-content: flex-start; min-height: 0; overflow: hidden; }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  .dock .right { flex-wrap: wrap; gap: .25rem; }
+  .dock button { padding: .15em .4em; font-size: .78rem; }
+  .dock .right [data-act=end] { font-size: .88rem; padding: .2em .55em; }
+  .energy { width: 44px; height: 44px; }
+  .energy span { font-size: 1.25rem; }
+}
+@media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
+  /* you on one line: portrait, name, HP */
+  .me { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: .1rem .45rem; padding: .1rem .3rem; }
+  .me .sigil { width: 40px; height: 40px; }
+  .me .chips { flex-basis: 100%; justify-content: center; }
+  .foe .sigil { width: 46px; height: 46px; }
+  .intent { min-height: 16px; font-size: .8rem; }
+  /* crowded fights: one row that shares the width */
+  .foes.crowd { flex-wrap: nowrap; }
+  .foes.crowd .foe { flex: 1 1 0; min-width: 0; }
+  .foes.crowd .foe .sigil { max-width: 38px; max-height: 38px; }
+  .foes.crowd .hpbar { width: 100%; max-width: 86px; }
+  .foes.crowd .fname { font-size: .66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+}
+
+/* Nothing inside combat may make it wider than the screen. */
+main.combat { grid-template-columns: minmax(0, 1fr); }
+.arena, .foes, .dock { min-width: 0; }
+/* The target number shown while aiming sits beside the name without taking space, so enemies don't shift. */
+.foe .fname { position: relative; }
+.foe .fname .tkey { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: .3em; }

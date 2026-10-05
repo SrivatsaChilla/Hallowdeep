@@ -86,6 +86,11 @@ The Inky enchantment from Blade of Ink only applies Weak in v0.111 (the patch no
 
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).
 
+## Ascension
+
+Levels 1 to 10 follow ascensions.json and the mechanics constants: 8 elites per act instead of 5 (A1), Ancients heal 80% of missing HP (A2), 25% less Gold from fights and chests (A3), 2 potion slots (A4), Ascender's Bane (A5), the Scarcity rarity numbers (A7: Rare 1.49%/5%/4.5% and half the rarity growth), each monster's Ascension HP (A8) and each move's Ascension damage (A9) from the monster data for the chosen card set, and a second Act 3 boss (A10).
+Approximations: Gloom (A6) removes 1 Rest Site per act (the count is not in the data); Scarcity also halves the chance of upgraded card rewards (the rate is not in the data); A8 Block values are not changed (the data's Block entries cannot be matched to moves); with Double Boss the second boss follows the first boss's rewards directly.
+
 ## Map
 
 The map climbs from a single start node at the bottom to the boss at the top. The start node is Neow. Floors count Neow as floor 1, so the Act 1 boss is floor 17.
