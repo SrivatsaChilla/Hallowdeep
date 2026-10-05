@@ -840,3 +840,26 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 .bar .stats .ascbadge { margin-left: 0; }
 /* The top bar stays on screen when a page scrolls (map, shop, rewards), as in the original; overlays still cover it. */
 .bar { position: sticky; top: 0; z-index: 40; }
+
+/* ---------- the Crowned: sigil, the Glint counter on the Energy orb, Glint costs on cards ---------- */
+.sigil.crowned .body { fill: #2d2838; stroke: #d6b25a; }
+.sigil.crowned .eye { fill: #f4d97c; stroke: #f4d97c; }
+.orbs { position: relative; align-self: center; display: grid; place-items: center; }
+.glints {
+  position: absolute; right: -12px; bottom: -8px; min-width: 30px; height: 30px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; gap: 1px;
+  border-radius: 15px; background: radial-gradient(circle at 38% 30%, #f7e3a1, #c99a2e 60%, #7a5a14); color: #2b1d05;
+  font-family: var(--disp); font-size: 1rem; box-shadow: 0 1px 0 rgba(0,0,0,.35); border: 1.5px solid #3a2a0c;
+}
+.glints svg { width: 12px; height: 12px; fill: #fff6d6; stroke: #3a2a0c; stroke-width: 1.2; }
+.glints b { font-weight: 400; line-height: 1; }
+.starseal {
+  position: absolute; left: -7px; top: 24px; width: 24px; height: 24px; display: grid; place-items: center; z-index: 1;
+  clip-path: polygon(50% 0, 63% 33%, 100% 38%, 72% 61%, 81% 100%, 50% 79%, 19% 100%, 28% 61%, 0 38%, 37% 33%);
+  background: radial-gradient(circle at 45% 40%, #fbe9a8, #d1a23a 65%, #7a5a14); color: #2b1d05; font-family: var(--disp); font-size: .85rem; padding-top: 3px;
+}
+.starseal.cheap { background: radial-gradient(circle at 45% 40%, #c8f0a8, #4f9a45 65%, #1b3d18); }
+.card.big .starseal { width: 32px; height: 32px; top: 32px; left: -9px; font-size: 1.1rem; }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .glints { min-width: 24px; height: 24px; right: -10px; top: -8px; bottom: auto; font-size: .85rem; padding: 0 4px; }
+  .glints svg { width: 10px; height: 10px; }
+}
