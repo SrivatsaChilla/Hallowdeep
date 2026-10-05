@@ -1,7 +1,7 @@
 // Targeted rule checks against the reference numbers.
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ctx=vm.createContext({console,setTimeout,Math,Promise});
-for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
+for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
 const HD=ctx.HD; let fails=0;
 const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console.log('FAIL',name,a,'!=',b);} else console.log('ok  ',name); };
 (async()=>{
@@ -322,7 +322,8 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     HD.setVersion('0.111');
     const rF = new HD.Run('fish'); rF.addRelic('FISHING_LINE'); const up0 = rF.deck.filter((c) => c.up).length; for (let i = 0; i < 3; i++) rF.combatDone('monster'); rF.combatDone('elite');
     eq('Fishing Rod: an upgrade every 3 normal combats', rF.deck.filter((c) => c.up).length - up0, 1);
-    const rK = new HD.Run('kal', 'VEILED'); rK.addRelic('PRISM_GLASS'); eq('Kaleidoscope: 2 card rewards from another character', [rK.pending.length, rK.pending.every((p) => p.cards.every((x) => HD.CARDS[x.id].color === 'oathburner'))], [2, true]);
+    const rK = new HD.Run('kal', 'VEILED'); rK.addRelic('PRISM_GLASS'); const otherColors = Object.values(HD.CHARS).filter((ch) => ch.id !== 'VEILED').map((ch) => ch.color);
+    eq('Kaleidoscope: 2 card rewards, each from one other character', [rK.pending.length, rK.pending.every((p) => new Set(p.cards.map((x) => HD.CARDS[x.id].color)).size === 1 && otherColors.includes(HD.CARDS[p.cards[0].id].color))], [2, true]);
     const rD = new HD.Run('dows'); rD.addRelic('DIVINING_ROD'); for (let i = 0; i < 5; i++) rD.hook('onUnknown'); eq('Dowsing Rod: Dowsing becomes Abundance after 5 ? rooms', [rD.deck.some((c) => c.id === 'DIVINING'), rD.deck.some((c) => c.id === 'ABUNDANCE')], [false, true]);
     const rS = new HD.Run('sac'); rS.addRelic('ROOT_OFFERING'); eq("Neow's Sacrifice: Ambergris and Guilty", [rS.potions.includes('AMBERGRIS'), rS.deck.some((c) => c.id === 'GUILT')], [true, true]);
     const gA = new HD.Combat(rS, 'RIPJAW', HD.autoUI, 'monster'); await gA.start(); gA.p.hp = 10; const t0 = gA.turn; await gA.usePotion(rS.potions.indexOf('AMBERGRIS'), null); gA.hand.length = 0; await gA.endTurn();

@@ -117,14 +117,17 @@
     for (let i = 0; i < eyes; i++) inner += `<circle cx="${50 + (i - (eyes - 1) / 2) * 14}" cy="${46 + (h % 7)}" r="${4 + (h % 3)}" class="eye"/>`;
     return `<svg class="sigil" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="--d:${-(HD.hashSeed(id + 'd') % 3000)}ms"><polygon points="${pts.join(' ')}" class="body"/>${inner}</svg>`;
   }
-  const playerSigil = (size, charId) => ((charId || (S.run && S.run.charId)) === 'VEILED'
-    ? `<svg class="sigil me veiled" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
-      <path class="body" d="M50 6C74 18 86 38 86 58c0 18-16 32-36 36C30 90 14 76 14 58 14 38 26 18 50 6z"/>
-      <path class="eye" d="M50 26 57 60 50 72 43 60z"/><path class="eye" d="M40 66h20" stroke-width="5"/></svg>`
-    : `<svg class="sigil me" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
-    <path class="body" d="M50 6 88 20v28c0 22-17 38-38 46C29 86 12 70 12 48V20z"/>
-    <path class="eye" d="M50 28c11 11 13 22 0 36-13-14-9-25 0-36z"/></svg>`);
+  const SIGILS = {
+    VEILED: ['veiled', '<path class="body" d="M50 6C74 18 86 38 86 58c0 18-16 32-36 36C30 90 14 76 14 58 14 38 26 18 50 6z"/><path class="eye" d="M50 26 57 60 50 72 43 60z"/><path class="eye" d="M40 66h20" stroke-width="5"/>'],
+    CROWNED: ['crowned', '<path class="body" d="M12 78 16 28 34 50 50 14 66 50 84 28 88 78z"/><path class="body" d="M12 78h76v12H12z"/><path class="eye" d="M50 46l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z"/>'],
+    OATHBURNER: ['', '<path class="body" d="M50 6 88 20v28c0 22-17 38-38 46C29 86 12 70 12 48V20z"/><path class="eye" d="M50 28c11 11 13 22 0 36-13-14-9-25 0-36z"/>'],
+  };
+  const playerSigil = (size, charId) => {
+    const [cls, art] = SIGILS[charId || (S.run && S.run.charId)] || SIGILS.OATHBURNER;
+    return `<svg class="sigil me ${cls}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">${art}</svg>`;
+  };
 
+  const GLINT = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.5 5.6 6.1.6-4.6 4.1 1.3 6-5.3-3.1-5.3 3.1 1.3-6L1.4 7.7l6.1-.6z"/></svg>';
   // ---------- cards ----------
   function fmt(g, c) {
     const mark = (v, base) => `<span class="num ${v > base ? 'hi' : v < base ? 'lo' : ''}">${v}</span>`;
@@ -184,11 +187,12 @@
     const cost = g ? g.costOf(c) : base;
     const costCls = typeof cost === 'number' && typeof base === 'number' ? (cost < base ? 'cheap' : cost > base ? 'dear' : '') : '';
     const text = cardParts(c, g);
+    const glint = d.star == null ? null : g ? g.starCostOf(c) : d.star;
     const rar = { Basic: 'Starter', Status: 'Status', Token: 'Token', Curse: 'Curse' }[d.rarity] || d.rarity;
     const typeLine = ['Status', 'Token', 'Curse'].includes(d.rarity) ? rar : `${rar} ${d.type.toLowerCase()}`;
     const cls = ['card', `t-${d.type.toLowerCase()}`, `r-${d.rarity.toLowerCase()}`, d.color === 'colorless' ? 'col-colorless' : '', c.ench ? 'enchanted' : '', c.up ? 'up' : '', c.bound ? 'bound' : '', o.cls || ''].join(' ');
     const act = o.act ? `data-act="${o.act}" data-arg="${o.arg != null ? o.arg : c.uid}" role="button" tabindex="0"` : '';
-    const label = `${d.name}${c.up ? '+' : ''}, ${typeLine}, cost ${cost == null ? 'none' : cost}. ${text.replace(/<[^>]+>/g, '')}`;
+    const label = `${d.name}${c.up ? '+' : ''}, ${typeLine}, cost ${cost == null ? 'none' : cost}${glint == null ? '' : ` and ${glint} ${T('Glint')}${glint === 1 ? '' : 's'}`}. ${text.replace(/<[^>]+>/g, '')}`;
     const name = `${d.name}${c.up ? '+' : ''}`;
     const nameCls = name.length > 16 ? 'n3' : name.length > 12 ? 'n2' : '';
     const plain = text.replace(/<[^>]+>/g, '');
@@ -196,6 +200,7 @@
     const fit = /\bbig\b/.test(o.cls || '') ? null : nameFit.get(fitKey(name, o.dkey && /^h/.test(o.dkey) ? 'hand' : 'full'));
     return `<div class="${cls}" ${act} data-cid="${d.id}" data-up="${c.up ? 1 : 0}" ${o.dkey ? `data-key="${o.dkey}"` : ''} ${o.style ? `style="${o.style}"` : ''} aria-label="${esc(label)}">
       ${cost == null ? '' : `<span class="seal ${costCls}">${cost}</span>`}
+      ${glint == null ? '' : `<span class="starseal ${typeof glint === 'number' && typeof d.star === 'number' && glint < d.star ? 'cheap' : ''}">${glint}</span>`}
       <span class="cname ${nameCls}" ${fit ? `style="font-size:${fit}px"` : ''}>${esc(name)}</span>
       <span class="cart"><img src="${HD.cardArt(d.id)}" alt="" draggable="false"></span>
       <span class="ctype">${typeWord}</span>
@@ -207,7 +212,7 @@
   }
 
   // ---------- shared chrome ----------
-  const HIDE_N = new Set(['rampart', 'rot', 'endlessCuts', 'standFirm', 'stoneStance', 'noDraw', 'noEnergy', 'keepSwinging', 'shrink', 'ringing', 'illusion', 'minion', 'duplicate', 'giga', 'surrounded', 'backAttack', 'crabRage', 'burrowed', 'imbalanced', 'escapeArtist', 'confused']);
+  const HIDE_N = new Set(['rampart', 'rot', 'endlessCuts', 'standFirm', 'stoneStance', 'noDraw', 'noEnergy', 'keepSwinging', 'shrink', 'ringing', 'illusion', 'minion', 'duplicate', 'giga', 'surrounded', 'backAttack', 'crabRage', 'burrowed', 'imbalanced', 'escapeArtist', 'confused', 'huntingEdge', 'reflect', 'usurped']);
   const info = (title, body) => `data-act="info" data-title="${esc(title)}" data-body="${esc(body)}"`;
   // Hover tooltips (mouse and keyboard focus): name, description, a small line of kind, and an optional icon.
   const tip = (title, body, kind, icon) => `data-tt="${esc(title)}" data-tb="${esc(body)}"${kind ? ` data-tk="${esc(kind)}"` : ''}${icon ? ` data-ti="${esc(icon)}"` : ''}`;
@@ -341,7 +346,7 @@
 
   // ---------- screens ----------
   function titleScreen() {
-    const locked = ['Third descender', 'Fourth descender', 'Fifth descender'];
+    const locked = ['Fourth descender', 'Fifth descender'];
     const hero = (id) => { const ch = HD.CHARS[id], rl = HD.RELICS[ch.relic];
       const lvl = ascChosen(id);
       return `<div class="herobox"><button class="hero" data-act="start" data-arg="${id}">
@@ -356,7 +361,7 @@
       <p class="lede">Fight your way through ${HD.ACT} with a deck that grows as you go.</p>
       ${readSave() ? `<button class="primary continue" data-act="resume">Continue your run (${T('Depth')} ${readSave().run.data.floor})</button>` : ''}
       <div class="roster">
-        ${hero('OATHBURNER')}${hero('VEILED')}
+        ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}
         ${locked.map((n) => `<div class="hero locked" aria-disabled="true"><span class="hname">${n}</span><span class="hsub">Not built yet</span></div>`).join('')}
       </div>
       <label class="seed">Seed <input id="seed" value="${esc(S.seedDefault)}" spellcheck="false" autocomplete="off"></label>
@@ -482,7 +487,7 @@
       <p class="hint" aria-live="polite">${hint}</p>
       <section class="dock">
         <div class="left">
-          <div class="energy ${g.energy ? '' : 'spent'}" data-key="orb" aria-label="Energy ${g.energy} of ${g.maxEnergy}"><span>${g.energy}</span><small>/${g.maxEnergy}</small></div>
+          <div class="orbs" data-key="orbs"><div class="energy ${g.energy ? '' : 'spent'}" data-key="orb" aria-label="Energy ${g.energy} of ${g.maxEnergy}"><span>${g.energy}</span><small>/${g.maxEnergy}</small></div>${S.run.charId === 'CROWNED' || g.stars ? `<span class="glints" data-key="glints" tabindex="0" aria-label="${g.stars} ${T('Glint')}${g.stars === 1 ? '' : 's'}" ${tip(T('Glints'), HD.TERMS[T('Glint')] || '', 'Resource')}>${GLINT}<b>${g.stars}</b></span>` : ''}</div>
           <button class="ghost" data-act="pile" data-arg="draw">Draw ${g.draw.length}</button>
         </div>
         <div class="hand" style="--m:${S.handM != null ? S.handM : 3}px" role="group" aria-label="Your hand">${hand || '<p class="empty">Your hand is empty.</p>'}</div>

@@ -38,9 +38,11 @@ Memento Mori.
 
 Card fields: `star` / `upStar` (Star cost, or 'X'), `onDraw(g, c)` (when drawn), `settleTo(g, c)` returning
 'hand' or 'drawTop' (where a played card goes), `playFromAshAtTurnStart` (plays itself from the Exhaust pile at the
-start of your turn), `playFromDrawTopAtTurnEnd` (plays itself from the top of the draw pile at the end of your turn).
+start of your turn), `playFromDrawTopAtTurnEnd` (plays itself from the top of the draw pile at the end of your turn),
+`dmgMult(g, t, c)` and `blockMult(g, c)` (multiply the card's final damage or Guard: Conqueror, Vitruvian Minion).
 Combat functions: `gainStars`, `spendStars`, `forge`, `create(card, where)`, `transformInCombat`, `playTimes`,
-`blades()`, and `g.endTurnAfterPlay = true` to end the turn once a card resolves.
+`blades()`, `hollowFree()` (Void Form), and `g.endTurnAfterPlay = true` to end the turn once a card resolves.
+The Regent's cards (src/regent.js) use all of these; `node test/regent_cards.js` checks them with the real cards.
 Registered hooks (`HD.onEngine(name, fn)`): starsGained, starsSpent, created, forged, energySpent, afterPlay,
 turnStart, afterDraw, turnEnd, combatWon. `node test/regent_engine.js` checks each one.
 
@@ -50,8 +52,7 @@ turnStart, afterDraw, turnEnd, combatWon. `node test/regent_engine.js` checks ea
 |---|---|---|---|
 | Void | Defect (status) | Whenever you draw this card, lose 1 Energy | `onDraw(g, c)` (built for the Regent) |
 | Pagestorm | Necrobinder | Whenever you draw an Ethereal card, draw 1 card | power check in `drawOne()` |
-| Kingly Kick, Melancholy, Momentum Strike, Rocket Punch | Regent, Necrobinder, Defect | cost changes while held or after play | per-card `costFn` / `bonusCost` (as Up My Sleeve) |
-| Echo Form, Sword Sage, Transfigure | Defect, Regent, Necrobinder | extra plays | `resolve` play count |
-| I Am Invincible | Regent | at end of turn, if in hand | `endInHand` |
+| Melancholy, Momentum Strike, Rocket Punch | Necrobinder, Defect | cost changes while held or after play | per-card `costFn` / `bonusCost` (as Up My Sleeve; Kingly Kick is built this way) |
+| Echo Form, Transfigure | Defect, Necrobinder | extra plays | `resolve` play count (Sword Sage is built this way) |
 | Wither, Beckon, Debt | Defect status, Underdocks, Crystal Sphere | at end of turn, if in hand | `endInHand` |
 | Ethereal-heavy Necrobinder cards | Necrobinder | Ethereal exhaust at end of turn | already built |

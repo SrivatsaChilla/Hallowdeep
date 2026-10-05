@@ -110,7 +110,7 @@
       if (d.costFn) k = d.costFn(this, c, k);
       if (d.type === 'Attack' && this.p.pw.tangled) k += 1;
       if (d.type === 'Skill' && this.p.pw.freeSkill) k = 0;
-      if (c.freeTurn || c.freeCombat || (d.type === 'Attack' && this.p.pw.keepSwinging) || (d.type === 'Skill' && this.p.pw.rot)) k = 0;
+      if (this.hollowFree() || c.freeTurn || c.freeCombat || (d.type === 'Attack' && this.p.pw.keepSwinging) || (d.type === 'Skill' && this.p.pw.rot)) k = 0;
       return Math.max(0, k);
     }
     canPlay(c) {
@@ -151,6 +151,7 @@
         if (t.pw.slow) d *= 1 + 0.1 * this.t.played;
       }
       if (isAtk && this.p.pw.giga) d *= 3;
+      if (d0 && d0.dmgMult) d *= d0.dmgMult(this, t, c);
       if (en && en.mult) d *= en.mult;
       if (isAtk && this.p.pw.doubleAtk) d *= 2;
       if (c && this.nibCard === c) d *= 2;
@@ -172,6 +173,8 @@
       const en = HD.enchOf(c);
       let b = n + this.poise() + (en && en.blockAdd ? en.blockAdd(c.ench.n) : 0);
       if (this.p.pw.brittle) b *= 0.75;
+      const d0 = c && CARDS[c.id];
+      if (d0 && d0.blockMult) b *= d0.blockMult(this, c);
       return Math.max(0, Math.floor(b));
     }
 
@@ -236,6 +239,7 @@
       }
       if (!t.isPlayer && o.attack && o.src === this.p && dmg > 0 && this.p.pw.venomous && t.alive) await this.applyToxin(t, this.p.pw.venomous);
       if (!t.isPlayer && o.attack && o.src === this.p) t.hitsTurn = (t.hitsTurn || 0) + 1;
+      if (!t.isPlayer && o.attack && o.src === this.p && this.p.pw.royalStare && t.alive) await this.apply(t, 'mightDown', this.p.pw.royalStare);
       if (t.isPlayer && o.attack && blocked > 0 && this.p.pw.reflect && o.src && !o.src.isPlayer && o.src.alive && !this.over) await this.damage(o.src, blocked, {});
       if (!t.isPlayer && o.attack && o.src === this.p && !this.over) {
         if (t.pw.flutter) { t.flutterHits = (t.flutterHits || 0) + 1; if (t.flutterHits >= t.pw.flutter) { delete t.pw.flutter; t.flutterHits = 0; t.forceIntent = 'STUN'; t.intent = 'STUN'; this.say(`${t.name} is knocked out of the air.`); } }
@@ -487,10 +491,11 @@
       for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS[name]) || []) { if (this.over) return; await f(this, ...args); }
     }
     // ---------- Stars ----------
+    hollowFree() { return !!this.p.pw.hollowForm && this.phase === 'player' && this.t.cards < this.p.pw.hollowForm; }
     starCostOf(c) {
       const d = CARDS[c.id];
       if (d.star === 'X') return 'X';
-      if (d.star == null) return 0;
+      if (d.star == null || this.hollowFree()) return 0;
       const k = (c.up && d.upStar != null ? d.upStar : d.star) + (c.starBonus || 0);
       return Math.max(0, k);
     }
@@ -526,13 +531,13 @@
       return null;
     }
     // ---------- Forge and the Sovereign Blade ----------
-    blades(includeAsh = true) { return [...this.hand, ...this.draw, ...this.discard, ...(includeAsh ? this.ash : []), ...(this.current && this.current.id === 'SOVEREIGN_BLADE' ? [this.current] : [])].filter((c, i, a) => c.id === 'SOVEREIGN_BLADE' && a.indexOf(c) === i); }
+    blades(includeAsh = true) { return [...this.hand, ...this.draw, ...this.discard, ...(includeAsh ? this.ash : []), ...(this.current && this.current.id === 'REGAL_BLADE' ? [this.current] : [])].filter((c, i, a) => c.id === 'REGAL_BLADE' && a.indexOf(c) === i); }
     async forge(n) {
       if (n <= 0 || this.over) return;
       // The first Forge (or the first after every Blade left the deck) creates a new Blade at 10 + n in hand.
       if (!this.blades(false).length) {
-        const b = this.makeCard('SOVEREIGN_BLADE', false); b.forged = 0;
-        for (const x of this.ash.filter((y) => y.id === 'SOVEREIGN_BLADE')) x.forged = (x.forged || 0) + n;
+        const b = this.makeCard('REGAL_BLADE', false); b.forged = 0;
+        for (const x of this.ash.filter((y) => y.id === 'REGAL_BLADE')) x.forged = (x.forged || 0) + n;
         b.forged = n;
         await this.create(b, 'hand');
       } else {

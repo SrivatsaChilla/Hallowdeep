@@ -80,6 +80,23 @@ Ancient relics follow the character: Archaic Tooth turns Neutralize into Suppres
 
 The Inky enchantment from Blade of Ink only applies Weak in v0.111 (the patch notes removed its bonus damage; the v0.111 data has no enchantment file). Approximations: Speedster counts every card drawn on your turn, including the opening draw. Nightmare's copies arrive at the start of your next turn.
 
+## The Crowned (the Regent)
+
+Built from the v0.111 data: 75 HP, 99 Gold, 3 Energy, 4 Strikes, 4 Defends, Falling Star and Venerate, Divine Right (3 Stars at combat start). All 86 solo cards (80 in the reward pool, 4 Basic, 2 Ancient), the Sovereign Blade, the three Minion tokens and Debris, 9 relics and 3 potions. Every cost, Star cost, number, keyword, target and type comes from the generated src/regent_data.js; dev/verify.js reports 0 mismatches. The 5 multiplayer-only Regent cards are not defined. Archaic Tooth turns Falling Star into Meteor Shower, Touch of Orobas turns Divine Right into Divine Destiny, and Dusty Tome offers Meteor Shower or The Sealed Throne.
+
+Card text follows the card where it disagrees with the power text (Conqueror lasts this turn, Tyranny draws and Exhausts 1, Royalties gives 30 Gold).
+
+Approximations:
+- Void Form makes the first 2 cards each turn free of both Energy and Stars ("free to play"); X-cost cards still spend everything.
+- Crescent Spear counts cards with a Star cost in every pile (hand, draw, discard, Exhaust) plus itself, and counts X Star cards.
+- Black Hole deals its damage once per gain or spend, not once per Star.
+- Tyranny keeps the Exhaust keyword the data gives it; a played Power leaves no card behind, so it has no effect.
+- Galactic Dust's count of Stars spent carries over between combats, like other counter relics.
+- Make It So returns from the draw or discard pile; Skills played by other cards (Decisions, Decisions) count toward its 3 when the next card is played.
+- Monarch's Gaze and Crush Under lower Strength until the end of the enemy's next turn (the same "this turn" rule as Piercing Wail).
+- Resonance's Strength loss on enemies is permanent and is not blocked by Artifact, as with Malaise.
+- Monologue does not count itself; The Sealed Throne, Monologue and Make It So do not trigger from cards that play themselves (Bombardment, I Am Invincible).
+
 ## Audit fixes (v0.111)
 
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).

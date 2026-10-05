@@ -4,7 +4,7 @@ const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2];
 if (!dir) { console.log('usage: node dev/verify.js <codex data/eng dir>'); process.exit(1); }
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'neow2', 'ascension_data', 'ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
 HD.setVersion();
 const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'namemap.json')));
@@ -39,14 +39,14 @@ for (const [orig, ours] of Object.entries(map.monsters)) {
   if (d.gap === 'attacks' && !theirAtk.length) gaps++; else if (JSON.stringify(ourAtk) !== JSON.stringify(theirAtk)) fail(`${ours} attacks ${ourAtk} vs ${theirAtk}`);
 }
 // Relic and potion text: every number in the source text must appear in ours (ordinal words aside).
-const nums = (s) => (s || '').replace(/\[energy:(\d+)\]/g, ' $1 ').replace(/\[[^\]]*\]/g, ' ').replace(/(\d+)(st|nd|rd|th)\b/g, '$1').match(/\d+/g) || [];
+const nums = (s) => (s || '').replace(/\[(?:energy|star):(\d+)\]/g, ' $1 ').replace(/\[[^\]]*\]/g, ' ').replace(/(\d+)(st|nd|rd|th)\b/g, '$1').match(/\d+/g) || [];
 const textCheck = (kind, table, src, ours) => {
   for (const [orig, id] of Object.entries(table)) {
     const x = src[orig], d = ours[id];
     if (!x || !d) { if (!d) fail(`${kind} ${id} missing`); continue; }
     checked++;
-    // The source writes the Energy icon right after a number in a few texts, which repeats that number.
-    const ICON_REPEAT = { SPIKED_GAUNTLETS: [1] };
+    // The source writes the Energy or Star icon right after a number (or as a plain word) in a few texts, which adds a number.
+    const ICON_REPEAT = { SPIKED_GAUNTLETS: [1], GALACTIC_DUST: [1], MINI_REGENT: [1] };
     const raw = nums(x.description); for (const n of ICON_REPEAT[orig] || []) raw.splice(raw.indexOf(String(n)), 1);
     const want = raw.sort().join(','), have = nums(d.text).sort().join(',');
     if (want !== have) fail(`${kind} ${id}: [${have}] vs [${want}]`);

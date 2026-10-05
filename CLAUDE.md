@@ -32,7 +32,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
   dist/index.html. dist/ is not committed; Netlify builds it.
 - Everything hangs off the global `HD`. Key files:
   - core.js: RNG, glossary terms, power definitions, HD.onEngine hook registry
-  - cards.js (Ironclad, called the Oathburner), silent.js (Silent, the Veiled), colorless.js, potions.js, relics.js
+  - cards.js (Ironclad, called the Oathburner), silent.js (Silent, the Veiled), regent.js (Regent, the Crowned; numbers
+    from the generated regent_data.js), colorless.js, potions.js, relics.js
   - monsters.js, act2.js, act3.js: monsters and encounters; events.js, events2.js; ancients.js, neow2.js
   - combat.js: the Combat class (turns, damage, piles, Stars, Forge, card creation, hooks)
   - run.js: the Run class (map, rewards, shop, saves); ascension.js + ascension_data.js (generated)
@@ -57,7 +58,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
     node test/checks.js                      # rule checks (run after every change)
     node test/triggers.js                    # card trigger behavior (Sly, exhaust, draw, shuffle, replay...)
     node test/regent_engine.js               # Stars, Forge, card creation and other engine hooks
-    node test/sim.js 100                     # headless random runs; CHAR=VEILED, ASC=10 env vars
+    node test/regent_cards.js                # the Regent's real cards, relics and potions
+    node test/sim.js 100                     # headless random runs; CHAR=VEILED or CROWNED, ASC=10 env vars
     node test/extra/invariants.js 300        # fuzzing for state invariants
     node dev/verify.js ../spire-codex/data-beta/v0.111.0/eng          # number parity, expect 0 mismatches
     node dev/audit.js ../spire-codex/data/eng ../spire-codex/data-beta/v0.111.0/eng   # 7 audit sections, all ok
@@ -65,13 +67,13 @@ One self-contained HTML file, no framework, no runtime dependencies.
     python3 dev/qa_resize.py                 # resizing and rotating mid-fight
     python3 dev/timer_check.py; python3 dev/ascension_unlock.py; python3 dev/cardfaces.py; python3 dev/handfit.py
     python3 test/extra/phone_layouts.py | card_text_fit.py | tooltips.py | save_load.py | touch_inspect.py
-    python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent
+    python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent, "crown" the Regent
 
 Generators: dev/gen_names.py (names.js), dev/gen_ascension.py (ascension_data.js), dev/gen_regent.py (regent_data.js).
 
 ## Before committing
 
-Build, then run checks.js, triggers.js, regent_engine.js, a short sim for each character, and the browser tests that
+Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, a short sim for each character, and the browser tests that
 touch what changed (any layout change: qa_devices on a few sizes plus qa_resize). Keep commits focused.
 
 Commit messages: imperative summary line under about 60 characters, blank line, then a body explaining what changed
@@ -79,18 +81,17 @@ and why (bullets are fine). Author: `Srivatsa Chilla <67921517+SrivatsaChilla@us
 
 ## Current work: the Regent (third character)
 
-Research is complete in dev/REGENT.md (rules for Stars, Forge, Sovereign Blade, card creation; card list; sources).
-Step 1 (engine) is done and tested. Step 2 (content) is in progress on the `regent-wip` branch:
-- Done: dev/gen_regent.py generates src/regent_data.js (every card's costs, Star costs, values, upgrades, keywords,
-  tags, targets) and adds the Regent to dev/namemap.json. HallowDeep names: the Regent is "The Crowned"; Star is
-  "Glint", Forge "Temper", Sovereign Blade "Regal Blade", Minion "Thrall", Debris "Rubble".
-- Next: src/regent.js with each card's text and play function built on HD.REGENT_DATA['0.111'] (mirror silent.js),
-  the Regal Blade and Thrall tokens, 9 relics, 3 potions, HD.CHARS.REGENT (75 HP, 99 Gold, deck 4 Smite, 4 Ward Off,
-  Starfall, Revere; relic Star Circlet), add regent_data and regent to build.py's order, card art, then step 3:
-  a Glint counter next to Energy, Glint costs on cards, the Regal Blade's damage shown. Add the Regent to the parity,
-  keyword and trigger checks, simulations and device tests.
-- On regent-wip, dev/verify.js reports 12 mismatches: the Regent's relics and potions are mapped in namemap.json
-  but not built yet. They clear once those exist; everything else should stay at 0.
+Research is in dev/REGENT.md. HallowDeep names: the Regent is "The Crowned" (id CROWNED, color crowned); Star is
+"Glint", Forge "Temper", Sovereign Blade "Regal Blade" (id REGAL_BLADE), Minion "Thrall", Debris "Rubble".
+- Done: engine (step 1); content (step 2): src/regent.js builds all 86 solo cards from HD.REGENT_DATA['0.111'], the
+  tokens, 9 relics, 3 potions, every power (as HD.onEngine hooks), HD.CHARS.CROWNED; card art; names.js regenerated.
+  Screen (step 3, first pass): roster entry and crown sigil, a Glint counter pinned to the Energy orb, a Glint cost seal
+  on cards, the Regal Blade's damage in its text. Parity 0 mismatches, audit all ok, sims 0 errors for all three
+  characters, test/regent_cards.js covers the cards. Approximations are in FIDELITY.md ("The Crowned").
+- Next: run the browser suites with the Regent (qa_devices includes a CROWNED fight, bot.py takes "crown" seeds,
+  qa_resize, phone_layouts, card_text_fit, tooltips); Playwright was not installed on Sri's Mac when this was built.
+  Then polish: Glint gain and spend animation, a Glint icon in card text, relic icons for the Regent's relics.
+- The 5 co-op Regent cards are not defined (the Silent's co-op cards are stubs; add stubs if the compendium needs them).
 
 ## Backlog
 
