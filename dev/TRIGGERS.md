@@ -34,11 +34,21 @@ Memento Mori.
 | Draw pile shuffled | Stratagem, The Abacus, Biiig Hug, Perfect Fit | `reshuffle()` then `onShuffle` |
 | Played again | Burst, One-Two Punch, Hidden Gem (Replay), Glam, Spiral | `resolve` play count |
 
+## Engine hooks added for the Regent
+
+Card fields: `star` / `upStar` (Star cost, or 'X'), `onDraw(g, c)` (when drawn), `settleTo(g, c)` returning
+'hand' or 'drawTop' (where a played card goes), `playFromAshAtTurnStart` (plays itself from the Exhaust pile at the
+start of your turn), `playFromDrawTopAtTurnEnd` (plays itself from the top of the draw pile at the end of your turn).
+Combat functions: `gainStars`, `spendStars`, `forge`, `create(card, where)`, `transformInCombat`, `playTimes`,
+`blades()`, and `g.endTurnAfterPlay = true` to end the turn once a card resolves.
+Registered hooks (`HD.onEngine(name, fn)`): starsGained, starsSpent, created, forged, energySpent, afterPlay,
+turnStart, afterDraw, turnEnd, combatWon. `node test/regent_engine.js` checks each one.
+
 ## Needed for characters not built yet
 
 | Card | Character | Trigger | Plan |
 |---|---|---|---|
-| Void | Defect (status) | Whenever you draw this card, lose 1 Energy | add an `onDraw(g, c)` card hook in `drawOne()` |
+| Void | Defect (status) | Whenever you draw this card, lose 1 Energy | `onDraw(g, c)` (built for the Regent) |
 | Pagestorm | Necrobinder | Whenever you draw an Ethereal card, draw 1 card | power check in `drawOne()` |
 | Kingly Kick, Melancholy, Momentum Strike, Rocket Punch | Regent, Necrobinder, Defect | cost changes while held or after play | per-card `costFn` / `bonusCost` (as Up My Sleeve) |
 | Echo Form, Sword Sage, Transfigure | Defect, Regent, Necrobinder | extra plays | `resolve` play count |

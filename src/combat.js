@@ -30,10 +30,11 @@
       this.extraDrawThisTurn = 0;
       this.leftover = 0;
       this.rs = {}; // per-combat relic flags
+      this.stars = 0; // the Regent's second resource; carries over between turns, no cap
       this.enemies = [];
       this.log = [];
     }
-    freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false }; }
+    freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false, starsGained: 0, starsSpent: 0, created: 0, energySpent: 0 }; }
 
     // ---------- setup ----------
     makeCard(id, up) { return { uid: HD.uid(), id, up: !!up, bonus: 0 }; }
@@ -122,6 +123,8 @@
       if (c.bound && this.t.boundPlayed) return false;
       if (d.playIf && !d.playIf(this, c)) return false;
       if (c.id !== 'SPELLBOUND' && this.hand.some((x) => x.id === 'SPELLBOUND')) return false;
+      const sc = this.starCostOf(c);
+      if (sc !== 'X' && sc > this.stars) return false;
       if (d.cost === 'X') return true;
       return this.costOf(c) <= this.energy;
     }
@@ -232,6 +235,8 @@
         if (o.src.pw.painfulStabs) this.addStatus({ id: 'GASH', n: o.src.pw.painfulStabs, to: 'discard' });
       }
       if (!t.isPlayer && o.attack && o.src === this.p && dmg > 0 && this.p.pw.venomous && t.alive) await this.applyToxin(t, this.p.pw.venomous);
+      if (!t.isPlayer && o.attack && o.src === this.p) t.hitsTurn = (t.hitsTurn || 0) + 1;
+      if (t.isPlayer && o.attack && blocked > 0 && this.p.pw.reflect && o.src && !o.src.isPlayer && o.src.alive && !this.over) await this.damage(o.src, blocked, {});
       if (!t.isPlayer && o.attack && o.src === this.p && !this.over) {
         if (t.pw.flutter) { t.flutterHits = (t.flutterHits || 0) + 1; if (t.flutterHits >= t.pw.flutter) { delete t.pw.flutter; t.flutterHits = 0; t.forceIntent = 'STUN'; t.intent = 'STUN'; this.say(`${t.name} is knocked out of the air.`); } }
         if (t.pw.personalHive) this.addStatus({ id: 'REELING', n: t.pw.personalHive, to: 'draw' });
@@ -329,6 +334,7 @@
       if (this.p.hp <= 0) { this.over = true; this.won = false; }
       else if (!this.alive().length) {
         this.over = true; this.won = true;
+        for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.combatWon) || []) f(this);
         if (this.p.pw.improvement) { const xs = this.run.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type)); for (let i = 0; i < this.p.pw.improvement && xs.length; i++) this.run.upgrade(xs.splice(this.rng.int(xs.length), 1)[0]); }
       }
     }
@@ -383,6 +389,7 @@
       if (this.p.pw.automation) { this.drawsCounted = (this.drawsCounted || 0) + 1; if (this.drawsCounted % 10 === 0) this.gainEnergy(this.p.pw.automation); }
       if (this.p.pw.chains && this.phase === 'player' && (this.t.drawn || 0) < this.p.pw.chains) { c.bound = true; this.t.drawn = (this.t.drawn || 0) + 1; }
       this.hand.push(c);
+      if (CARDS[c.id].onDraw && !this.over) await CARDS[c.id].onDraw(this, c);
       if (this.p.pw.endlessCuts && this.isCut(c) && this.alive().length && this.phase === 'player') {
         this.hand.splice(this.hand.indexOf(c), 1);
         await this.autoPlay(c, {});
@@ -474,6 +481,74 @@
       if (hexed || HD.kwOf(c).includes('Fleeting')) return false;
       return keep || this.cardRetained(c);
     }
+    // ---------- shared hooks: relics (rh) plus anything registered in HD.ENGINE_HOOKS[name] ----------
+    async hook(name, ...args) {
+      await this.rh(name, ...args);
+      for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS[name]) || []) { if (this.over) return; await f(this, ...args); }
+    }
+    // ---------- Stars ----------
+    starCostOf(c) {
+      const d = CARDS[c.id];
+      if (d.star === 'X') return 'X';
+      if (d.star == null) return 0;
+      const k = (c.up && d.upStar != null ? d.upStar : d.star) + (c.starBonus || 0);
+      return Math.max(0, k);
+    }
+    async gainStars(n) {
+      if (n <= 0 || this.over) return;
+      this.stars += n; this.t.starsGained += n;
+      this.emit('stars', this.p, n);
+      await this.hook('starsGained', n);
+    }
+    async spendStars(n) {
+      if (n <= 0 || this.over) return;
+      this.stars = Math.max(0, this.stars - n); this.t.starsSpent += n; this.rs.starsSpent = (this.rs.starsSpent || 0) + n;
+      await this.hook('starsSpent', n);
+    }
+    // ---------- creating cards: anything new added to a pile mid-combat (status cards do not count) ----------
+    async create(c, where = 'hand') {
+      if (where === 'hand') this.addToHand(c);
+      else if (where === 'drawTop') this.draw.push(c);
+      else if (where === 'draw') this.draw.splice(this.rng.int(this.draw.length + 1), 0, c);
+      else this.discard.push(c);
+      if (CARDS[c.id].type === 'Status') return c;
+      this.t.created++; this.rs.created = (this.rs.created || 0) + 1;
+      await this.hook('created', c);
+      return c;
+    }
+    // Transform a card where it sits; the new card counts as created.
+    async transformInCombat(c, id, up) {
+      const n = this.makeCard(id, !!up);
+      for (const pile of [this.hand, this.draw, this.discard, this.ash]) {
+        const i = pile.indexOf(c);
+        if (i >= 0) { pile[i] = n; if (CARDS[n.id].type !== 'Status') { this.t.created++; this.rs.created = (this.rs.created || 0) + 1; await this.hook('created', n); } return n; }
+      }
+      return null;
+    }
+    // ---------- Forge and the Sovereign Blade ----------
+    blades(includeAsh = true) { return [...this.hand, ...this.draw, ...this.discard, ...(includeAsh ? this.ash : []), ...(this.current && this.current.id === 'SOVEREIGN_BLADE' ? [this.current] : [])].filter((c, i, a) => c.id === 'SOVEREIGN_BLADE' && a.indexOf(c) === i); }
+    async forge(n) {
+      if (n <= 0 || this.over) return;
+      // The first Forge (or the first after every Blade left the deck) creates a new Blade at 10 + n in hand.
+      if (!this.blades(false).length) {
+        const b = this.makeCard('SOVEREIGN_BLADE', false); b.forged = 0;
+        for (const x of this.ash.filter((y) => y.id === 'SOVEREIGN_BLADE')) x.forged = (x.forged || 0) + n;
+        b.forged = n;
+        await this.create(b, 'hand');
+      } else {
+        for (const b of this.blades(true)) b.forged = (b.forged || 0) + n;
+      }
+      this.rs.forged = (this.rs.forged || 0) + n;
+      this.emit('forge', this.p, n);
+      await this.hook('forged', n);
+    }
+    // Play a card several times from wherever it is, then settle it once (Decisions, Decisions).
+    async playTimes(c, times, tg) {
+      for (const pile of [this.hand, this.draw, this.discard]) { const i = pile.indexOf(c); if (i >= 0) { pile.splice(i, 1); break; } }
+      const d = CARDS[c.id];
+      for (let i = 0; i < times && !this.over; i++) { this.count(d); await this.resolve(c, d.target === 'enemy' ? (tg && tg.alive ? tg : this.randomEnemy()) : null, 0); this.t.played++; }
+      if (!this.over) await this.settle(c, false);
+    }
     randomPoolCard(filter) { return this.rng.pick(HD.POOL(this.run.color).filter(filter)).id; }
     // Whirligig: refill an empty hand during your turn.
     async topCheck() {
@@ -517,6 +592,9 @@
       const d = CARDS[c.id];
       c.freeTurn = false;
       if (d.type === 'Power') return;
+      const to = d.settleTo && !forceBurn ? d.settleTo(this, c) : null;
+      if (to === 'hand') { this.addToHand(c); return; }
+      if (to === 'drawTop') { this.draw.push(c); return; }
       if (forceBurn || HD.kwOf(c).includes('Burn') || (this.p.pw.rot && d.type === 'Skill')) await this.burn(c);
       else if (this.p.pw.nostalgia && !this.t.nostalgia && (d.type === 'Attack' || d.type === 'Skill')) { this.t.nostalgia = true; this.draw.push(c); }
       else this.discard.push(c);
@@ -535,6 +613,11 @@
       let x = 0, paid = 0;
       if (d.cost === 'X') { x = this.energy + (this.has('UNKNOWN_REAGENT') ? 2 : 0); paid = this.energy; this.energy = 0; }
       else { paid = this.costOf(c); this.energy -= paid; }
+      const sc = this.starCostOf(c);
+      const starsPaid = sc === 'X' ? this.stars : sc;
+      if (sc === 'X') x = starsPaid;
+      if (paid > 0) { this.t.energySpent += paid; await this.hook('energySpent', paid); }
+      if (starsPaid > 0) await this.spendStars(starsPaid);
       if (d.type === 'Attack' && this.p.pw.keepSwinging) delete this.p.pw.keepSwinging;
       if (d.type === 'Attack' && this.has('QUILL_NIB')) { const r = this.run.relic('QUILL_NIB'); r.counter = (r.counter || 0) + 1; if (r.counter >= 10) { r.counter = 0; this.nibCard = c; } }
       this.hand.splice(this.hand.indexOf(c), 1);
@@ -555,6 +638,8 @@
       this.t.played++;
       if (!this.over) await this.settle(c, false);
       if (!this.over) await this.rh('afterPlay', c, d, paid);
+      if (!this.over) for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.afterPlay) || []) { await f(this, c, d, paid); if (this.over) break; }
+      if (this.endTurnAfterPlay && !this.over) { this.endTurnAfterPlay = false; this.checkEnd(); if (!this.over) await this.endTurn(); return true; }
       if (!this.over && this.p.pw.echoImage) await this.gainBlock(this.p.pw.echoImage, false);
       if (!this.over && this.p.pw.coiled) { const e = this.randomEnemy(); if (e) await this.damage(e, this.p.pw.coiled, {}); }
       if (!this.over && CARDS[c.id].tags.includes('Shiv')) { this.t.ghostUsed = true; if (this.has('SPIRAL_DART')) this.addPw(this.p, 'poiseTemp', 1); }
@@ -639,6 +724,8 @@
       if (p.barkRing) { for (const x of p.barkRing) { await this.gainBlock(x.n, false); x.turns--; } p.barkRing = p.barkRing.filter((x) => x.turns > 0); }
       await this.rh('turnStart');
       if (this.over) return;
+      for (const e of this.enemies) e.hitsTurn = 0;
+      for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.turnStart) || []) { await f(this); if (this.over) return; }
       for (const c of this.discard.filter((x) => x.returnNext)) { c.returnNext = false; const i = this.discard.indexOf(c); if (i < 0) continue; this.discard.splice(i, 1); this.addToHand(c); }
       if (p.pw.prepTime) this.addPw(p, 'vigor', p.pw.prepTime);
       if (p.pw.specter) this.addPw(p, 'poise', -p.pw.specter);
@@ -664,6 +751,14 @@
       await this.drawCards(5 + (this.turn === 1 ? this.firstTurnDraw : 0) + this.extraDrawThisTurn);
       if (this.turn === 1 && !this.over) await this.rh('firstHand');
       if (!this.over) await this.rh('afterDraw');
+      if (!this.over) for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.afterDraw) || []) { await f(this); if (this.over) return; }
+      // Cards that play themselves from the Exhaust pile at the start of your turn (Bombardment).
+      for (const c of this.ash.filter((x) => CARDS[x.id].playFromAshAtTurnStart)) {
+        if (this.over || !this.alive().length) break;
+        const i = this.ash.indexOf(c); if (i < 0) continue;
+        this.ash.splice(i, 1);
+        await this.autoPlay(c, {});
+      }
       for (let i = 0; i < (p.pw.tradeTools || 0) && !this.over; i++) { await this.drawCards(1); await this.discardChoice(1, 'Trade Tools: discard a card'); }
       if (this.has('OLD_FIDDLE')) this.drawLocked = true;
       for (let i = 0; i < (p.pw.entropy || 0) && this.hand.length; i++) {
@@ -690,6 +785,9 @@
       this.ending = true;
       const p = this.p;
       const done = () => { this.ending = false; return this.checkEnd(); };
+      for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.turnEnd) || []) { await f(this); if (this.over) return done(); }
+      const top = this.draw[this.draw.length - 1];
+      if (top && CARDS[top.id].playFromDrawTopAtTurnEnd && !this.over) { this.draw.pop(); await this.autoPlay(top, {}); if (this.over) return done(); }
       for (let i = 0; i < (p.pw.frenzy || 0); i++) {
         const atks = this.hand.filter((c) => CARDS[c.id].type === 'Attack');
         if (!atks.length || !this.alive().length) break;

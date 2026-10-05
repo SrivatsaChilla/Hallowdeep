@@ -185,6 +185,10 @@
     diadem: { n: 'Diamond Crown', t: 'buff', d: () => 'Take half damage from enemies this round.' },
   };
   // Enchantment of a card instance, or null (filled in by enchants.js).
+  // Engine hooks other modules register into: HD.onEngine('starsSpent', async (g, n) => ...).
+  // Names: starsGained, starsSpent, created, forged, energySpent, afterPlay, turnStart, afterDraw, turnEnd, combatWon.
+  HD.ENGINE_HOOKS = HD.ENGINE_HOOKS || {};
+  HD.onEngine = (name, fn) => { (HD.ENGINE_HOOKS[name] = HD.ENGINE_HOOKS[name] || []).push(fn); };
   HD.charName = (id) => (HD.CHAR_NAMES && HD.CHAR_NAMES[id || 'OATHBURNER']) || (HD.CHARS && HD.CHARS[id] ? HD.CHARS[id].name : 'Oathburner');
   HD.enchOf = (c) => (c && c.ench && HD.ENCH ? HD.ENCH[c.ench.id] : null);
   HD.DEBUFFS = new Set(['exposed', 'sapped', 'brittle', 'mightDown', 'slow', 'demise', 'dampened']);
