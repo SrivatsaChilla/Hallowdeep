@@ -278,7 +278,7 @@
   const NAME_KEY = 'hollowdeep.names';
   function namesToggle() {
     const opt = (v, label) => `<button class="seg ${HD.nameMode === v ? 'on' : ''}" data-act="names" data-arg="${v}" aria-pressed="${HD.nameMode === v}">${label}</button>`;
-    return `<div class="names" role="group" aria-label="Card and enemy names">${opt('original', 'Original names')}${opt('hollowdeep', 'Hollowdeep names')}</div>`;
+    return `<div class="names" role="group" aria-label="Card and enemy names">${opt('original', 'Original names')}${opt('hollowdeep', 'HallowDeep names')}</div>`;
   }
   const VERSION_KEY = 'hollowdeep.version';
   function versionToggle() {
@@ -302,7 +302,7 @@
         </button>`; };
     if (!S.seedDefault) S.seedDefault = S.lastSeed || Math.random().toString(36).slice(2, 8);
     return `<main class="title" data-key="scr-title">
-      <h1>Hollowdeep</h1>
+      <h1>HallowDeep</h1>
       <p class="lede">Fight your way through ${HD.ACT} with a deck that grows as you go.</p>
       ${readSave() ? `<button class="primary continue" data-act="resume">Continue your run (${T('Depth')} ${readSave().run.data.floor})</button>` : ''}
       <div class="roster">

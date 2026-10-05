@@ -1,4 +1,4 @@
-// Events and ? rooms. Numbers and outcomes follow the reference data; all event text is Hollowdeep's own.
+// Events and ? rooms. Numbers and outcomes follow the reference data; all event text is HallowDeep's own.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;

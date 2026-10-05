@@ -4,7 +4,7 @@
 import asyncio, json, random, sys
 from pathlib import Path as _P
 from playwright.async_api import async_playwright
-HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html'))
+HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html'))
 
 import os
 VERBOSE = os.environ.get('QA_VERBOSE') == '1'

@@ -1,5 +1,5 @@
 // The six Ancients met at the start of Acts 2 and 3, their relics, and the cards those relics hand out.
-// Numbers follow the reference data; names and text are Hollowdeep's own.
+// Numbers follow the reference data; names and text are HallowDeep's own.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;

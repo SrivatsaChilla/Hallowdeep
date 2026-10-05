@@ -1,5 +1,5 @@
 // The Veiled: the second character. Cards, relics and potions follow the v0.111 data (HP, costs, damage, upgrades).
-// Names and text are Hollowdeep's own; HD.ORIGINAL maps them back to the original game's names.
+// Names and text are HallowDeep's own; HD.ORIGINAL maps them back to the original game's names.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;

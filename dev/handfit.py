@@ -1,7 +1,7 @@
 import asyncio
 from playwright.async_api import async_playwright
 from pathlib import Path as _P
-HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html'))
+HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html'))
 JS = """async(names)=>{ HD.setNames(names); HD.sleep=()=>Promise.resolve(); const S=HD.state,r=S.run; S.kind='monster'; S.g=new HD.Combat(r,'RIPJAW',HD.UI,'monster'); S.screen='combat'; S.busy=true; HD.render(); await S.g.start(); S.busy=false;
   const minFs=[]; const ids=Object.keys(HD.CARDS).filter(id=>!HD.CARDS[id].coop && (!HD.CARDS[id].only || HD.CARDS[id].only===HD.version)); const bad=[];
   for (let i=0;i<ids.length;i+=10) { for (const up of [false,true]) { S.g.hand = ids.slice(i,i+10).map(id=>S.g.makeCard(id, up && ['Attack','Skill','Power'].includes(HD.CARDS[id].type))); HD.render();

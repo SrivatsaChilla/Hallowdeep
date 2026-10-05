@@ -1,7 +1,7 @@
 import asyncio, json
 from playwright.async_api import async_playwright
 from pathlib import Path as _P
-HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html'))
+HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html'))
 TIP = "(()=>{const t=document.getElementById('hovertip'); return t && !t.hidden ? t.innerText.replace(/\\n+/g,' | ').slice(0,260) : null})()"
 async def main():
     async with async_playwright() as p:

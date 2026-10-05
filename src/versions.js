@@ -107,7 +107,7 @@
     for (const [id, patch] of Object.entries(RELIC_PATCH())) {
       const d = HD.RELICS[id];
       if (!d) continue;
-      // Work in Hollowdeep text: the name switch keeps the untranslated text in textHD.
+      // Work in HallowDeep text: the name switch keeps the untranslated text in textHD.
       if (!relicStable[id]) relicStable[id] = Object.fromEntries(Object.keys(patch).map((k) => [k, k === 'text' && d.textHD != null ? d.textHD : d[k]]));
       Object.assign(d, HD.version === '0.111' ? patch : relicStable[id]);
       delete d.textHD;

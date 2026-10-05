@@ -1,4 +1,4 @@
-// Potions. Numbers match the reference build; names and text are Hollowdeep's own.
+// Potions. Numbers match the reference build; names and text are HallowDeep's own.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;

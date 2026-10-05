@@ -1,4 +1,4 @@
-// Colorless cards. Numbers match the reference build; names and text are Hollowdeep's own.
+// Colorless cards. Numbers match the reference build; names and text are HallowDeep's own.
 // coop: true cards exist only for multiplayer and never appear in solo pools. noGen cards are never created mid-combat.
 (function () {
   const HD = globalThis.HD;

@@ -1,4 +1,4 @@
-// Switches displayed names between Hollowdeep's own and the original game's. Numbers and rules never change.
+// Switches displayed names between HallowDeep's own and the original game's. Numbers and rules never change.
 (function () {
   const HD = globalThis.HD;
   const O = HD.ORIGINAL;
@@ -6,7 +6,7 @@
   // Plurals translate too ("3 Phantasms" becomes "3 Apparitions").
   const re = new RegExp(`\\b(${Object.keys(O.text).sort((a, b) => b.length - a.length).map(esc).join('|')})(s|es)?\\b`, 'g');
   const plural = (w) => (/(s|x|z|ch|sh)$/.test(w) ? `${w}es` : `${w}s`);
-  // Saves the Hollowdeep value of a field the first time it is read. Always call it before overwriting.
+  // Saves the HallowDeep value of a field the first time it is read. Always call it before overwriting.
   const base = (o, k) => { const hk = `${k}HD`; if (!(hk in o)) o[hk] = o[k]; return o[hk]; };
   const sub = (s) => (HD.nameMode === 'original' && typeof s === 'string' ? s.replace(re, (m, w, pl) => (pl ? plural(O.text[w]) : O.text[w])) : s);
   const wrap = (f) => (HD.nameMode === 'original' ? (...a) => sub(f(...a)) : f);

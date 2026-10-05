@@ -1,7 +1,7 @@
 import asyncio, json
 from playwright.async_api import async_playwright
 from pathlib import Path as _P
-HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html'))
+HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html'))
 def setup(enc, ids): return f"""async()=>{{HD.sleep=()=>Promise.resolve(); const S=HD.state,r=S.run; r.feed.length=0; S.kind='monster'; S.g=new HD.Combat(r,'{enc}',HD.UI,'monster'); S.screen='combat'; S.busy=true; HD.render(); await S.g.start(); const g=S.g;
   for (const e of g.enemies) {{ e.hp=e.maxHp=200; }} g.hand={json.dumps(ids)}.map(id=>g.makeCard(id,false)); g.energy=9; S.busy=false; HD.render(); }}"""
 async def touch_drag(cdp, x0, y0, x1, y1, steps=12):

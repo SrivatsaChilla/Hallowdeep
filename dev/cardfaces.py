@@ -3,7 +3,7 @@ from pathlib import Path
 # and that every game term on the face has a tooltip.  Usage: python3 dev/cardfaces.py [path to built html]
 import asyncio, json, sys
 from playwright.async_api import async_playwright
-HTML = sys.argv[1] if len(sys.argv) > 1 else str(Path(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html')
+HTML = sys.argv[1] if len(sys.argv) > 1 else str(Path(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html')
 JS = """([names, ver])=>{
   HD.setVersion(ver); HD.setNames(names);
   const T = (s) => HD.sub(s);

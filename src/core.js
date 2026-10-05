@@ -1,4 +1,4 @@
-// Hollowdeep core: namespace, seeded RNG, keyword glossary, power metadata.
+// HallowDeep core: namespace, seeded RNG, keyword glossary, power metadata.
 (function () {
   const HD = (globalThis.HD = globalThis.HD || {});
 
@@ -45,7 +45,7 @@
   let uidCounter = 1;
   HD.uid = () => uidCounter++;
 
-  // Keyword glossary shown as tooltips. Written for Hollowdeep.
+  // Keyword glossary shown as tooltips. Written for HallowDeep.
   HD.TERMS = {
     Guard: 'Stops incoming attack damage. Guard fades at the start of your next turn.',
     Might: 'Each point adds 1 damage to every hit of your Attacks.',

@@ -1,7 +1,7 @@
 import asyncio, json
 from playwright.async_api import async_playwright
 from pathlib import Path as _P
-HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html'))
+HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html'))
 SETUP = """async(pyramid)=>{HD.sleep=(ms)=>new Promise(r=>setTimeout(r, Math.min(ms, 60))); const S=HD.state,r=S.run; r.feed.length=0; if (pyramid) r.addRelic('GLYPH_PYRAMID');
   S.kind='monster'; S.g=new HD.Combat(r,'RIPJAW',HD.UI,'monster'); S.screen='combat'; S.busy=true; HD.render(); await S.g.start(); const g=S.g;
   g.enemies[0].hp=g.enemies[0].maxHp=999; g.p.pw.ghostKnives=9;

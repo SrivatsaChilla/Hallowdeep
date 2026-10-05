@@ -1,5 +1,5 @@
 // Act 2 and 3 events, and the shared events that start appearing in Act 2.
-// Numbers follow the reference data; all event text is Hollowdeep's own.
+// Numbers follow the reference data; all event text is HallowDeep's own.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;

@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 SRC = (Path(__file__).parent / 'qa_devices.py').read_text()
 LAYOUT = re.search(r'LAYOUT = r"""(.*?)"""', SRC, re.S).group(1)
-HTML_URL = 'file://' + str(Path(__file__).resolve().parent.parent / 'dist' / 'hollowdeep.html')
+HTML_URL = 'file://' + str(Path(__file__).resolve().parent.parent / 'dist' / 'hallowdeep.html')
 SETUP = """async (enc) => { const S = HD.state; S.run.feed = []; S.kind = 'monster'; S.screen = 'combat'; S.g = new HD.Combat(S.run, enc, HD.UI, 'monster');
   S.busy = true; HD.render(); await S.g.start(); S.g.hand = ['CUT','BRACE','CRACK','CUT','BRACE','CUT','BRACE'].map((i) => S.g.makeCard(i, false)); S.busy = false; HD.render(); }"""
 CHAINS = {

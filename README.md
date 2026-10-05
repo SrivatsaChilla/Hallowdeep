@@ -1,4 +1,4 @@
-# Hollowdeep
+# HallowDeep
 
 A deckbuilding roguelike descent. Mechanics and numbers mirror a reference game 1:1; names, text, characters, monsters, art and UI are original.
 
@@ -6,7 +6,7 @@ Built so far: one full character (the Oathburner, all 87 cards), Act 1 (The Root
 
 ## Run it
 
-Open `dist/hollowdeep.html` in a browser. No server or install needed.
+Open `dist/hallowdeep.html` in a browser. No server or install needed.
 
 After editing anything in `src/`, rebuild:
 
@@ -41,7 +41,7 @@ Run all three after every change. `node test/sim.js 300 0.111` simulates the bet
     src/ui.js        screens and input
     src/style.css    tokens (light and dark), cards, layout
     src/index.html   template the build fills in
-    dev/namemap.json original id to Hollowdeep id (dev only, never ship)
+    dev/namemap.json original id to HallowDeep id (dev only, never ship)
     dev/verify.js    parity checker
     FIDELITY.md      what is exact, what is approximated, what is missing
 
@@ -72,9 +72,9 @@ Game mechanics and numbers generally are not protected by copyright, but copying
 
 ## Names
 
-The game shows the original card, relic, potion, enemy and keyword names by default. The toggle on the title screen and the map switches to Hollowdeep's own names; the choice is saved in the browser. Only names and wording change, never numbers or rules.
+The game shows the original card, relic, potion, enemy and keyword names by default. The toggle on the title screen and the map switches to HallowDeep's own names; the choice is saved in the browser. Only names and wording change, never numbers or rules.
 
-`src/names.js` is generated. After editing `dev/namemap.json`, rebuild it with `python3 dev/gen_names.py <codex data/eng dir>`. Before sharing the game publicly, consider defaulting to Hollowdeep names (the `'original'` fallback in `HD.boot` in `ui.js`) or dropping `names` and `naming` from `build.py`.
+`src/names.js` is generated. After editing `dev/namemap.json`, rebuild it with `python3 dev/gen_names.py <codex data/eng dir>`. Before sharing the game publicly, consider defaulting to HallowDeep names (the `'original'` fallback in `HD.boot` in `ui.js`) or dropping `names` and `naming` from `build.py`.
 
 ## Card art
 
