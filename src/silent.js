@@ -101,8 +101,6 @@
     play: async (g, c, t, v) => g.addPw(g.p, 'quicksilver', v.amt) });
 
   // ---------- uncommon skills ----------
-  skl('SPOOK', { name: 'Spook', rarity: 'Uncommon', cost: 0, target: 'all', only: 'stable', kw: ['Burn'], upKw: [], v: { weak: 1 }, text: (v) => `Apply ${v.weak} Sapped to ALL enemies.`,
-    play: async (g, c, t, v) => { for (const e of g.alive()) await g.apply(e, 'sapped', v.weak); } });
   skl('SOMERSAULT', { name: 'Somersault', rarity: 'Uncommon', cost: 1, v: { draw: 3 }, up: { draw: 1 }, text: (v) => `Draw ${v.draw} cards. Discard 1 card.`, play: async (g, c, t, v) => { await g.drawCards(v.draw); await g.discardChoice(1); } });
   skl('SMEAR', { name: 'Smear', rarity: 'Uncommon', cost: 1, v: { blk: 5 }, up: { blk: 3 }, text: (v, f) => `Gain ${f.b(v.blk)} Guard. Your Guard is not removed at the start of your next turn.`,
     play: async (g, c, t, v) => { await g.gainBlock(v.blk, true); g.addPw(g.p, 'smear', 1); } });

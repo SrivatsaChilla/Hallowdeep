@@ -1,5 +1,6 @@
 // Full audit against the game data and the v0.111 patch notes.
 // Usage: node dev/audit.js <stable data dir> <v0.111 data dir>   (writes dev/audit_report.txt)
+// The game follows v0.111 only; the stable export is read as reference data (older Act lists, patch-note baselines).
 const fs = require('fs'), vm = require('vm'), path = require('path'), { execFileSync } = require('child_process');
 const [STABLE, BETA] = [process.argv[2], process.argv[3]];
 if (!STABLE || !BETA) { console.error('Usage: node dev/audit.js <stable data dir> <v0.111 data dir>   (the eng/ folders of a Spire Codex export)'); process.exit(2); }
@@ -58,7 +59,7 @@ const EXCLUDE = {
 // ---------- 2. numbers: costs, damage, Block, upgrades, monster HP and attacks, relic and potion text numbers ----------
 {
   const lines = []; let bad = 0;
-  for (const [dir, ver] of [[BETA, '0.111'], [STABLE, 'stable']]) {
+  for (const [dir, ver] of [[BETA, '0.111']]) {
     const out = execFileSync('node', [path.join(__dirname, 'verify.js'), dir, ver], { encoding: 'utf8' }).trim().split('\n');
     const mism = out.filter((l) => l.startsWith('MISMATCH')); bad += mism.length;
     lines.push(`${ver}: ${out[out.length - 1]}`, ...mism.map((m) => `   ${m}`));
@@ -71,7 +72,7 @@ const EXCLUDE = {
   const KW = { Exhaust: 'Burn', Ethereal: 'Fleeting', Innate: 'Opening', Unplayable: 'Unplayable', Eternal: 'Eternal', Retain: 'Retain', Sly: 'Furtive' };
   const TT = { AnyEnemy: 'enemy', AllEnemies: 'all', Self: 'self', None: 'self', RandomEnemy: 'random' };
   const lines = []; let bad = 0;
-  for (const [ver, src] of [['0.111', D.beta.cards], ['stable', D.stable.cards]]) {
+  for (const [ver, src] of [['0.111', D.beta.cards]]) {
     HD.setVersion(ver); let n = 0;
     for (const [orig, ours] of Object.entries(MAP.cards)) {
       const c = src[orig], d = HD.CARDS[ours]; if (!c || !d || d.coop || c.multiplayer_only) continue; n++;
@@ -152,7 +153,7 @@ const PW_MAP = { STRENGTH: 'might', ARTIFACT: 'ward', PLATING: 'plate', THORNS: 
 {
   const lines = []; let bad = 0;
   (async () => {})();
-  for (const [ver, mons] of [['0.111', D.beta.monsters], ['stable', D.stable.monsters]]) {
+  for (const [ver, mons] of [['0.111', D.beta.monsters]]) {
     HD.setVersion(ver);
     for (const [orig, ours] of Object.entries(MAP.monsters)) {
       const m = mons[orig], d = HD.MON[ours]; if (!m || !d) continue;
@@ -198,17 +199,17 @@ const PW_MAP = { STRENGTH: 'might', ARTIFACT: 'ward', PLATING: 'plate', THORNS: 
   const check = (name, fn) => { let ok = false, note = ''; try { [ok, note] = fn(); } catch (e) { note = 'ERROR ' + e.message; } if (!ok) bad++; lines.push(`${ok ? 'ok  ' : 'FAIL'} ${name}${note ? ` (${note})` : ''}`); };
   const at = (ver, fn) => { const was = HD.version; HD.setVersion(ver); try { return fn(); } finally { HD.setVersion(was); } };
   const v = (id, up) => HD.vals({ id, up: !!up });
-  check('Brightest Flame: Max HP loss 1 -> 2', () => [at('0.111', () => v('WHITE_FLAME').hp) === 2 && at('stable', () => v('WHITE_FLAME').hp) === 1, '']);
+  check('Brightest Flame: Max HP loss 1 -> 2', () => [at('0.111', () => v('WHITE_FLAME').hp) === 2, '']);
   check('Beautiful Bracelet: enchants 4 random cards', () => [at('0.111', () => /4 random/.test(HD.RELICS.LOVELY_BRACELET.text)), at('0.111', () => HD.RELICS.LOVELY_BRACELET.text)]);
-  check('Axebot: Hammer Uppercut 12 -> 14, One-Two 9x2 -> 10x2', () => [at('0.111', () => HD.MON.AXE_BOT.moves.HAMMER_UPPERCUT.atk === 14 && HD.MON.AXE_BOT.moves.ONE_TWO.atk === 10) && at('stable', () => HD.MON.AXE_BOT.moves.HAMMER_UPPERCUT.atk === 12), '']);
+  check('Axebot: Hammer Uppercut 12 -> 14, One-Two 9x2 -> 10x2', () => [at('0.111', () => HD.MON.AXE_BOT.moves.HAMMER_UPPERCUT.atk === 14 && HD.MON.AXE_BOT.moves.ONE_TWO.atk === 10), '']);
   check('Axebot: respawns (Stock) and gains +10 Max HP each time', () => { const init = at('0.111', () => (HD.MON.AXE_BOT.initFor ? HD.MON.AXE_BOT.initFor() : HD.MON.AXE_BOT.init) || {}); return [!!init.stock, `starting powers ${JSON.stringify(init)}`]; });
-  check('Mecha Knight: Flamethrower also deals 8 damage', () => [at('0.111', () => HD.MON.CLOCK_KNIGHT.moves.FLAMETHROWER.atk === 8) && at('stable', () => HD.MON.CLOCK_KNIGHT.moves.FLAMETHROWER.atk == null), '']);
+  check('Mecha Knight: Flamethrower also deals 8 damage', () => [at('0.111', () => HD.MON.CLOCK_KNIGHT.moves.FLAMETHROWER.atk === 8), '']);
   check('Rend: cost 2 -> 1, damage 15(18) -> 10(12)', () => [at('0.111', () => HD.CARDS.TEAR_OPEN.cost === 1 && v('TEAR_OPEN').base === 10 && v('TEAR_OPEN', true).base === 12), '']);
-  check('Salvo now Uncommon (Splash now Rare; Splash not built)', () => [at('0.111', () => HD.CARDS.BARRAGE.rarity === 'Uncommon') && at('stable', () => HD.CARDS.BARRAGE.rarity === 'Rare'), '']);
+  check('Salvo now Uncommon (Splash now Rare; Splash not built)', () => [at('0.111', () => HD.CARDS.BARRAGE.rarity === 'Uncommon'), '']);
   check('Expect a Fight: 3 cost, 15(16) Block + 5(8) per Strength', () => [at('0.111', () => HD.CARDS.HUNKER ? true : /Block/.test(Object.values(HD.CARDS).find((d) => d.name === 'Expect a Fight' || (MAP.cards.EXPECT_A_FIGHT && d.id === MAP.cards.EXPECT_A_FIGHT)).text(v(MAP.cards.EXPECT_A_FIGHT), { d: (n) => n, b: (n) => n }, { id: MAP.cards.EXPECT_A_FIGHT }, null))), '']);
   check('Forgotten Ritual: gains Energy without needing an Exhaust', () => { const id = MAP.cards.FORGOTTEN_RITUAL; const t = at('0.111', () => HD.CARDS[id].text(v(id), { d: (n) => n, b: (n) => n }, { id }, null)); return [!/if you.*Exhaust|Exhausted a card/i.test(HD.sub(t)), HD.sub(t)]; });
   check('Rampage: 9 -> 10 damage, scaling 5(9) -> 5(10)', () => { const id = MAP.cards.RAMPAGE; const b = at('0.111', () => [v(id).dmg, v(id).inc, v(id, true).inc]); return [b[0] === 10 && b[1] === 5 && b[2] === 10, JSON.stringify(b)]; });
-  check('Blade of Ink: Inky gives no bonus damage in v0.111, still Weak', () => [at('0.111', () => HD.ENCH.INKY.dmgAdd(0, {}) === 0) && at('stable', () => HD.ENCH.INKY.dmgAdd(0, {}) === 1) && !!HD.ENCH.INKY.after, '']);
+  check('Blade of Ink: Inky gives no bonus damage in v0.111, still Weak', () => [at('0.111', () => HD.ENCH.INKY.dmgAdd(0, {}) === 0) && !!HD.ENCH.INKY.after, '']);
   check('Mirage: Exhausts, upgrade removes Exhaust, cost stays 1', () => [at('0.111', () => HD.CARDS.SHIMMER.kw.includes('Burn') && HD.CARDS.SHIMMER.upKw.length === 0 && HD.CARDS.SHIMMER.upCost == null), '']);
   check('Jeweled Mask picks a non-Innate Power', () => [/random Power from your draw pile/.test(HD.RELICS.JEWEL_MASK.text), 'Innate Powers start in hand, so the draw pile holds only non-Innate ones']);
   check('Not built here: Regent, Necrobinder, Defect cards; Soul Fysh; Ascension-only values', () => [true, 'out of scope']);

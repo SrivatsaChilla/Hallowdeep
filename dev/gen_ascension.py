@@ -1,8 +1,8 @@
 # Builds src/ascension_data.js: per-monster Ascension HP (A8, Tough Enemies) and attack damage (A9, Deadly Enemies),
-# for both card sets, from the Spire Codex monster data.  Usage: python3 dev/gen_ascension.py <stable eng dir> <v0.111 eng dir>
+# from the Spire Codex v0.111 monster data.  Usage: python3 dev/gen_ascension.py <v0.111 eng dir>
 import json, sys, subprocess
 from pathlib import Path
-stable, beta = Path(sys.argv[1]), Path(sys.argv[2])
+beta = Path(sys.argv[-1])
 nm = json.load(open(Path(__file__).parent / 'namemap.json'))['monsters']
 aliases = json.loads(subprocess.check_output(['node', '-e', """
 const fs=require('fs'),vm=require('vm');const ctx=vm.createContext({console,Math});
@@ -10,7 +10,7 @@ for (const f of ['core','cards','potions','monsters','relics','versions','combat
 const HD=ctx.HD; const moves={}; for (const [k,d] of Object.entries(HD.MON)) moves[k]=Object.keys(d.moves);
 console.log(JSON.stringify({alias: HD.MOVE_ALIASES||{}, moves}));"""], cwd=Path(__file__).parent.parent))
 out = {}
-for ver, d in (('stable', stable), ('0.111', beta)):
+for ver, d in (('0.111', beta),):
     mons = {m['id']: m for m in json.load(open(d / 'monsters.json'))}
     table = {}
     for orig, ours in nm.items():

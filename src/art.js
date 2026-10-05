@@ -180,7 +180,7 @@
     SLEIGHT: ['cards', 'mask', ['sparks'], 0], MIASMA_CLOUD: ['spores', 'skull', ['ash'], 0], SLEEVE_KNIVES: ['dagger', 'cards', ['speed'], 25],
     TRIP: ['claw', 'shield', ['quake'], 0], SHIMMER: ['mask', 'tear', ['aura'], 0], REFLEXES: ['eye', 'cards', ['speed'], 0],
     SIDLE: ['mask', 'bolt', ['aura'], 0], PLANNER: ['scroll', 'bolt', ['aura'], 0], HIDDEN_STASH: ['dagger', 'coins', ['sparks'], 0],
-    SPOOK: ['mask', 'eye', ['ring'], 0], SILENT_KILL: ['dagger', 'skull', ['slash'], 40], CURTAIN_CALL: ['burst', 'skull', ['sparks', 'aura'], 0],
+    SILENT_KILL: ['dagger', 'skull', ['slash'], 40], CURTAIN_CALL: ['burst', 'skull', ['sparks', 'aura'], 0],
     SLAUGHTER: ['sword', 'blood', ['drops', 'slash'], 50], THE_CHASE: ['claw', 'eye', ['speed'], 0], ROUGH_HIDE: ['claw', 'shield', ['ring'], 0],
     ECHO_IMAGE: ['mask', 'mask', ['aura'], 0], VENOMOUS: ['tear', 'claw', ['drops', 'aura'], 0], KNIFE_WHEEL: ['swirl', 'dagger', ['sparks'], 0],
     MASTERMIND: ['crown', 'cards', ['aura'], 0], COILED_FORM: ['tentacle', 'eye', ['aura'], 0], TRADE_TOOLS: ['anvil', 'cards', ['sparks'], 0],

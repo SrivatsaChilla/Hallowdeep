@@ -41,7 +41,7 @@
     spawn(id, o = {}) {
       let d = HD.MON[id];
       const asc = (this.run && this.run.asc) || 0;
-      const A = asc >= 8 && HD.ASC_MON ? (HD.ASC_MON[HD.version === 'stable' ? 'stable' : '0.111'] || {})[id] : null;
+      const A = asc >= 8 && HD.ASC_MON ? (HD.ASC_MON['0.111'] || {})[id] : null;
       // Ascension 9 (Deadly Enemies): stronger attacks, per move, as in the data.
       if (A && A.atk && asc >= 9) d = Object.assign({}, d, { moves: Object.fromEntries(Object.entries(d.moves).map(([k, m]) => [k, A.atk[k] != null && m.atk != null ? Object.assign({}, m, { atk: A.atk[k] }) : m])) });
       // Ascension 8 (Tough Enemies): more HP.

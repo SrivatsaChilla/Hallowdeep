@@ -17,9 +17,9 @@
     GOOPY: { name: 'Goopy', extra: () => "Permanently increase this card's Guard by 1.",  fits: tagged('Brace'), kwAdd: ['Burn'], text: (n) => `Burn. Gains 1 Guard for good each time it is played${n ? ` (+${n})` : ''}.`, blockAdd: (n) => n,
       after: async (g, c) => { c.ench.n++; if (c.src && c.src.ench) c.src.ench.n++; } },
     IMBUED: { name: 'Imbued', fits: isSkill, text: () => 'Played automatically at the start of each combat.' },
-    // Inky: +1 damage on the stable branch; v0.111 removed the bonus damage and kept the Weak.
-    INKY: { name: 'Inky', extra: () => 'Apply 1 Sapped.', fits: playable, text: () => (HD.version === 'stable' ? 'Deals 1 more damage and applies 1 Sapped.' : 'Applies 1 Sapped.'),
-      dmgAdd: () => (HD.version === 'stable' ? 1 : 0),
+    // Inky: v0.111 removed the bonus damage and kept the Weak.
+    INKY: { name: 'Inky', extra: () => 'Apply 1 Sapped.', fits: playable, text: () => 'Applies 1 Sapped.',
+      dmgAdd: () => 0,
       after: async (g, c, t) => { const e = t && t.alive ? t : null; if (e) await g.apply(e, 'sapped', 1); } },
     INSTINCT: { name: 'Instinct', fits: isAtk, text: () => 'Deals double Attack damage.', mult: 2 },
     MOMENTUM: { name: 'Momentum', extra: (n) => `Increase this card's damage by ${n} this combat.`,  fits: isAtk, text: (n) => `Deals ${n} more damage each time it is played this combat.`, dmgAdd: (n, c) => c.momentum || 0,

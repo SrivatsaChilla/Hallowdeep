@@ -2,7 +2,7 @@
 
 A deckbuilding roguelike descent. Mechanics and numbers mirror a reference game 1:1; names, text, characters, monsters, art and UI are original.
 
-Built so far: two characters (the Oathburner and the Veiled), all three acts with their monsters, events and six Ancients, Ascension 0 to 10, enchantments, potions and relics, a v0.111 / stable card-set switch, original or HallowDeep names, and layouts tested on 16 screen sizes from desktops to small phones. The Regent is in progress (see dev/REGENT.md).
+Built so far: two characters (the Oathburner and the Veiled), all three acts with their monsters, events and six Ancients, Ascension 0 to 10, enchantments, potions and relics, original or HallowDeep names, and layouts tested on 16 screen sizes from desktops to small phones. The Regent is in progress (see dev/REGENT.md).
 
 ## Run it
 
@@ -22,7 +22,7 @@ Netlify builds from source using `netlify.toml`: it runs `python3 build.py` and 
     node test/sim.js 300       # plays 300 random runs headless, reports crashes and stalls
     node dev/verify.js <codex data/eng dir>   # number parity against a Spire Codex export
 
-Run all three after every change. `node test/sim.js 300 0.111` simulates the beta card set, and `node dev/verify.js <codex data-beta/v0.111.0/eng> 0.111` checks it. `sim.js` also lists any card, potion or relic that never got exercised.
+Run all three after every change. `node dev/verify.js <codex data-beta/v0.111.0/eng> 0.111` checks it. `sim.js` also lists any card, potion or relic that never got exercised.
 
 ## Layout
 
@@ -86,7 +86,7 @@ Every card has an original painted-style illustration generated as SVG in `src/a
 
 ## Versions
 
-The title screen switches between the stable card set and the v0.111 beta set (the default). `src/versions.js` holds the beta changes as a patch over the stable cards: `v` and `up` merge into the stable values, anything else replaces them. Cards that only exist in a version carry `only: '0.111'` and stay out of the pool otherwise.
+The game follows the v0.111 data. Cards and monsters first written from the older data get the v0.111 changes from `src/versions.js` once at load: `v` and `up` merge into the older values, anything else replaces them. Cards added in v0.111 carry `only: '0.111'`.
 
 ## Saving and controls
 
@@ -114,11 +114,11 @@ A deck card carries `ench: { id, n }`. Combat copies keep it plus a `src` link b
 
 ## Characters
 
-`HD.CHARS` holds each character: HP, Gold, Energy, starting deck and relic, the card color (pool), the ancient versions used by Archaic Tooth and Touch of Orobas, and the ids of its Strike and Defend. A run is created as `new HD.Run(seed, charId)`; every pool lookup goes through `run.color`. The Veiled's cards are written from the v0.111 data; `STABLE_PATCH` in versions.js turns them back into the stable cards when the toggle is on stable.
+`HD.CHARS` holds each character: HP, Gold, Energy, starting deck and relic, the card color (pool), the ancient versions used by Archaic Tooth and Touch of Orobas, and the ids of its Strike and Defend. A run is created as `new HD.Run(seed, charId)`; every pool lookup goes through `run.color`. The Veiled's cards are written from the v0.111 data.
 
 ## Audit
 
-`node dev/audit.js [stable data dir] [v0.111 data dir]` runs every check against the data and writes `dev/audit_report.txt`:
+`node dev/audit.js [stable data dir] [v0.111 data dir]` (the game follows v0.111; the stable export is only reference data) runs every check against the data and writes `dev/audit_report.txt`:
 coverage (every card, relic, potion, event and Act 1-3 monster in the data is built or excluded with a stated reason),
 numbers (both card sets), keywords, targets, types and keyword upgrades, whether each card, relic and potion text names the same
 mechanics as the data (reviewed wording differences are listed, not counted), monster move sequences and starting powers,

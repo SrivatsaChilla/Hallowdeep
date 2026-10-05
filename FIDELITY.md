@@ -1,6 +1,6 @@
 # Fidelity notes
 
-Reference data: Spire Codex export (stable branch, repo snapshot of Sep 29 2026, changelog 1.3.0). Ascension 0 values throughout.
+Reference data: Spire Codex export (repo snapshot of Sep 29 2026, changelog 1.3.0) and its v0.111 beta export. The game follows v0.111 only; the older export serves as reference.
 
 ## Exact
 
@@ -34,9 +34,7 @@ Reference data: Spire Codex export (stable branch, repo snapshot of Sep 29 2026,
 - Aegis does not stop HP loss you inflict on yourself.
 ## Game versions
 
-Two card sets, picked on the title screen:
-- Stable: the main data set. Every card, relic and potion number is checked against it (314 entries, 0 mismatches).
-- Beta v0.111 (default): the v0.111 beta changes on top. 15 Ironclad cards change (Bloodletting, Colossus, Crimson Mantle, Cruelty, Demon Form, Dominate, Expect a Fight, Forgotten Ritual, Howl from Beyond, Mangle, Pact's End, Rampage, Setup Strike, Tank, Taunt), Giant Rock deals 20, and Midnight and Outrage join the pool (Blaze is co-op only). Checked against the v0.111 data: 317 entries, 0 mismatches.
+The game follows the v0.111 data (there is no card-set switch). Compared with the older data: 15 Ironclad cards change (Bloodletting, Colossus, Crimson Mantle, Cruelty, Demon Form, Dominate, Expect a Fight, Forgotten Ritual, Howl from Beyond, Mangle, Pact's End, Rampage, Setup Strike, Tank, Taunt), Giant Rock deals 20, and Midnight and Outrage join the pool (Blaze is co-op only). Checked against the v0.111 data: 317 entries, 0 mismatches.
 
 Not built for v0.111 yet: Neow's two new relics (Dowsing Rod, Neow's Sacrifice) and the Ambergris potion; the data does not say which side of Neow's offer they sit on.
 
@@ -76,11 +74,11 @@ All 22 enchantments, one per card, saved with the deck and shown on the card (na
 
 ## The Veiled (the Silent)
 
-Built from the v0.111 data: 70 HP, 99 Gold, 3 Energy, 5 Strikes, 5 Defends, Neutralize and Survivor, Ring of the Snake. All 86 solo cards (80 in the reward pool, plus 4 Basic and 2 Ancient), the Shiv token, 9 relics and 3 potions, with every cost, number, keyword, target and type checked against v0.111 (668 entries) and, with the version toggle on stable, against the stable data (662 entries). The stable toggle restores the 12 cards v0.111 changed (Outbreak back to a Power, Well-Laid Plans back to retaining 1 card, Expertise back to drawing up to 6, Tracking back to double damage, Haze, Flick-Flack, Mirage, Anticipate and three rarities), removes Sidestep and adds back Scare. The 5 multiplayer-only Silent cards are defined but never offered. Built mechanics: Poison (ticks at the start of each creature's turn, ignores Block), Accelerant, Shivs (with Accuracy, Phantom Blades, Fan of Knives, Knife Trap, Helical Dart), Sly (a card discarded from your hand during your turn plays itself for free), discard effects (Tingsha, Tough Bandages, Memento Mori), and every power.
+Built from the v0.111 data: 70 HP, 99 Gold, 3 Energy, 5 Strikes, 5 Defends, Neutralize and Survivor, Ring of the Snake. All 86 solo cards (80 in the reward pool, plus 4 Basic and 2 Ancient), the Shiv token, 9 relics and 3 potions, with every cost, number, keyword, target and type checked against v0.111 (668 entries).111 changed (Outbreak back to a Power, Well-Laid Plans back to retaining 1 card, Expertise back to drawing up to 6, Tracking back to double damage, Haze, Flick-Flack, Mirage, Anticipate and three rarities), removes Sidestep and adds back Scare. The 5 multiplayer-only Silent cards are defined but never offered. Built mechanics: Poison (ticks at the start of each creature's turn, ignores Block), Accelerant, Shivs (with Accuracy, Phantom Blades, Fan of Knives, Knife Trap, Helical Dart), Sly (a card discarded from your hand during your turn plays itself for free), discard effects (Tingsha, Tough Bandages, Memento Mori), and every power.
 
 Ancient relics follow the character: Archaic Tooth turns Neutralize into Suppress, Touch of Orobas turns Ring of the Snake into Ring of the Drake, and Dusty Tome offers the Silent's Ancient cards.
 
-The Inky enchantment from Blade of Ink only applies Weak in v0.111 (the patch notes removed its bonus damage; the v0.111 data has no enchantment file), and adds 1 damage on stable. Approximations: Speedster counts every card drawn on your turn, including the opening draw. Nightmare's copies arrive at the start of your next turn.
+The Inky enchantment from Blade of Ink only applies Weak in v0.111 (the patch notes removed its bonus damage; the v0.111 data has no enchantment file). Approximations: Speedster counts every card drawn on your turn, including the opening draw. Nightmare's copies arrive at the start of your next turn.
 
 ## Audit fixes (v0.111)
 

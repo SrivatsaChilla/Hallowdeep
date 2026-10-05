@@ -9,7 +9,7 @@ for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', '
 }
 const HD = ctx.HD;
 const N = +process.argv[2] || 300;
-HD.setVersion(process.argv[3] || 'stable');
+HD.setVersion();
 const CHAR = process.env.CHAR || 'OATHBURNER';
 const allRelics = Object.keys(HD.RELICS).filter((id) => HD.RELICS[id].rarity !== 'Starter' && ['shared', 'neow', 'ancient', 'darv', HD.CHARS[CHAR].color].includes(HD.RELICS[id].pool || 'shared'));
 

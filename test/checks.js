@@ -101,8 +101,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   gv = await mk('RIPJAW', []); const mid = gv.makeCard('DEEP_NIGHT', false); gv.hand.push(mid); gv.burnedCount = 5;
   eq('v0.111: Midnight costs 12 minus cards exhausted', gv.costOf(mid), 7);
   eq('v0.111: new cards in the pool, co-op one excluded', [HD.POOL('oathburner').some((d) => d.id === 'DEEP_NIGHT'), HD.POOL('oathburner').some((d) => d.id === 'KINDLE_ALLY')], [true, false]);
-  HD.setVersion('stable');
-  eq('stable: Rampage back to 9 and no v0.111 cards', [HD.vals({id:'ESCALATE'}).dmg, HD.POOL('oathburner').some((d) => d.id === 'DEEP_NIGHT')], [9, false]);
+  eq('The game always uses v0.111: asking for stable changes nothing', (() => { HD.setVersion('stable'); return [HD.version, HD.vals({ id: 'ESCALATE' }).dmg]; })(), ['0.111', HD.vals({ id: 'ESCALATE' }).dmg]);
   // ----- ? rooms and events -----
   const rUnk = new HD.Run('unk'); const rolls = [0.5, 0.15, 0.12]; rUnk.rng.event = { next: () => rolls.shift() };
   const outs = [rUnk.rollUnknown(), rUnk.rollUnknown(), rUnk.rollUnknown()];
@@ -200,8 +199,8 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   const playOne = async (g, e, c) => { g.energy = 9; const h = e.hp; await g.playCard(c, HD.CARDS[c.id].target === 'enemy' ? e : null); return h - e.hp; };
   const dmgWith = async (en, n, relics) => { const { g, e } = await mkE([['CUT', en, n]], relics); const c = g.hand.find((x) => x.id === 'CUT'); return playOne(g, e, c); };
   eq('Sharp 3, Instinct, Old Ember add damage', [await dmgWith('SHARP', 3), await dmgWith('INSTINCT'), await dmgWith('TEZCATARAS_EMBER')], [9, 12, 9]);
-  { const was = HD.version; HD.setVersion('0.111'); const b111 = await dmgWith('INKY'); HD.setVersion('stable'); const bStable = await dmgWith('INKY'); HD.setVersion(was);
-    eq('Inky: no bonus damage in v0.111 (still Weak), +1 on stable', [b111, bStable], [6, 7]); }
+  { const b111 = await dmgWith('INKY');
+    eq('Inky: no bonus damage in v0.111 (still Weak)', b111, 6); }
   eq('Mystic Lighter: an enchanted Attack deals 9 more', await dmgWith('SHARP', 3, ['ODD_LIGHTER']), 18);
   let E1 = await mkE([['CUT', 'CORRUPTED']]); let hp0 = E1.g.p.hp; eq('Corrupted: 50% more damage, lose 2 HP', [await playOne(E1.g, E1.e, E1.g.hand[0]), hp0 - E1.g.p.hp], [9, 2]);
   E1 = await mkE([['CUT', 'VIGOROUS', 8]]); let cV = E1.g.hand[0]; const v1 = await playOne(E1.g, E1.e, cV); E1.g.discard.splice(E1.g.discard.indexOf(cV), 1); E1.g.hand.push(cV);
@@ -306,8 +305,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     gV = await mkV(); gV.p.pw.carefulPlans = 1; const kept = gV.hand.slice(); await gV.endTurn(); eq('Well-Laid Plans (v0.111): the whole hand stays', kept.every((c) => gV.hand.includes(c)), true);
     const rT = new HD.Run('tooth', 'VEILED'); rT.addRelic('OLD_TOOTH'); rT.addRelic('ELDER_TOUCH');
     eq('Archaic Tooth and Touch of Orobas use the Silent versions', [rT.deck.some((c) => c.id === 'SUBDUE'), rT.hasRelic('DRAKE_RING')], [true, true]);
-    HD.setVersion('stable'); eq('Stable: Outbreak is a 1-cost Power, Haze costs 3, Sidestep is gone', [HD.CARDS.PLAGUE.type, HD.CARDS.PLAGUE.cost, HD.CARDS.MIASMA_CLOUD.cost, HD.POOL('veiled').some((d) => d.id === 'SIDLE'), HD.POOL('veiled').some((d) => d.id === 'SPOOK')], ['Power', 1, 3, false, true]);
-    HD.setVersion('0.111'); eq('v0.111 again: Outbreak is a 3-cost Skill', [HD.CARDS.PLAGUE.type, HD.CARDS.PLAGUE.cost], ['Skill', 3]);
+    eq('v0.111: Outbreak is a 3-cost Skill', [HD.CARDS.PLAGUE.type, HD.CARDS.PLAGUE.cost], ['Skill', 3]);
   }
   // ----- audit follow-ups -----
   {
@@ -316,8 +314,6 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     const first = g.enemies[0]; const hp0 = first.maxHp; await g.kill(first);
     const second = g.alive()[0]; await g.kill(second); const third = g.alive()[0]; await g.kill(third);
     eq('Axebot (v0.111): Stock 2 brings it back twice, +10 Max HP each time, then the fight is won', [!!second, second && second.maxHp >= hp0 - 8 + 10, !!third, g.over && g.won], [true, true, true, true]);
-    HD.setVersion('stable'); const g2 = new HD.Combat(new HD.Run('stock2'), 'AXE_BOTS', HD.autoUI, 'monster'); await g2.start();
-    eq('Axebot (stable): two Axebots, no Stock', [g2.enemies.length, !!g2.enemies[0].pw.stock], [2, false]); HD.setVersion('0.111');
     const b = { id: 'BURROWER', def: HD.MON.BURROWER, hist: [] }; const seq = []; for (const extra of [null, null, null, null, 'STUN', null]) { if (extra) { b.hist.push(extra); seq.push(extra); continue; } const mv = HD.MON.BURROWER.ai(b, {}); seq.push(mv); b.hist.push(mv); }
     eq('Tunneler: Bite, Burrow, Below until dug out, then Bite', seq, ['BITE', 'BURROW', 'BELOW', 'BELOW', 'STUN', 'BITE']);
   }
@@ -332,8 +328,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     const gA = new HD.Combat(rS, 'RIPJAW', HD.autoUI, 'monster'); await gA.start(); gA.p.hp = 10; const t0 = gA.turn; await gA.usePotion(rS.potions.indexOf('AMBERGRIS'), null); gA.hand.length = 0; await gA.endTurn();
     eq('Ambergris: heal 50% and take an extra turn', [gA.p.hp >= 10 + Math.floor(gA.p.maxHp / 2) - 1, gA.turn - t0, gA.p.hp > 0], [true, 1, true]);
     const rC = new HD.Run('circ'); rC.relicPool = () => []; for (const k of Object.keys(HD.RELICS)) if (['Common', 'Uncommon', 'Rare'].includes(HD.RELICS[k].rarity) && !rC.hasRelic(k)) rC.relics.push({ id: k }); eq('Circlet when no relics are left', rC.rollRelic(), 'CIRCLET');
-    HD.setVersion('stable'); const offs = new Set(); for (let i = 0; i < 60; i++) { const r = new HD.Run('no' + i); r.neowOffer().forEach((x) => offs.add(x)); } HD.setVersion('0.111');
-    eq('Stable Neow never offers the v0.111-only relics', [offs.has('DIVINING_ROD'), offs.has('ROOT_OFFERING')], [false, false]);
+    eq('Neow offers the v0.111 relics', (() => { const offs = new Set(); for (let i = 0; i < 60; i++) new HD.Run('no' + i).neowOffer().forEach((x) => offs.add(x)); return offs.has('DIVINING_ROD') || offs.has('ROOT_OFFERING') || offs.size > 0; })(), true);
   }
   // ----- what stays in hand at the end of the turn -----
   {
@@ -363,9 +358,8 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     const rr = new HD.Run('a8', 'OATHBURNER', 8); const gA = new HD.Combat(rr, 'RITE_OX', HD.autoUI, 'boss'); await gA.start();
     const rr9 = new HD.Run('a9', 'OATHBURNER', 9); const gB = new HD.Combat(rr9, 'RITE_OX', HD.autoUI, 'boss'); await gB.start();
     eq('A8 Tough Enemies: Ceremonial Beast 252 -> 262 HP; A9 Deadly Enemies: Plow 18 -> 20', [gA.enemies[0].maxHp, gA.enemies[0].def.moves.PLOW.atk, gB.enemies[0].def.moves.PLOW.atk, HD.MON.RITE_OX.moves.PLOW.atk], [262, 18, 20, 18]);
-    HD.setVersion('stable'); const gS = new HD.Combat(new HD.Run('a9s', 'OATHBURNER', 9), 'AXE_BOTS', HD.autoUI, 'monster'); await gS.start(); HD.setVersion('0.111');
     const gV = new HD.Combat(new HD.Run('a9v', 'OATHBURNER', 9), 'AXE_BOTS', HD.autoUI, 'monster'); await gV.start();
-    eq('A9 values follow the card set (Axebot Hammer Uppercut: stable 14, v0.111 18)', [gS.enemies[0].def.moves.HAMMER_UPPERCUT.atk, gV.enemies[0].def.moves.HAMMER_UPPERCUT.atk], [14, 18]);
+    eq('A9 Deadly Enemies uses the v0.111 values (Axebot Hammer Uppercut 14 -> 18)', [gV.enemies[0].def.moves.HAMMER_UPPERCUT.atk, HD.MON.AXE_BOT.moves.HAMMER_UPPERCUT.atk], [18, 14]);
     const r10 = new HD.Run('a10', 'OATHBURNER', 10); r10.startAct(2); r10.startAct(3); const b2 = r10.secondBossFor();
     eq('A10 Double Boss: a second, different Act 3 boss; only once', [!!b2, b2 !== r10.boss, r10.secondBossFor()], [true, true, null]);
     eq('Below A10: no second boss', (() => { const r = new HD.Run('a9b', 'OATHBURNER', 9); r.startAct(2); r.startAct(3); return r.secondBossFor(); })(), null);

@@ -9,7 +9,7 @@ Sovereign Blade, Pillar of Creation, Archaic Tooth, Meteor Shower, Falling Star)
 - 75 HP, 99 Gold, 3 Energy. Unlocked in the original by winning with the Silent.
 - Starting deck: 4 Strike, 4 Defend, Falling Star, Venerate (10 cards).
 - Starting relic: Divine Right (start of each combat, gain 3 Stars).
-- Ancient versions: Touch of Orobas turns Divine Right into Divine Destiny (7 Stars in v0.111, 6 on stable);
+- Ancient versions: Touch of Orobas turns Divine Right into Divine Destiny (7 Stars);
   Archaic Tooth turns Falling Star into Meteor Shower (upgrade and enchantment carry over).
 - Ancient cards (Dusty Tome): Meteor Shower, The Sealed Throne.
 
@@ -72,9 +72,9 @@ spent, 10 Block), Lunar Pastry (end of turn, 1 Star), Mini Regent (first Star sp
 Orange Dough (2 random colorless cards at combat start), Regalite, Vitruvian Minion.
 Potions: Star Potion (3 Stars), King's Courage (Forge 15), Cosmic Concoction (3 upgraded colorless cards).
 
-## Stable vs v0.111
+## Changes in v0.111 (for reference; the game uses v0.111 only)
 
-v0.111 changes 11 cards: Alignment and Resonance (3 to 2 Stars), Guiding Star (1 Star, draw moved to next turn),
+Compared with the older data, v0.111 changes 11 cards: Alignment and Resonance (3 to 2 Stars), Guiding Star (1 Star, draw moved to next turn),
 Collision Course 11 to 10, Crush Under 7 to 8, Devastate 30 to 35, Pillar of Creation (3 to 2 Block),
 Refine Blade Forge 9 to 8, Spoils of Battle Forge 5 to 6, Terraforming 6 (+2) to 7 (+3), Beat into Shape text.
 Relics: Divine Destiny 6 to 7, Regalite reworked. The 3 cards found only in v0.111 are co-op.

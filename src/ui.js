@@ -280,11 +280,6 @@
     const opt = (v, label) => `<button class="seg ${HD.nameMode === v ? 'on' : ''}" data-act="names" data-arg="${v}" aria-pressed="${HD.nameMode === v}">${label}</button>`;
     return `<div class="names" role="group" aria-label="Card and enemy names">${opt('original', 'Original names')}${opt('hollowdeep', 'HallowDeep names')}</div>`;
   }
-  const VERSION_KEY = 'hollowdeep.version';
-  function versionToggle() {
-    const opt = (v) => `<button class="seg ${HD.version === v ? 'on' : ''}" data-act="version" data-arg="${v}" aria-pressed="${HD.version === v}">${HD.VERSIONS[v]}</button>`;
-    return `<div class="names" role="group" aria-label="Game version">${Object.keys(HD.VERSIONS).map(opt).join('')}</div>`;
-  }
   function setNames(mode) {
     HD.setNames(mode);
     try { localStorage.setItem(NAME_KEY, HD.nameMode); } catch (e) { /* storage unavailable */ }
@@ -317,7 +312,7 @@
         <button class="ghost" data-act="asc" data-arg="1" aria-label="Raise Ascension" ${S.asc >= 10 ? 'disabled' : ''}>+</button>
         <span class="desc">${S.asc ? `<b>${esc(HD.ascName(S.asc))}</b> ${esc(HD.ascText(S.asc))}${S.asc > 1 ? ' Includes every level below.' : ''}` : esc(HD.ascText(0))}</span>
       </div>
-      <div class="toggles">${namesToggle()}${versionToggle()}</div>
+      <div class="toggles">${namesToggle()}</div>
       <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, Esc cancels.</p>
     </main>`;
   }
@@ -556,7 +551,7 @@
     return `<main class="panel end" data-key="scr-end">
       <h1>${won ? 'Victory' : 'You fell'}</h1>
       <p>${won ? `All three acts are behind you${r.asc ? ` on Ascension ${r.asc}` : ''}. The run is won.` : `${T('Depth')} ${r.floor}, ${S.g ? `against ${esc(HD.ENC[S.g.encId].name)}` : `at ${esc(S.deathBy || 'an event')}`}.`}</p>
-      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}. ${HD.VERSIONS[HD.version]} card set.</p>
+      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
       <button class="primary" data-act="title">New descent</button>
     </main>`;
   }
@@ -1178,7 +1173,6 @@
   function resumeRun() {
     const save = readSave();
     if (!save) return render();
-    HD.setVersion(save.version);
     const r = (S.run = HD.Run.fromSave(save.run));
     r.feed = [];
     const u = save.ui;
@@ -1385,10 +1379,6 @@
         checkPending();
         return render();
       }
-      case 'version':
-        HD.setVersion(arg);
-        try { localStorage.setItem(VERSION_KEY, HD.version); } catch (e) { /* storage unavailable */ }
-        return render();
       case 'gift': r.addRelic(arg); S.screen = 'map'; S.scrollMap = true; checkPending(); return render();
       case 'title': S.screen = 'title'; S.overlay = null; return render();
       case 'node': return enterNode(arg);
@@ -1611,9 +1601,9 @@
   })();
 
   HD.boot = () => {
-    let saved = null, ver = null;
-    try { saved = localStorage.getItem(NAME_KEY); ver = localStorage.getItem(VERSION_KEY); } catch (e) { /* storage unavailable */ }
-    HD.setVersion(ver || '0.111');
+    let saved = null;
+    try { saved = localStorage.getItem(NAME_KEY); } catch (e) { /* storage unavailable */ }
+    HD.setVersion();
     HD.setNames(saved || 'original');
     render();
   };

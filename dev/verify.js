@@ -1,12 +1,12 @@
 // Parity check against a Spire Codex export: card numbers, monster HP and attacks, and the numbers in relic and potion text.
-// Usage: node dev/verify.js /path/to/codex/data/eng [stable|0.111]
+// Usage: node dev/verify.js /path/to/codex/data-beta/v0.111.0/eng   (the game follows v0.111 only)
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2];
 if (!dir) { console.log('usage: node dev/verify.js <codex data/eng dir>'); process.exit(1); }
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
 for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'neow2', 'ascension_data', 'ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
-HD.setVersion(process.argv[3] || 'stable');
+HD.setVersion();
 const map = JSON.parse(fs.readFileSync(path.join(__dirname, 'namemap.json')));
 const load = (n) => Object.fromEntries(JSON.parse(fs.readFileSync(path.join(dir, n + '.json'))).map((x) => [x.id, x]));
 const codexCards = load('cards'), codexMons = load('monsters'), codexRelics = load('relics'), codexPots = load('potions');
