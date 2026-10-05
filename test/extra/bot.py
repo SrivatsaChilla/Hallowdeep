@@ -41,7 +41,7 @@ async def main():
                     continue
                 if o == 'pick': await click('.overlay .card'); continue
                 if o == 'bonus':
-                    if not await click('.overlay [data-act=take], .overlay [data-act=takecard]'): await click('[data-act=bonus-done]')
+                    if not await click('.overlay [data-act=take]:not([disabled]), .overlay [data-act=takecard]:not([disabled])'): await click('[data-act=bonus-done]')
                     continue
                 if o == 'choice': await click('[data-act=choicePick]'); continue
                 if o in ('pile','potion','info','cardinfo'): await click('[data-act=close]'); continue
