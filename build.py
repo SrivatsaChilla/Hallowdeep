@@ -6,5 +6,6 @@ js = "\n".join((root / "src" / f"{n}.js").read_text() for n in order)
 css = (root / "src" / "style.css").read_text()
 html = (root / "src" / "index.html").read_text().replace("/*CSS*/", css).replace("/*JS*/", js)
 out = root / "dist" / "hollowdeep.html"
+out.parent.mkdir(parents=True, exist_ok=True)  # dist/ is not in the repo
 out.write_text(html)
 print(f"wrote {out} ({len(html)//1024} KB)")
