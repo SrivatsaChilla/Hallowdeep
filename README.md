@@ -122,6 +122,8 @@ and each item of the official v0.111 patch notes that applies to built content.
 
 `python3 dev/qa_devices.py [device names]` plays five real fights through the screen on 14 device sizes (1920x1080 down to a 320x568 phone and a 568x320 phone held sideways), with a mouse on desktops and touch on tablets and phones, and checks after every action for errors, stuck screens, cards that fail to play, page scrolling, and controls, cards or enemies that are off screen or covered.
 
+`python3 dev/qa_resize.py` starts fights at one size and then resizes the window or rotates the device through a chain of sizes (desktop windows, phones and tablets), running the same layout check after every change.
+
 `node test/triggers.js` plays out every card trigger that is built: Sly from each discard source (cards, Tools of the Trade, Gambler's Brew, Gambling Chip), exhaust triggers, end-of-turn effects of cards held in hand, draw, shuffle and replay effects. `dev/TRIGGERS.md` lists each trigger type, the rule from the data, the engine function it must go through, and the triggers the remaining characters need.
 
 `python3 dev/cardfaces.py` renders every card (base and upgraded, both name modes, both versions) and checks that each keyword it has (Sly, Retain, Innate, Ethereal, Exhaust and so on) is printed on its face and that every game term on a card has a tooltip. `python3 dev/handfit.py` puts every card in a phone-sized hand and checks that no name or text is cut off.

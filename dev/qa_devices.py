@@ -9,7 +9,7 @@ HTML_URL = 'file://' + str((_P(__file__).resolve().parent.parent / 'dist' / 'hol
 import os
 VERBOSE = os.environ.get('QA_VERBOSE') == '1'
 DEVICES = {  # name: (width, height, touch)
-    'desktop-1920': (1920, 1080, False), 'laptop-1366': (1366, 768, False), 'laptop-1280': (1280, 720, False), 'small-1024': (1024, 768, False),
+    'desktop-1920': (1920, 1080, False), 'panel-tall': (1029, 1236, False), 'panel-narrow': (820, 1100, False), 'laptop-1366': (1366, 768, False), 'laptop-1280': (1280, 720, False), 'small-1024': (1024, 768, False),
     'tablet-portrait': (768, 1024, True), 'tablet-landscape': (1024, 768, True), 'ipad-mini': (744, 1133, True),
     'phone-large': (430, 932, True), 'phone': (390, 844, True), 'phone-small': (360, 640, True), 'phone-tiny': (320, 568, True),
     'phone-land': (844, 390, True), 'phone-land-small': (667, 375, True), 'phone-land-tiny': (568, 320, True),
@@ -63,9 +63,16 @@ LAYOUT = r"""() => {
 
 STATE = "() => { const S = HD.state, g = S.g; return { screen: S.screen, busy: !!S.busy, over: !!(g && g.over), phase: g && g.phase, energy: g && g.energy, hand: g ? g.hand.map((c) => c.uid) : [], playable: g && g.phase === 'player' && !S.busy ? g.hand.filter((c) => g.canPlay(c)).map((c) => [c.uid, c.id, HD.CARDS[c.id].target, HD.CARDS[c.id].type]) : [], alive: g ? g.alive().length : 0, overlay: S.overlay && S.overlay.kind, sel: !!S.sel, potions: S.run ? S.run.potions.map((p, i) => p ? [i, p, HD.POTIONS[p].target] : null).filter(Boolean) : [] }; }"
 CARDPT = """(uid) => { const el = document.querySelector(`.hand .card[data-key="h${uid}"]`); if (!el) return null; const r = el.getBoundingClientRect();
-  let right = r.right; for (let n = el.nextElementSibling; n; n = n.nextElementSibling) if (n.classList.contains('card')) { right = Math.min(right, n.getBoundingClientRect().left); break; }
-  const x = (r.left + Math.max(right, r.left + 8)) / 2, y = r.top + r.height * 0.55; const hit = document.elementFromPoint(x, y);
-  return { x, y, ok: !!(hit && el.contains(hit)), what: hit ? ((hit.closest('.card') ? 'card ' + (hit.closest('.card').dataset.cid || '?') + ' ' + hit.closest('.card').className.split(' ').filter(c => ['flying','sel','gone'].includes(c)).join(',') : hit.className.toString().slice(0, 20))) : 'nothing', top: document.querySelector('.hand').getBoundingClientRect().top }; }"""
+  const top = document.querySelector('.hand').getBoundingClientRect().top;
+  // Find a point that really lands on this card (fanned cards are tilted, so the visible part is not a neat strip).
+  for (const fy of [0.55, 0.4, 0.7, 0.3, 0.8]) for (const fx of [0.15, 0.3, 0.08, 0.45, 0.6, 0.75, 0.9]) {
+    const x = r.left + r.width * fx, y = r.top + r.height * fy;
+    if (x < 1 || y < 1 || x > innerWidth - 1 || y > innerHeight - 1) continue;
+    const hit = document.elementFromPoint(x, y);
+    if (hit && el.contains(hit)) return { x, y, ok: true, what: 'card', top };
+  }
+  const x = r.left + r.width * 0.15, y = r.top + r.height * 0.55, hit = document.elementFromPoint(x, y);
+  return { x, y, ok: false, what: hit ? (hit.closest('.card') ? 'card ' + (hit.closest('.card').dataset.cid || '?') : hit.className.toString().slice(0, 20)) : 'nothing', top }; }"""
 FOEPT = "(i) => { const f = [...document.querySelectorAll('.foe')].filter((x) => !x.classList.contains('dying') && !x.classList.contains('fled'))[i]; if (!f) return null; const r = (f.querySelector('.sigil') || f).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }"
 
 async def run_device(b, name):
@@ -171,7 +178,11 @@ async def run_device(b, name):
                 else: await drag(pt['x'], pt['y'], pt['x'], max(12, pt['top'] - 130))
             await asyncio.sleep(0.12); st2 = await settle()
             played = uid not in st2['hand'] or st2['over'] or st2['overlay'] or st2['energy'] != e0
-            if not played: flag('input', f'{enc}: {"click" if use_click else ("touch drag" if touch else "mouse drag")} did not play {cid} ({target})')
+            if not played:
+                extra = ''
+                if os.environ.get('QA_DIAG') and target == 'enemy':
+                    extra = ' | ' + json.dumps(await pg.evaluate("([x,y]) => ({under: document.elementsFromPoint(x,y).slice(0,3).map(e => (e.closest('.foe') ? '[foe ' + e.closest('.foe').className.trim() + '] ' : '') + e.className.toString().slice(0,20)), foes: [...document.querySelectorAll('.foe')].map(f => { const r = f.querySelector('.sigil').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom), f.className.trim()]; }), sel: HD.state.sel && HD.state.sel.id, alive: HD.state.g.alive().length, aimedAt: [Math.round(x), Math.round(y)]})", [f['x'], f['y']] if f else [0, 0]))
+                flag('input', f'{enc}: {"click" if use_click else ("touch drag" if touch else "mouse drag")} did not play {cid} ({target}){extra}')
             else: plays += 1
             st = st2
         if st['screen'] == 'combat' and not st['over']: flag('flow', f'{enc}: fight not finished after {actions} actions')
