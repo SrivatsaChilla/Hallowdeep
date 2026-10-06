@@ -572,19 +572,24 @@
     </main>`;
   }
 
+  // An Ancient: its name and title, a line in its voice beside its sigil, then one row per gift.
   function ancientScreen() {
     const r = S.run;
-    const neow = r.act === 1;
-    const who = neow || !HD.ANCIENTS[r.ancient] ? T('The Rootmother') : T(HD.ANCIENTS[r.ancient].name);
-    const offer = S.offer.map((id) => {
-      const d = HD.RELICS[id];
-      return `<button class="choice gift ${d.bane ? 'bane' : ''}" data-key="gift-${id}" data-act="gift" data-arg="${id}">${HD.relicIcon(id, 'medal')}<b>${esc(d.name)}</b><span>${esc(d.text)}</span>${d.bane ? '<em>Comes with a cost</em>' : ''}</button>`;
+    const neow = r.act === 1 || !HD.ANCIENTS[r.ancient];
+    const id = neow ? 'ROOTMOTHER' : r.ancient;
+    const who = T(neow ? 'The Rootmother' : HD.ANCIENTS[id].name);
+    const voice = HD.ANCIENT_VOICE[id] || { epithet: '', lines: [''] };
+    const line = voice.lines[HD.hashSeed(`${r.seed}:${r.act}`) % voice.lines.length];
+    const rows = S.offer.map((rid) => {
+      const d = HD.RELICS[rid];
+      return `<button class="choice gift ${d.bane ? 'bane' : ''}" data-key="gift-${rid}" data-act="gift" data-arg="${rid}">${HD.relicIcon(rid, 'medal')}<span class="gtext"><b>${esc(d.name)}</b><span>${esc(d.text)}</span></span>${d.bane ? '<em>Comes with a cost</em>' : ''}</button>`;
     }).join('');
     return `${bar()}<main class="panel ancient" data-key="scr-ancient">
-      <h2>${esc(who)}</h2>
-      <p>${neow ? 'Something ancient stirs beneath the first roots. It has mended your wounds, and it offers one gift before you begin.'
-        : `The way down to ${esc(actName())} is guarded by something very old. It mends your wounds, and it will part with one of its treasures.`}</p>
-      <div class="choices">${offer}</div>
+      <header class="anc-plate"><h2>${esc(who)}</h2>${voice.epithet ? `<small>${esc(T(voice.epithet))}</small>` : ''}</header>
+      <p class="anc-note">${neow ? 'Something ancient stirs beneath the first roots. It has mended your wounds.'
+        : `The way down to ${esc(actName())} is guarded by something very old. It has mended your wounds.`}</p>
+      <div class="anc-talk"><span class="anc-face">${sigil('ANCIENT_' + id, 60)}</span><p class="bubble">${esc(T(line))}</p></div>
+      <div class="gifts" role="group" aria-label="Choose one gift">${rows}</div>
     </main>`;
   }
 

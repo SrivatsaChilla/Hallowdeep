@@ -163,6 +163,17 @@
     VAKUU: { name: 'The Whisperer', acts: [3], pool: pool('VAKUU') },
   });
   HD.ANCIENTS.DARV.acts = [2, 3];
+  // How each Ancient introduces itself on its screen: a title under the name and a few opening lines (one is shown).
+  HD.ANCIENT_VOICE = {
+    ROOTMOTHER: { epithet: 'Keeper of the First Roots', lines: ['...little one.. ...the roots.. remember you...', '...wake.. ...take.. what the deep gives...', '...again.. you come.. ...again.. I mend...'] },
+    DARV: { epithet: 'Keeper of Lost Things', lines: ["Everything down here was someone's once. Pick one.", 'I keep what the dark forgets. You may borrow one.', 'Mind the pile. Take one, and only one.'] },
+    OROBAS: { epithet: 'Who Holds the Low Water', lines: ['The tide brings what it brings. Choose.', 'Salt and patience. One gift, then go.', 'The water has been waiting for you.'] },
+    PAEL: { epithet: 'Watcher in the Wax', lines: ['We see you. We have always seen you.', 'So many eyes, and all of them on you. Choose.', 'We watched you climb down. Take what we offer.'] },
+    TEZCATARA: { epithet: 'Who Keeps the Last Fire', lines: ['Sit. Warm your hands. Then take something.', 'Little ember, you look cold. One gift.', 'The fire remembers every traveler. Choose.'] },
+    NONUPEIPE: { epithet: 'Who Counts the Coins Alone', lines: ['Gold, gold, gold. Touch only one.', 'Shh. Count with me. Then choose.', 'You may have one. One! Not two.'] },
+    TANX: { epithet: 'Who Never Lost a Trail', lines: ['You have been hunted all the way down. Arm yourself.', 'Prey or hunter? Choose, and we will see.', 'The trail ends here, for now. Take a weapon.'] },
+    VAKUU: { epithet: 'The Voice at Your Shoulder', lines: ['...closer... ...I have something for you...', '...yes... ...that one... ...or that one...', "...don't listen to the others... ...listen to me..."] },
+  };
   HD.Run.prototype.ancientOffer = function () {
     // Ascension 2 (Weary Traveler): Ancients heal only 80% of your missing HP.
     this.hp = this.asc >= 2 ? this.hp + Math.floor((this.maxHp - this.hp) * 0.8) : this.maxHp;

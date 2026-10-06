@@ -398,12 +398,38 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .names .seg.on { background: var(--ink); color: var(--bg); }
 .side .names { margin-top: .2rem; }
 
-/* ---------- ancients, curses, leaps ---------- */
-.ancient .choices { margin-top: 1rem; }
-button.choice.gift { width: 250px; min-height: 150px; justify-content: flex-start; }
-button.choice.gift b { font-size: 1.35rem; }
-button.choice.gift em { margin-top: auto; font-size: .85rem; color: var(--blood); font-style: normal; }
-button.choice.gift.bane { border-color: var(--blood); border-style: dashed; }
+/* ---------- ancients: nameplate, a line in the Ancient's voice, one row per gift ---------- */
+.ancient { display: flex; flex-direction: column; gap: .9rem; }
+.anc-plate h2 { margin: 0; font-size: 2.2rem; line-height: 1.05; }
+.anc-plate small { display: block; margin-top: .3rem; font-style: italic; font-size: .95rem; color: var(--ink2); }
+.anc-note { margin: 0; color: var(--ink2); }
+.anc-talk { display: flex; align-items: center; gap: .9rem; margin-top: .3rem; }
+.anc-face { flex: 0 0 auto; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--brass); }
+.anc-face .sigil { width: 54px; height: 54px; }
+.bubble {
+  position: relative; margin: 0; max-width: 560px; padding: .7rem 1rem; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); font-size: 1.05rem; line-height: 1.4;
+}
+.bubble::before {
+  content: ''; position: absolute; left: -8px; top: 50%; width: 14px; height: 14px; background: var(--panel);
+  border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: translateY(-50%) rotate(45deg);
+}
+.gifts { display: flex; flex-direction: column; gap: .55rem; max-width: 680px; margin-top: .3rem; }
+button.choice.gift { flex-direction: row; align-items: center; gap: .9rem; width: 100%; padding: .7rem 1.1rem .7rem .8rem; border-left: 4px solid var(--brass); transition: transform .12s ease, border-color .12s ease; }
+button.choice.gift:hover, button.choice.gift:focus-visible { transform: translateX(4px); border-color: var(--brass); }
+button.choice.gift .gtext { display: flex; flex-direction: column; gap: .1rem; flex: 1; min-width: 0; }
+button.choice.gift b { font-size: 1.25rem; color: var(--brass); }
+button.choice.gift em { flex: 0 0 auto; margin-left: auto; font-size: .82rem; font-style: normal; color: var(--blood); }
+button.choice.gift.bane { border-style: dashed; border-color: var(--blood); border-left: 4px solid var(--blood); }
+@media (max-width: 760px) {
+  .anc-plate h2 { font-size: 1.7rem; }
+  .anc-face { width: 56px; height: 56px; }
+  .anc-face .sigil { width: 42px; height: 42px; }
+  .bubble { font-size: .95rem; }
+  button.choice.gift { flex-wrap: wrap; gap: .3rem .75rem; }
+  button.choice.gift em { flex-basis: 100%; box-sizing: border-box; margin-left: 0; padding-left: calc(44px + .75rem); }
+}
+@media (prefers-reduced-motion: reduce) { button.choice.gift { transition: none; } button.choice.gift:hover { transform: none; } }
 .card.t-curse { --frame: #4a3a52; }
 .card.r-curse .cname { border-bottom-color: #4a3a52; }
 .node.reach.leap circle { stroke-dasharray: 4 3; }
@@ -575,7 +601,7 @@ button.choice.loot > span b { display: block; font-size: 1.15rem; margin-bottom:
 /* ---------- Fur Coat: marked fights ---------- */
 .map .node.marked circle { stroke: #c79a3a; stroke-width: 3.5; stroke-dasharray: 4 3; }
 
-.choice.gift .medal { width: 46px; height: 46px; margin-bottom: .3rem; }
+.choice.gift .medal { flex: 0 0 auto; width: 44px; height: 44px; }
 
 /* ---------- the Veiled ---------- */
 .sigil.veiled .body { fill: #23312a; stroke: #7fb08a; }
