@@ -32,7 +32,7 @@
     for (const [k, p] of Object.entries(HD.PW)) { const n = base(p, 'n'); p.n = (on && O.powers[k]) || sub(n); p.d = wrap(base(p, 'd')); }
     if (!HD.TERMS_HD) HD.TERMS_HD = HD.TERMS;
     HD.TERMS = on ? Object.fromEntries(Object.entries(HD.TERMS_HD).map(([k, v]) => [sub(k), sub(v)])) : HD.TERMS_HD;
-    HD.CHAR_NAMES = on ? { OATHBURNER: 'Ironclad', VEILED: 'Silent', CROWNED: 'Regent', WIREBOUND: 'Defect' } : { OATHBURNER: 'Oathburner', VEILED: 'The Veiled', CROWNED: 'The Crowned', WIREBOUND: 'The Wirebound' };
+    HD.CHAR_NAMES = on ? { OATHBURNER: 'Ironclad', VEILED: 'Silent', CROWNED: 'Regent', WIREBOUND: 'Defect', UNBURIED: 'Necrobinder' } : { OATHBURNER: 'Oathburner', VEILED: 'The Veiled', CROWNED: 'The Crowned', WIREBOUND: 'The Wirebound', UNBURIED: 'The Unburied' };
     HD.CHAR = HD.CHAR_NAMES.OATHBURNER;
     HD.ACT_NAMES = on ? { 1: 'Overgrowth', 2: 'Hive', 3: 'Glory' } : { 1: 'The Rootworks', 2: 'The Waxen Hive', 3: 'The Gilded Court' };
     HD.ACT = HD.ACT_NAMES[1];

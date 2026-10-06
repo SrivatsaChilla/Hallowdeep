@@ -1,7 +1,7 @@
 // Targeted rule checks against the reference numbers.
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ctx=vm.createContext({console,setTimeout,Math,Promise});
-for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
+for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','osty','necro_data','necro','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
 const HD=ctx.HD; let fails=0;
 const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console.log('FAIL',name,a,'!=',b);} else console.log('ok  ',name); };
 (async()=>{

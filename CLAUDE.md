@@ -33,7 +33,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
 - Everything hangs off the global `HD`. Key files:
   - core.js: RNG, glossary terms, power definitions, HD.onEngine hook registry
   - cards.js (Ironclad, called the Oathburner), silent.js (Silent, the Veiled), regent.js (Regent, the Crowned; numbers
-    from the generated regent_data.js), defect.js (Defect, the Wirebound; defect_data.js; Orbs in orbs.js), colorless.js, potions.js, relics.js
+    from the generated regent_data.js), defect.js (Defect, the Wirebound; defect_data.js; Orbs in orbs.js), necro.js (Necrobinder, the
+    Unburied; necro_data.js; Osty and Doom in osty.js), colorless.js, potions.js, relics.js
   - monsters.js, act2.js, act3.js: monsters and encounters; events.js, events2.js; ancients.js, neow2.js
   - combat.js: the Combat class (turns, damage, piles, Stars, Forge, card creation, hooks)
   - run.js: the Run class (map, rewards, shop, saves); ascension.js + ascension_data.js (generated)
@@ -60,7 +61,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
     node test/regent_engine.js               # Stars, Forge, card creation and other engine hooks
     node test/regent_cards.js                # the Regent's real cards, relics and potions
     node test/defect_cards.js                # Cells (Orbs) and the Defect's cards, relics and potions
-    node test/sim.js 100                     # headless random runs; CHAR=VEILED, CROWNED or WIREBOUND, ASC=10 env vars
+    node test/necro_cards.js                 # Clutch (Osty), Knell (Doom) and the Necrobinder's cards
+    node test/sim.js 100                     # headless random runs; CHAR=VEILED, CROWNED, WIREBOUND or UNBURIED, ASC=10 env vars
     node test/extra/invariants.js 300        # fuzzing for state invariants
     node dev/verify.js ../spire-codex/data-beta/v0.111.0/eng          # number parity, expect 0 mismatches
     node dev/audit.js ../spire-codex/data/eng ../spire-codex/data-beta/v0.111.0/eng   # 7 audit sections, all ok
@@ -68,14 +70,14 @@ One self-contained HTML file, no framework, no runtime dependencies.
     python3 dev/qa_resize.py                 # resizing and rotating mid-fight
     python3 dev/timer_check.py; python3 dev/ascension_unlock.py; python3 dev/cardfaces.py; python3 dev/handfit.py
     python3 test/extra/phone_layouts.py | card_text_fit.py | tooltips.py | save_load.py | touch_inspect.py
-    python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent, "crown" the Regent, "wire" the Defect
+    python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent, "crown" the Regent, "wire" the Defect, "necro" the Necrobinder
 
 Generators: dev/gen_names.py (names.js), dev/gen_ascension.py (ascension_data.js), dev/gen_regent.py (regent_data.js),
-dev/gen_defect.py (defect_data.js); the character generators share dev/charlib.py.
+dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js); the character generators share dev/charlib.py.
 
 ## Before committing
 
-Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, a short sim for each character, and the browser tests that
+Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, necro_cards.js, a short sim for each character, and the browser tests that
 touch what changed (any layout change: qa_devices on a few sizes plus qa_resize). Keep commits focused.
 
 Commit messages: imperative summary line under about 60 characters, blank line, then a body explaining what changed
@@ -95,7 +97,7 @@ Research is in dev/REGENT.md. HallowDeep names: the Regent is "The Crowned" (id 
   Then polish: Glint gain and spend animation, a Glint icon in card text, relic icons for the Regent's relics.
 - The 5 co-op Regent cards are not defined (the Silent's co-op cards are stubs; add stubs if the compendium needs them).
 
-## The Defect (fifth roster slot; slot four is kept for the Necrobinder)
+## The Defect (fifth roster slot)
 
 Research is in dev/DEFECT.md. HallowDeep names: the Defect is "The Wirebound" (id WIREBOUND, color wirebound); Orb is
 "Cell", Channel "Prime", Evoke "Release", Focus "Tuning", Lightning "Bolt", Frost "Rime", Dark "Murk", Plasma "Flux",
@@ -107,10 +109,20 @@ Glass "Shard", Void "Drain", Fuel "Battery". All names are in dev/gen_defect.py.
 - Next: the browser suites with the Defect once Playwright is installed (qa_devices has a WIREBOUND fight; bot.py
   takes "wire" seeds); Cell channel and release animations.
 
+## The Necrobinder (fourth roster slot)
+
+Research is in dev/NECROBINDER.md. HallowDeep names: the Necrobinder is "The Unburied" (id UNBURIED, color unburied);
+Osty is "Clutch", Summon "Rouse", Doom "Knell", Soul "Wraith", Sweeping Gaze "Sweeping Glare". All names are in
+dev/gen_necro.py.
+- Built on the `necrobinder` branch (from defect): src/osty.js (Clutch, Knell, Wraiths), src/necro.js (all 86 solo
+  cards, 5 co-op stubs, tokens, 9 relics, 3 potions, every power), roster slot 4 with a skull sigil, a Clutch HP bar under
+  the portrait, card art, names.js. Parity 0 mismatches, audit all ok, test/necro_cards.js 50 checks, sims 0 errors.
+  Approximations in FIDELITY.md ("The Unburied").
+- Next: the browser suites once Playwright is installed (qa_devices has an UNBURIED fight; bot.py takes "necro" seeds).
+
 ## Backlog
 
 - Portrait phone performance (about 12 fps under 4x CPU throttle).
 - Content needing other characters: Sea Glass, Prismatic Gem, Colorful Philosophers.
-- Not built: Golden Compass, Crystal Sphere, The Merchant???, Future of Potions, co-op cards, the Underdocks act,
-  the Necrobinder.
+- Not built: Golden Compass, Crystal Sphere, The Merchant???, Future of Potions, co-op cards, the Underdocks act.
 - Optional: attach the built HTML to GitHub Releases.

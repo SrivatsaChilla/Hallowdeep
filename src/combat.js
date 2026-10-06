@@ -2,7 +2,7 @@
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;
-  const TICK = ['exposed', 'sapped', 'brittle', 'dampened'];
+  const TICK = ['exposed', 'sapped', 'brittle', 'dampened', 'debilitate'];
 
   class Combat {
     constructor(run, encId, ui, kind = 'monster') {
@@ -110,6 +110,7 @@
       if (c.costTurn != null) k = c.costTurn;
       if (c.bonusCost) k += c.bonusCost;
       if (d.costFn) k = d.costFn(this, c, k);
+      for (const f of HD.COST_MODS || []) k = f(this, c, k, d);
       if (d.type === 'Attack' && this.p.pw.tangled) k += 1;
       if (d.type === 'Skill' && this.p.pw.freeSkill) k = 0;
       if (d.type === 'Power' && this.p.pw.freePower) k = 0;
@@ -150,10 +151,12 @@
       if (t) {
         if ((t.pw.flutter || t.pw.soar) && isAtk) d *= 0.5;
         if (isAtk && t.pw.sapped && this.p.pw.huntersMark) d *= HD.trackingMult || 1.5;
-        if (t.pw.exposed) d *= (this.has('PAPER_NEWT') ? 1.75 : 1.5) + (this.p.pw.merciless || 0) / 100;
+        if (t.pw.exposed) d *= 1 + (this.has('PAPER_NEWT') ? 0.75 : 0.5) * (t.pw.debilitate ? 2 : 1) + (this.p.pw.merciless || 0) / 100;
         if (t.pw.slow) d *= 1 + 0.1 * this.t.played;
       }
       if (isAtk && this.p.pw.giga) d *= 3;
+      // Lethality: the first Attack each turn (in hand: none played yet; resolving: it is the first).
+      if (isAtk && this.p.pw.lethality && (this.t ? this.t.attacks : 0) <= (this.hand.includes(c) ? 0 : 1)) d *= 1 + this.p.pw.lethality / 100;
       if (d0 && d0.dmgMult) d *= d0.dmgMult(this, t, c);
       if (en && en.mult) d *= en.mult;
       if (isAtk && this.p.pw.doubleAtk) d *= 2;
@@ -162,7 +165,8 @@
     }
     enemyDmg(e, base) {
       let d = base + (e.pw.might || 0) - (e.pw.mightDown || 0);
-      if (e.pw.sapped) d *= this.has('PAPER_CRANE') ? 0.6 : 0.75;
+      if (e.pw.sapped) d *= 1 - (this.has('PAPER_CRANE') ? 0.4 : 0.25) * (e.pw.debilitate ? 2 : 1);
+      if (e.pw.doom && e.pw.doom >= e.hp && this.has('DEATHLESS_SEAL')) d *= 0.5;
       if (e.pw.dampened) d *= 0.7;
       if (e.pw.backAttack && this.facing && this.facing !== e.uid && this.alive().some((x) => x.uid === this.facing)) d *= 1.5;
       if (this.p.pw.tainted) d += this.p.pw.tainted;
@@ -199,6 +203,7 @@
       }
       this.addPw(t, k, n);
       if (k === 'exposed' && this.p.pw.bloodhound) await this.drawCards(this.p.pw.bloodhound);
+      if (debuff && !t.isPlayer && !this.over) await this.hook('debuffApplied', t, k, n);
       return true;
     }
     async applyToPlayer(k, n, src) {
@@ -231,10 +236,12 @@
       t.block -= blocked;
       dmg -= blocked;
       if (blocked) this.emit('block', t, blocked);
+      if (t.isPlayer && o.attack && dmg > 0 && this.osty && this.osty.alive) dmg = await this.ostyAbsorb(dmg);
       // Burrowed creatures are knocked out when their Guard is broken.
       if (!t.isPlayer && t.pw.burrowed && blocked && t.block === 0) { delete t.pw.burrowed; t.forceIntent = 'STUN'; t.intent = 'STUN'; this.say(`${t.name} is dug out and dazed.`); }
       if (dmg > 0) await this.loseHp(t, dmg, o);
       else if (!blocked) this.emit('hit', t, 0);
+      if (!t.isPlayer && o.attack && dmg > 0 && (o.src === this.p || o.osty) && !this.over) await this.hook('attackDealt', t, dmg, o);
       if (t.isPlayer && o.attack && dmg > 0 && this.p.pw.gambit && !this.over) { this.say('You went all in, and lost.'); this.p.hp = 0; this.over = true; this.won = false; return dmg; }
       if (t.isPlayer && o.src && o.attack && dmg > 0 && !this.over) {
         if (o.src.pw.paperCuts) { this.p.maxHp = Math.max(1, this.p.maxHp - o.src.pw.paperCuts); this.p.hp = Math.min(this.p.hp, this.p.maxHp); this.say(`You lose ${o.src.pw.paperCuts} Max HP.`); }
@@ -334,7 +341,7 @@
       if (this.leader === e) {
         for (const x of this.enemies) { if (!x.reviveHp) x.reviveTurn = null; if (x !== e && x.alive && x.pw.minion) { x.alive = false; x.fled = true; this.say(`${x.name} flees.`); } }
       }
-      await this.rh('onEnemyDeath', e);
+      await this.hook('onEnemyDeath', e);
       this.checkEnd();
     }
     checkEnd() {
@@ -819,6 +826,7 @@
       if (p.pw.plate) await this.gainBlock(p.pw.plate, false);
       await this.rh('turnEnd');
       if (this.over) return done();
+      if (p.pw.doom && p.hp <= p.pw.doom) { p.hp = 0; this.say('Your Knell tolls.'); this.over = true; this.won = false; return done(); }
       if (p.pw.regen) { this.heal(p.pw.regen); this.addPw(p, 'regen', -1); }
       if (p.pw.ritual) this.addPw(p, 'might', p.pw.ritual);
       for (const c of this.hand.slice()) {
@@ -904,6 +912,7 @@
         if (e.alive && e.pw.territorial) this.addPw(e, 'might', e.pw.territorial);
         if (e.alive && e.pw.demise) { await this.loseHp(e, e.pw.demise); if (this.over) return; }
         delete e.pw.mightDown;
+        if (e.alive && e.pw.doom && e.hp <= e.pw.doom) { await this.doomKill(e); if (this.over) return; }
       }
       for (const t of [this.p, ...this.alive()]) {
         for (const k of TICK) {

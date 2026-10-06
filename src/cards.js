@@ -13,7 +13,8 @@
     const v = Object.assign({}, d.v);
     if (ci.up) for (const k in d.up) v[k] = (v[k] || 0) + d.up[k];
     if (ci.bonus && v.dmg !== undefined) v.dmg += ci.bonus;
-    if (ci.grow && v.blk !== undefined) v.blk += ci.grow; // permanent Guard growth (Genetic Algorithm)
+    // permanent growth from the deck card: Guard if the card gives Guard (Genetic Algorithm), else damage (The Scythe)
+    if (ci.grow) { if (v.blk !== undefined) v.blk += ci.grow; else if (v.dmg !== undefined) v.dmg += ci.grow; }
     return v;
   };
   HD.kwOf = (ci) => {

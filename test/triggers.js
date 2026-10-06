@@ -2,7 +2,7 @@
 // Usage: node test/triggers.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'neow2', 'ascension_data', 'ascension'])
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'neow2', 'ascension_data', 'ascension'])
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
 HD.setVersion('0.111');
@@ -239,6 +239,18 @@ const play = async (g, id, t) => { const c = g.hand.find((x) => x.id === id); aw
     const g = await fight('WIREBOUND', { hand: [], draw: ['DRAIN'], discard: [] });
     g.energy = 3; await g.drawCards(1);
     eq('Void: drawing it loses 1 Energy', g.energy, 2);
+  }
+
+  // ---------- the Necrobinder (the Unburied) ----------
+  {
+    const g = await fight('UNBURIED', { hand: ['LEAFSTORM'], draw: ['RAKE', 'RAKE', 'DESECRATE'], discard: [] });
+    await play(g, 'LEAFSTORM'); await g.drawCards(1);
+    eq('Pagestorm: drawing an Ethereal card draws 1 more', g.hand.length, 2);
+  }
+  {
+    const g = await fight('UNBURIED', { hand: ['REMAKE', 'RAKE'], draw: [], discard: [] });
+    await play(g, 'REMAKE'); const r = g.hand[0]; const cost = g.costOf(r); await play(g, 'RAKE');
+    eq('Transfigure: the card gains Replay 1 (6 + 6) and costs 1 more', [r.replay, cost, hp(g)[0]], [1, 2, 12]);
   }
 
   console.log(fails ? `${fails} of ${n} FAILED` : `all ${n} trigger checks passed`);
