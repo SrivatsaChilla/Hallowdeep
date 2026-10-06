@@ -4,7 +4,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path'), { execFileSync } = require('child_process');
 const [STABLE, BETA] = [process.argv[2], process.argv[3]];
 if (!STABLE || !BETA) { console.error('Usage: node dev/audit.js <stable data dir> <v0.111 data dir>   (the eng/ folders of a Spire Codex export)'); process.exit(2); }
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
 const ctx = vm.createContext({ console, Math, Promise, setTimeout, CSS: { escape: (s) => s } });
 for (const f of FILES) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
@@ -20,7 +20,7 @@ const rev = (table) => Object.fromEntries(Object.entries(table).map(([a, b]) => 
 
 // ---------- 1. coverage: everything in the v0.111 data is built, or excluded for a stated reason ----------
 const EXCLUDE = {
-  cards: (c) => (c.multiplayer_only ? 'co-op only' : ['defect', 'necrobinder', 'regent'].includes(c.color) ? `${c.color} not built` : c.id === 'SPLASH' ? 'needs other characters\' Attacks'
+  cards: (c) => (c.multiplayer_only ? 'co-op only' : c.id === 'SPLASH' ? 'needs other characters\' Attacks'
     : ({ DEBRIS: 'Defect token', FUEL: 'Defect token', VOID: 'Defect status', SWEEPING_GAZE: 'Defect token', SOUL: 'Necrobinder token', MINION_DIVE_BOMB: 'Necrobinder token', MINION_SACRIFICE: 'Necrobinder token',
         MINION_STRIKE: 'Necrobinder token', SOVEREIGN_BLADE: 'Regent token', BECKON: 'Soul Fysh (Underdocks)', FEEDING_FRENZY: 'Endless Conveyor (Underdocks)', RIP_AND_TEAR: 'Mawler (Underdocks)',
         DEBT: 'Crystal Sphere', CALTROPS: 'event card, source not in the data', CLASH: 'event card, source not in the data', DISTRACTION: 'event card, source not in the data',
@@ -99,6 +99,7 @@ const REVIEWED = {
   SEARING_MARK: 'Exhaust 1 card = from your hand', ROUTINE: 'applies while in hand, as in the original', STONE_STANCE: 'this turn = until your next turn',
   FIRE_WALL: 'this turn = until your next turn', CONJURED_EDGE: 'free to play this turn = costs 0 this turn', MAIM: 'Strength returns at the end of the enemy turn',
   EARTHSHAPER: 'turn into = Transform', CRUSHING_STAMP: 'Energy icon in a cost phrase', KEEP_SWINGING: 'costs 0', ROT_OATH: 'cost 0', WINDFALL: 'cards that cost 0',
+  SQUASH: 'costs 0', RETRIEVE: 'each turn = this turn', SORROW: 'costs 1 less', VEILCUTTER: 'costs 0', REMAKE: 'costs 1 more',
   ROLLING_POUND: 'costs 0', RAVENOUS: '0-cost', PISTON_FIST: 'costs 1 less', SCRAP_PICK: 'cost 0', ASSEMBLY: 'costs 0', LEARNING_POUND: 'costs 0', GATHER_ROUND: 'cost 0',
   NEEDLEPOINT: 'costs 1 less', LUNGE: 'costs 0', 'relic COLD_CREAM': 'Energy carries over to the next turn', 'relic WITHERED_HAND': 'free that turn = free this turn',
   'relic SPADE': 'Dig finds a random relic', 'relic THE_RUNNER': 'restocks what you buy', 'relic CHIME': 'keeps your hand on turn 1', 'potion STEADY_SERUM': 'keeps your hand',
@@ -213,7 +214,7 @@ const PW_MAP = { STRENGTH: 'might', ARTIFACT: 'ward', PLATING: 'plate', THORNS: 
   check('Blade of Ink: Inky gives no bonus damage in v0.111, still Weak', () => [at('0.111', () => HD.ENCH.INKY.dmgAdd(0, {}) === 0) && !!HD.ENCH.INKY.after, '']);
   check('Mirage: Exhausts, upgrade removes Exhaust, cost stays 1', () => [at('0.111', () => HD.CARDS.SHIMMER.kw.includes('Burn') && HD.CARDS.SHIMMER.upKw.length === 0 && HD.CARDS.SHIMMER.upCost == null), '']);
   check('Jeweled Mask picks a non-Innate Power', () => [/random Power from your draw pile/.test(HD.RELICS.JEWEL_MASK.text), 'Innate Powers start in hand, so the draw pile holds only non-Innate ones']);
-  check('Not built here: Necrobinder, Defect cards; Soul Fysh; Ascension-only values', () => [true, 'out of scope']);
+  check('Not built here: Soul Fysh; Ascension-only values', () => [true, 'out of scope']);
   section('Official v0.111 patch notes', lines, bad);
 }
 

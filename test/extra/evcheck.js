@@ -3,7 +3,7 @@ const _path = require('path');
 const _ROOT = _path.join(__dirname, '..', '..');
 const fs = require('fs'), vm = require('vm');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(_path.join(_ROOT, 'src') + '/'+f+'.js','utf8'), ctx);
+for (const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','osty','necro_data','necro','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(_path.join(_ROOT, 'src') + '/'+f+'.js','utf8'), ctx);
 const HD = ctx.HD;
 const map = JSON.parse(fs.readFileSync(_path.join(_ROOT, 'dev', 'namemap.json'))).events;
 const data = Object.fromEntries(JSON.parse(fs.readFileSync(_path.join(process.env.CODEX_STABLE || _path.join(_ROOT, '..', 'spire-codex', 'data', 'eng'), 'events.json'))).map((e) => [e.id, e]));

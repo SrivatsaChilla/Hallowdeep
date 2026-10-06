@@ -45,7 +45,10 @@ Combat functions: `gainStars`, `spendStars`, `forge`, `create(card, where)`, `tr
 The Regent's cards (src/regent.js) use all of these; `node test/regent_cards.js` checks them with the real cards.
 Registered hooks (`HD.onEngine(name, fn)`): starsGained, starsSpent, created, forged, energySpent, afterPlay,
 turnStart, afterDraw, turnEnd, combatWon; for the Defect also channeled, evoked, statusCreated (creating a Status card)
-and drawn (every card drawn). Orbs (Cells) live in src/orbs.js; `node test/defect_cards.js` checks them. `node test/regent_engine.js` checks each one.
+and drawn (every card drawn). Orbs (Cells) live in src/orbs.js; `node test/defect_cards.js` checks them.
+For the Necrobinder: summoned, ostyAttacked, died, doomApplied, doomKilled, debuffApplied, attackDealt; onEnemyDeath now
+reaches engine hooks too. Osty and Doom live in src/osty.js; `node test/necro_cards.js` checks them. `HD.COST_MODS`
+is a list of (g, c, cost) functions applied to every card's cost. `node test/regent_engine.js` checks each one.
 
 ## Needed for characters not built yet
 

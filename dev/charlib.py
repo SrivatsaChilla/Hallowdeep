@@ -8,7 +8,7 @@ KEY = {'Damage': 'dmg', 'Block': 'blk', 'Cards': 'draw', 'Energy': 'en', 'Repeat
        'Vulnerable': 'vul', 'Weak': 'weak', 'CalculationBase': 'base', 'CalculationExtra': 'per', 'ExtraDamage': 'per', 'Increase': 'inc',
        'Dexterity': 'dex'}
 KW = {'Exhaust': 'Burn', 'Ethereal': 'Fleeting', 'Innate': 'Opening', 'Retain': 'Retain', 'Sly': 'Furtive', 'Unplayable': 'Unplayable', 'Eternal': 'Eternal'}
-TAG = {'Strike': 'Cut', 'Defend': 'Brace', 'Minion': 'Thrall'}
+TAG = {'Strike': 'Cut', 'Defend': 'Brace', 'Minion': 'Thrall', 'OstyAttack': 'Clutch'}
 TARGET = {'AnyEnemy': 'enemy', 'AllEnemies': 'all', 'Self': 'self', 'None': 'self', 'RandomEnemy': 'self', None: 'self'}
 # Every source file in build order; a generator loads the ones before its own character to check for id clashes.
 SOURCES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants',

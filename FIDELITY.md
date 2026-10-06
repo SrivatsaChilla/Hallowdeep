@@ -112,7 +112,20 @@ Approximations:
 - Emotion Chip checks HP lost from the start of your previous turn through the enemy turn.
 - Power Cell picks its 2 zero-cost cards before the opening draw.
 
+## The Unburied (the Necrobinder)
 
+Built from the v0.111 data: 66 HP, 99 Gold, 3 Energy, 4 Strikes, 4 Defends, Bodyguard and Unleash, Bound Phylactery. All 86 solo cards, Soul and Sweeping Gaze, 9 relics and 3 potions, with every cost, number, keyword, target and type from the generated src/necro_data.js (dev/verify.js: 0 mismatches). The 5 multiplayer-only cards are defined but never offered. Osty and Doom rules are in dev/NECROBINDER.md.
+
+Card text follows the card where it disagrees with the power text (Reaper Form applies that much Doom per copy).
+
+Approximations:
+- Osty's attacks are not hit back by enemy Thorns (Spines), and they do not count as your hits for other characters' "you hit" effects.
+- Sic 'Em applies after its own hit, so only later Osty hits Summon.
+- "Ethereal cards played" counts cards you play that are Ethereal when played, not ones that play themselves.
+- Sacrifice's Block is not changed by Dexterity.
+- Bookmark and Ivory Tile use the current cost or the Energy actually paid; Wide Brim picks Ethereal cards from the character's pool.
+
+## Audit fixes (v0.111)
 
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).
 

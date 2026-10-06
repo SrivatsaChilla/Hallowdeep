@@ -604,8 +604,6 @@ button.choice.loot > span b { display: block; font-size: 1.15rem; margin-bottom:
 .choice.gift .medal { flex: 0 0 auto; width: 44px; height: 44px; }
 
 /* ---------- the Veiled ---------- */
-.sigil.veiled .body { fill: #23312a; stroke: #7fb08a; }
-.sigil.veiled .eye { fill: #b8e0b0; stroke: #b8e0b0; }
 .card.col-veiled .cname { letter-spacing: .01em; }
 
 /* ---------- hover tooltips ---------- */
@@ -868,8 +866,6 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 .bar { position: sticky; top: 0; z-index: 40; }
 
 /* ---------- the Crowned: sigil, the Glint counter on the Energy orb, Glint costs on cards ---------- */
-.sigil.crowned .body { fill: #2d2838; stroke: #d6b25a; }
-.sigil.crowned .eye { fill: #f4d97c; stroke: #f4d97c; }
 .orbs { position: relative; align-self: center; display: grid; place-items: center; }
 .glints {
   position: absolute; right: -12px; bottom: -8px; min-width: 30px; height: 30px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; gap: 1px;
@@ -891,8 +887,6 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------- the Wirebound: sigil and Cells (Orbs) under the portrait ---------- */
-.sigil.wirebound .body { fill: #23303a; stroke: #7fb4d9; }
-.sigil.wirebound .eye { fill: #bfe6ff; stroke: #bfe6ff; }
 .cellrow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 100%; margin-top: 6px; }
 .cell { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #1d1a17; border: 1.5px solid var(--line); }
 .cell svg { width: 16px; height: 16px; stroke: currentColor; fill: currentColor; }
@@ -911,4 +905,16 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .cell { width: 22px; height: 22px; }
   .cell svg { width: 12px; height: 12px; }
   .cell b, .cell i { min-width: 12px; height: 12px; font-size: .58rem; padding: 0 2px; }
+}
+
+/* ---------- the Unburied: sigil and Clutch (Osty) under the portrait ---------- */
+.clutch { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 2px 8px 2px 4px; border-radius: 999px; background: #1d1a17; border: 1.5px solid #8a76a8; }
+.clutch .clutch-ico { width: 18px; height: 18px; fill: #e6d9ff; stroke: #3a2f47; stroke-width: .8; }
+.clutch .hpbar { width: 76px; }
+.clutch.down { border-style: dashed; opacity: .6; }
+.clutch .cdown { font-size: .75rem; color: var(--ink2); }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .clutch { margin-top: 3px; padding: 1px 6px 1px 3px; }
+  .clutch .clutch-ico { width: 14px; height: 14px; }
+  .clutch .hpbar { width: 60px; }
 }
