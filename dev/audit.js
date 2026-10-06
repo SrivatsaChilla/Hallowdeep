@@ -4,7 +4,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path'), { execFileSync } = require('child_process');
 const [STABLE, BETA] = [process.argv[2], process.argv[3]];
 if (!STABLE || !BETA) { console.error('Usage: node dev/audit.js <stable data dir> <v0.111 data dir>   (the eng/ folders of a Spire Codex export)'); process.exit(2); }
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro','coop', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'coop', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
 const ctx = vm.createContext({ console, Math, Promise, setTimeout, CSS: { escape: (s) => s } });
 for (const f of FILES) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;

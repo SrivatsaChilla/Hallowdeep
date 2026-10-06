@@ -57,20 +57,24 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   players (`g.mark`, Flanked, Knocked Over, Double Team); `seat.cover` for Take the Blow; the hooks `allyAttacked`,
   `allyAttackDealt`, `blockGained` and `anyDrawn`; and `HD.ATK_ADD` / `HD.TAKEN_MODS` for All Hands and Take the Hits.
 
-### Network (next)
+### Network (src/net.js)
 
-- Lockstep inside combat only. At the start of a fight every client sends its Run snapshot (`toSave`). The host sends
-  back the bundle, the uid start (`HD.setUid`) and the fight's seeds. Everyone builds the same Combat, and from then on
-  only actions travel, numbered by the host. A state hash each round catches desyncs. To rejoin: the snapshot bundle
-  plus a replay of the fight's actions. test/mp_sim.js replays every fight from its action log and expects the same
-  result.
-- Out of combat each player runs their own Run (rewards, shop, rest, events) on their own screen. The host decides the
-  shared things (the map, the vote result, the encounter, the event) and sends results. A barrier ("waiting for...")
-  follows each room.
-- Choices in the middle of a card (`ui.choose`) come from the player who played it. The other clients wait for the
-  answer instead of showing the prompt.
-- Transport behind one interface: a loopback for tests and local play first, then WebRTC with the host as hub (free
-  signaling; a relay can replace it later). A build hash on join keeps versions from mixing.
+- Lockstep inside combat. `HD.NetHost` seats players by the link they joined on (so nobody can act for anyone else),
+  turns away a different build (`HD.BUILD`, stamped by build.py) and numbers every action and choice. `HD.NetPeer` is
+  one player: it runs the fight and applies the host's numbered messages strictly in order.
+- Messages (JSON): `hello`/`welcome`/`reject`; `snap-req`/`snap` (each player's `run.toSave()` and next uid);
+  `fight` (every snapshot, the uid start, encounter and kind: everyone builds the same Combat, the host's run first so
+  its RNG drives the fight); `act` (a player's move) and `pick` (their answer to a prompt) become `seq` with a number
+  `n`; `hash` (a fingerprint of the fight, `HD.fightHash`, sent when the round changes and at the end) and `desync`.
+- Prompts in the middle of a card belong to the player resolving it (`g.seat` when `ui.choose` runs). That player
+  answers; everyone, them included, uses the numbered answer, matched by a per-player prompt count.
+- Rejoin: a player who drops sends `hello` with their seat and gets the fight's start and every numbered message so
+  far, then replays them in a fresh copy of the game. Until then the round waits for them.
+- Every message off a link is checked (types, numbers, sizes); anything else is ignored.
+- Links: `HD.loopPair` (in memory, in order, optional delay) for tests and one-machine play. WebRTC comes next with
+  the lobby. test/net_sim.js runs each player in its own copy of the game and checks that every copy ends the same,
+  that rejoining works, that tampering is caught and that bad messages are refused.
+- Out of combat is not networked yet: map votes, room barriers and shared results come with the lobby (step 4).
 
 ## Status
 
@@ -80,7 +84,7 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 | 1 | Seats; solo unchanged | done |
 | 2a | N players in the engine: rounds, enemy turn for all, falling, scaling, theft | done (test/mp_checks.js, test/mp_sim.js) |
 | 2b | The 37 co-op cards, multiplayer card pools, throwing potions, Intercept/Covered, Tank | done (test/coop_cards.js) |
-| 3 | Net layer: transport, host sequencer, snapshot exchange, desync hash, N-client test in Node | |
+| 3 | Net layer: transport, host sequencer, snapshot exchange, desync hash, N-client test in Node | done (test/net_sim.js) |
 | 4 | WebRTC, lobby, barriers, map vote, Mend, treasure picks | |
 | 5 | Allies on the combat screen (phones too), animations for other players' cards | |
 | 6 | Rejoin and hardening | |

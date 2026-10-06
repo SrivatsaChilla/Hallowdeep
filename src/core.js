@@ -46,6 +46,7 @@
   HD.uid = () => uidCounter++;
   // Multiplayer: every client starts a fight from the same uid, so cards and enemies match across machines.
   HD.setUid = (n) => { uidCounter = n; };
+  HD.uidPeek = () => uidCounter;
 
   // Keyword glossary shown as tooltips. Written for HallowDeep.
   HD.TERMS = {
