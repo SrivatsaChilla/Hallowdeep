@@ -958,11 +958,13 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 /* ---------- co-op ---------- */
 .coopbtn { margin: 0 auto 1rem; display: block; }
 .lobby { text-align: center; }
+.lobby .fine { margin-left: auto; margin-right: auto; text-align: center; }
 .lobbyrow { display: flex; gap: .6rem; justify-content: center; margin: .8rem 0; }
-.lobbyrow input { font: inherit; font-size: 1.2rem; letter-spacing: .25em; text-transform: uppercase; width: 9ch; text-align: center; padding: .35em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+.lobbyrow input { font: inherit; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 1.2rem; letter-spacing: .25em; text-transform: uppercase; width: 9ch; text-align: center; padding: .35em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
 .lobby .err { color: var(--wax2); font-weight: 700; }
 .roomcode { font-size: 1.1rem; }
-.roomcode b { font-family: var(--disp); font-size: 2.2rem; letter-spacing: .18em; margin: 0 .3em; }
+/* The room code is read out loud and typed in: a plain monospace face, no lookalike letters. */
+.roomcode b { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-weight: 700; font-size: 2rem; letter-spacing: .2em; margin: 0 .3em; }
 .partylist { list-style: none; padding: 0; margin: .8rem auto; display: flex; flex-direction: column; gap: .35rem; align-items: center; }
 .partylist li { display: flex; align-items: center; gap: .5rem; }
 .partylist li.gone, .partylist li.mine { opacity: .85; }

@@ -8,6 +8,11 @@
   const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
   const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.' };
   const render = () => A.render();
+  // Keep the screen on during co-op: a phone that sleeps stops answering the other players.
+  let lock = null;
+  const wake = () => { if (navigator.wakeLock && !lock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { lock = l; l.addEventListener('release', () => { lock = null; }); }, () => {}); };
+  const sleep = () => { if (lock) lock.release().catch(() => {}); lock = null; };
+  document.addEventListener('visibilitychange', () => { if (C.peer) wake(); });
 
   // One co-op session per tab. S.coop points here once the run starts.
   const C = {
@@ -19,6 +24,7 @@
       if (C.room) C.room.close();
       if (C.peer) C.peer.link.close();
       Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false });
+      sleep();
     },
     leave() { C.reset(); S.coop = null; S.g = null; S.me = null; S.run = null; },
 
@@ -123,6 +129,7 @@
   function join(link) {
     C.peer = new HD.NetPeer({ link, ui: HD.UI, onEvent: onPeer });
     C.peer.hello();
+    wake();
   }
   async function hostGame() {
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
@@ -156,7 +163,7 @@
       <div class="lobbyrow"><button class="primary" data-act="coop-host">Host a game</button></div>
       <div class="lobbyrow"><input id="coopcode" data-key="coopcode" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" aria-label="Room code"><button class="primary" data-act="coop-join">Join</button></div>
       ${err}
-      <p class="fine">Players connect directly. A free public server only introduces them. Enemies have more HP the more players there are.</p>
+      <p class="fine">Players connect directly; a free public server only introduces them${HD.rtcRelay ? ', and a relay helps when a network blocks direct connections' : ''}. Enemies have more HP the more players there are.</p>
       <button class="ghost" data-act="coop-back">Back</button>
     </main>`;
     const me = C.me();
@@ -167,7 +174,7 @@
     const ready = live.length >= MIN_PLAYERS && live.every((p) => p.char);
     return `<main class="panel lobby" data-key="scr-lobby">
       <h1>Play together</h1>
-      ${C.code ? `<p class="roomcode">Room code <b>${esc(C.code)}</b> <button class="ghost small" data-act="coop-copy">Copy</button></p>` : ''}
+      ${C.code ? `<p class="roomcode">Room code <b>${esc(C.code)}</b> <button class="ghost small" data-act="coop-copy">Copy</button></p>${me === 0 ? '<p class="fine">Keep this screen open until everyone has joined.</p>' : ''}` : ''}
       <ul class="partylist">${party}</ul>
       <h3>Pick your hero</h3>
       <div class="roster minis">${heroes}</div>
@@ -183,7 +190,7 @@
     </div></div>`;
 
   Object.assign(HD.UI_ACTS, {
-    'coop-open': () => { C.reset(); S.screen = 'lobby'; render(); },
+    'coop-open': () => { C.reset(); S.screen = 'lobby'; render(); HD.rtcCheckRelay().then(render); },
     'coop-back': () => { C.leave(); S.screen = 'title'; render(); },
     'coop-host': hostGame,
     'coop-join': joinGame,

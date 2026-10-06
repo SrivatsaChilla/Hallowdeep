@@ -2,3 +2,7 @@
 [build]
   command = "python3 build.py"
   publish = "dist"
+
+# Relay logins for co-op (netlify/functions/turn.mjs); set CF_TURN_KEY_ID and CF_TURN_API_TOKEN to turn it on.
+[functions]
+  directory = "netlify/functions"
