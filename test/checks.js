@@ -100,7 +100,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   await gv.playCard(ef, null); eq('v0.111: Expect a Fight = 15 + 5 per Strength', gv.p.block, 25);
   gv = await mk('RIPJAW', []); const mid = gv.makeCard('DEEP_NIGHT', false); gv.hand.push(mid); gv.burnedCount = 5;
   eq('v0.111: Midnight costs 12 minus cards exhausted', gv.costOf(mid), 7);
-  eq('v0.111: new cards in the pool, co-op one excluded', [HD.POOL('oathburner').some((d) => d.id === 'DEEP_NIGHT'), HD.POOL('oathburner').some((d) => d.id === 'KINDLE_ALLY')], [true, false]);
+  eq('v0.111: co-op cards stay out of the pool (Midnight and Outrage count ANYONE / EVERYONE)', ['DEEP_NIGHT', 'SPREADING_RAGE', 'KINDLE_ALLY'].map((id) => HD.POOL('oathburner').some((d) => d.id === id)), [false, false, false]);
   eq('The game always uses v0.111: asking for stable changes nothing', (() => { HD.setVersion('stable'); return [HD.version, HD.vals({ id: 'ESCALATE' }).dmg]; })(), ['0.111', HD.vals({ id: 'ESCALATE' }).dmg]);
   // ----- ? rooms and events -----
   const rUnk = new HD.Run('unk'); const rolls = [0.5, 0.15, 0.12]; rUnk.rng.event = { next: () => rolls.shift() };

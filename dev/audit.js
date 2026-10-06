@@ -53,6 +53,9 @@ const EXCLUDE = {
   const actMons = new Set(); for (const e of Object.values(D.stable.encounters)) if ((!e.act || /Overgrowth|Hive|Glory/.test(e.act)) && e.monsters) for (const m of e.monsters) actMons.add(m.id || m);
   const mMissing = [...actMons].filter((id) => !(monMap[id] && HD.MON[monMap[id]]) && monAll[id] && !['FAKE_MERCHANT_MONSTER', 'ARCHITECT'].includes(id));
   bad += mMissing.length; lines.push(`monsters in Acts 1-3: ${actMons.size - mMissing.length} of ${actMons.size} built`, ...mMissing.map((m) => `   missing ${m}`));
+  // Multiplayer-only cards must be marked coop so solo rewards, shops and random picks never offer them.
+  const soloLeaks = Object.values(D.beta.cards).filter((c) => c.multiplayer_only && MAP.cards[c.id] && HD.CARDS[MAP.cards[c.id]] && !HD.CARDS[MAP.cards[c.id]].coop);
+  bad += soloLeaks.length; lines.push(`multiplayer-only cards offered in solo: ${soloLeaks.length}`, ...soloLeaks.map((c) => `   ${MAP.cards[c.id]} (${c.name}) needs coop: true`));
   section('Coverage (v0.111 data)', lines, bad);
 }
 

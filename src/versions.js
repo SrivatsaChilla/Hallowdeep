@@ -6,11 +6,11 @@
   const mightNow = (g) => (g ? (g.p.pw.might || 0) + (g.p.pw.mightTemp || 0) : 0);
 
   // Cards that only exist from v0.111 on.
-  card('DEEP_NIGHT', { name: 'Deep Night', only: '0.111', type: 'Attack', rarity: 'Rare', cost: 12, target: 'enemy', v: { dmg: 60 }, up: { dmg: 12 },
+  card('DEEP_NIGHT', { name: 'Deep Night', only: '0.111', coop: true, type: 'Attack', rarity: 'Rare', cost: 12, target: 'enemy', v: { dmg: 60 }, up: { dmg: 12 },
     costFn: (g, c, k) => k - (g.burnedCount || 0),
     text: (v, f, c, g) => `Deal ${f.d(v.dmg)} damage. Costs 1 less Energy for each card Burned this combat.${g ? ` (${g.burnedCount || 0})` : ''}`,
     play: async (g, c, t, v) => g.attack(t, v.dmg, 1, c) });
-  card('SPREADING_RAGE', { name: 'Spreading Rage', only: '0.111', type: 'Attack', rarity: 'Uncommon', cost: 0, target: 'enemy', v: { dmg: 9 }, up: { dmg: 4 },
+  card('SPREADING_RAGE', { name: 'Spreading Rage', only: '0.111', coop: true, type: 'Attack', rarity: 'Uncommon', cost: 0, target: 'enemy', v: { dmg: 9 }, up: { dmg: 4 },
     text: (v, f) => `Deal ${f.d(v.dmg)} damage. Put a copy of this card in every player's discard pile.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); g.discard.push(g.makeCard(c.id, c.up)); } });
   card('KINDLE_ALLY', { name: 'Kindle Ally', only: '0.111', coop: true, type: 'Skill', rarity: 'Uncommon', cost: 2, v: { str: 5 }, up: { str: 2 },

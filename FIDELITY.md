@@ -127,6 +127,8 @@ Approximations:
 
 ## Audit fixes (v0.111)
 
+Midnight and Outrage are multiplayer-only in the v0.111 data (they count cards Exhausted by anyone, or copy into everyone's discard pile), so they are defined but never offered in solo; dev/audit.js now flags any multiplayer-only card that is not marked co-op.
+
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).
 
 ## Ascension
