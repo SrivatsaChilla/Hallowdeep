@@ -13,7 +13,7 @@ async def main():
             pg = await b.new_page(viewport={'width':1280,'height':820})
             pg.on('pageerror', lambda e: errs.append(str(e)))
             await pg.goto(HTML_URL)
-            await pg.fill('#seed', seed); await pg.click('button.hero[data-arg=%s]' % ('VEILED' if seed.startswith('veil') else 'CROWNED' if seed.startswith('crown') else 'OATHBURNER'))
+            await pg.fill('#seed', seed); await pg.click('button.hero[data-arg=%s]' % ('VEILED' if seed.startswith('veil') else 'CROWNED' if seed.startswith('crown') else 'WIREBOUND' if seed.startswith('wire') else 'OATHBURNER'))
             # speed up enemy pacing and give relics that touch the UI flow
             await pg.evaluate("""()=>{HD.sleep=()=>Promise.resolve(); const r=HD.state.run; ['BREWING_POT','HAND_MIRROR','CLOCKWORK_SKY','BEDROLL','SPADE','KETTLEBELL','LOADED_DIE','LETTER_SLOT','PALE_IDOL','THE_RUNNER'].forEach(x=>r.addRelic(x)); r.maxHp=r.hp=400; HD.render();}""")
             random.seed(seed)

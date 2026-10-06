@@ -18,7 +18,9 @@
   const sapExpose = async (g, t, v) => { if (t.alive) await g.apply(t, 'sapped', v.weak); if (t.alive) await g.apply(t, 'exposed', v.vul); };
   const lowerMight = async (g, n) => { for (const e of g.alive()) await g.apply(e, 'mightDown', n); };
   const colorless = (g, up) => g.makeCard(g.rng.pick(HD.colorlessIds(true)), !!up);
-  const tokenName = (id, c) => `${CARDS[id].name}${c && c.up ? '+' : ''}`;
+  // Card names in text use the HallowDeep name; the original-names mode swaps it with the rest of the text.
+  const hdName = (id) => CARDS[id].nameHD || CARDS[id].name;
+  const tokenName = (id, c) => `${hdName(id)}${c && c.up ? '+' : ''}`;
   // Move chosen cards from one pile to another (the engine has no shared helper for this).
   const move = (from, to, xs) => { for (const x of xs) { const i = from.indexOf(x); if (i >= 0) { from.splice(i, 1); to.push(x); } } };
   const putBackOnTop = async (g, n) => {
@@ -63,7 +65,7 @@
     play: (g, c) => transformChosen(g, g.hand, 1, 1, 'THRALL_STRIKE', c.up, `Transform a card into ${tokenName('THRALL_STRIKE', c)}`) });
   card('HEAVENS_WEIGHT', { text: (v, f) => `Deal ${f.d(v.dmg)} damage ${v.hits} times.`, play: (g, c, t, v) => g.attack(t, v.dmg, v.hits, c) });
   card('STARRY_MANTLE', { text: (v, f) => `Gain ${f.b(v.blk)} Guard.`, play: (g, c, t, v) => g.gainBlock(v.blk, true) });
-  card('IMPACT_PATH', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Add a ${CARDS.RUBBLE.name} to your hand.`,
+  card('IMPACT_PATH', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Add a ${hdName('RUBBLE')} to your hand.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); if (!g.over) await g.create(g.makeCard('RUBBLE', false), 'hand'); } });
   card('COLD_HEAVENS', { text: (v, f) => `Gain ${f.b(v.blk)} Guard. Put a card from your discard pile on top of your draw pile.`,
     play: async (g, c, t, v) => {
@@ -99,7 +101,7 @@
   card('MUSTER', { text: (v, f, c) => `Choose ${plural(v.draw, 'card')} in your draw pile to Transform into ${tokenName('THRALL_PLUNGE', c)}.`,
     play: (g, c, t, v) => transformChosen(g, g.draw, v.draw, v.draw, 'THRALL_PLUNGE', c.up, `Transform cards into ${tokenName('THRALL_PLUNGE', c)}`) });
   card('STARBORN', { text: (v) => `Whenever you spend Glints, gain ${v.blockForStars} Guard for each Glint spent.`, play: async (g, c, t, v) => g.addPw(g.p, 'starborn', v.blockForStars) });
-  card('USURPER', { text: (v) => `Temper ${v.forge}. The ${CARDS.REGAL_BLADE.name} deals double damage to the enemy this turn.`,
+  card('USURPER', { text: (v) => `Temper ${v.forge}. The ${hdName('REGAL_BLADE')} deals double damage to the enemy this turn.`,
     play: async (g, c, t, v) => { await g.forge(v.forge); if (t && t.alive) await g.apply(t, 'usurped', 1); } });
   card('CONFLUENCE', { text: (v) => `Next turn, gain ${v.en} Energy and ${glints(v.stars)}. Retain your hand this turn.`,
     play: async (g, c, t, v) => { g.addPw(g.p, 'nextEnergy', v.en); g.addPw(g.p, 'nextStars', v.stars); g.t.keepHand = true; } });
@@ -123,7 +125,7 @@
   card('CIRCUIT', { text: (v) => `Every 4 Energy you spend, gain ${v.en} Energy.`, play: async (g, c, t, v) => g.addPw(g.p, 'circuit', v.en) });
   card('FAR_SPECK', { text: (v) => `If you play ${v.cardPlay} or more cards in a turn, draw ${plural(v.draw, 'card')} at the start of your next turn.`,
     play: async (g, c, t, v) => g.addPw(g.p, 'farSpeck', v.draw) });
-  card('RIPOSTE', { text: (v) => `The ${CARDS.REGAL_BLADE.name} now also gives ${v.parry} Guard.`, play: async (g, c, t, v) => g.addPw(g.p, 'riposte', v.parry) });
+  card('RIPOSTE', { text: (v) => `The ${hdName('REGAL_BLADE')} now also gives ${v.parry} Guard.`, play: async (g, c, t, v) => g.addPw(g.p, 'riposte', v.parry) });
   card('MOTE_WALL', { text: (v, f) => `Gain ${f.b(v.blk)} Guard. Return this card to your hand.`, settleTo: () => 'hand', play: (g, c, t, v) => g.gainBlock(v.blk, true) });
   card('NURSERY_CLOUD', { text: (v) => `Whenever you create a card, gain ${v.blk} Guard.`, play: async (g, c, t, v) => g.addPw(g.p, 'nurseryCloud', v.blk) });
   card('FORETELL', { text: (v) => `Draw ${plural(v.draw, 'card')}.`, play: (g, c, t, v) => g.drawCards(v.draw) });
@@ -144,7 +146,7 @@
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); await g.gainStars(v.stars); } });
   card('STARDRIFT', { text: (v, f) => `Deal ${f.d(v.dmg)} damage to a random enemy X times.`,
     play: async (g, c, t, v, x) => { for (let i = 0; i < x && !g.over; i++) { const e = g.randomEnemy(); if (e) await g.attack(e, v.dmg, 1, c); } } });
-  card('CALL_THE_BLADE', { text: (v) => `Put every ${CARDS.REGAL_BLADE.name} into your hand from anywhere. Temper ${v.forge}.`,
+  card('CALL_THE_BLADE', { text: (v) => `Put every ${hdName('REGAL_BLADE')} into your hand from anywhere. Temper ${v.forge}.`,
     play: async (g, c, t, v) => {
       for (const b of g.blades(true)) {
         if (g.hand.includes(b)) continue;
@@ -171,7 +173,7 @@
     play: async (g, c, t, v) => { for (let i = 0; i < v.draw; i++) await g.create(colorless(g, false), 'hand'); } });
   card('FIRETAIL', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Apply ${v.weak} Sapped. Apply ${v.vul} Exposed.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); await sapExpose(g, t, v); } });
-  card('HARD_DESCENT', { text: (v, f) => `Deal ${f.d(v.dmg)} damage to ALL enemies. Fill your hand with ${CARDS.RUBBLE.name}.`,
+  card('HARD_DESCENT', { text: (v, f) => `Deal ${f.d(v.dmg)} damage to ALL enemies. Fill your hand with ${hdName('RUBBLE')}.`,
     play: async (g, c, t, v) => { await g.attackAll(v.dmg, 1, c); while (!g.over && g.hand.length < 10) await g.create(g.makeCard('RUBBLE', false), 'hand'); } });
   card('ROYAL_DECREE', { text: (v) => `Draw ${plural(v.draw, 'card')}. Choose a Skill in your hand and play it ${v.hits} times.`,
     play: async (g, c, t, v) => {
@@ -204,10 +206,10 @@
   card('ROYAL_STARE', { text: (v) => `Whenever you attack an enemy, it loses ${v.loss} Might this turn.`, play: async (g, c, t, v) => g.addPw(g.p, 'royalStare', v.loss) });
   card('DENSE_SHELL', { text: (v) => `Gain ${v.plating} Plate.`, play: async (g, c, t, v) => g.addPw(g.p, 'plate', v.plating) });
   card('TRIBUTE', { text: (v) => `At the end of combat, gain ${v.gold} Gold.`, play: async (g, c, t, v) => g.addPw(g.p, 'tribute', v.gold) });
-  card('HUNTING_EDGE', { text: (v) => `Temper ${v.forge}. The ${CARDS.REGAL_BLADE.name} now deals damage to ALL enemies.`,
+  card('HUNTING_EDGE', { text: (v) => `Temper ${v.forge}. The ${hdName('REGAL_BLADE')} now deals damage to ALL enemies.`,
     play: async (g, c, t, v) => { g.p.pw.huntingEdge = 1; await g.forge(v.forge); } });
   card('SEVEN_LIGHTS', { text: (v, f) => `Deal ${f.d(v.dmg)} damage to ALL enemies ${v.hits} times.`, play: (g, c, t, v) => g.attackAll(v.dmg, v.hits, c) });
-  card('BLADEMASTER', { text: (v) => `The ${CARDS.REGAL_BLADE.name} gains Replay ${v.swordSage}.`,
+  card('BLADEMASTER', { text: (v) => `The ${hdName('REGAL_BLADE')} gains Replay ${v.swordSage}.`,
     play: async (g, c, t, v) => { g.addPw(g.p, 'blademaster', v.swordSage); for (const b of g.blades(true)) b.replay = (b.replay || 0) + v.swordSage; } });
   card('THE_ARMORER', { text: (v) => `Temper ${v.forge}.`, play: (g, c, t, v) => g.forge(v.forge) });
   card('IRON_RULE', { text: () => 'At the start of your turn, draw 1 card and Burn 1 card from your hand.', play: async (g) => g.addPw(g.p, 'ironRule', 1) });

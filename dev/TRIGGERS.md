@@ -44,7 +44,8 @@ Combat functions: `gainStars`, `spendStars`, `forge`, `create(card, where)`, `tr
 `blades()`, `hollowFree()` (Void Form), and `g.endTurnAfterPlay = true` to end the turn once a card resolves.
 The Regent's cards (src/regent.js) use all of these; `node test/regent_cards.js` checks them with the real cards.
 Registered hooks (`HD.onEngine(name, fn)`): starsGained, starsSpent, created, forged, energySpent, afterPlay,
-turnStart, afterDraw, turnEnd, combatWon. `node test/regent_engine.js` checks each one.
+turnStart, afterDraw, turnEnd, combatWon; for the Defect also channeled, evoked, statusCreated (creating a Status card)
+and drawn (every card drawn). Orbs (Cells) live in src/orbs.js; `node test/defect_cards.js` checks them. `node test/regent_engine.js` checks each one.
 
 ## Needed for characters not built yet
 

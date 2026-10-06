@@ -388,7 +388,7 @@
   Run.prototype.toSave = function () {
     const data = {};
     for (const [k, v] of Object.entries(this)) if (!SAVE_SKIP.has(k)) data[k] = v;
-    data.deck = this.deck.map((c) => ({ id: c.id, up: c.up, left: c.left, ench: c.ench, rider: c.rider }));
+    data.deck = this.deck.map((c) => ({ id: c.id, up: c.up, left: c.left, ench: c.ench, rider: c.rider, grow: c.grow }));
     const rng = {};
     for (const [k, r] of Object.entries(this.rng)) rng[k] = r.getState();
     return JSON.parse(JSON.stringify({ seed: this.seed, data, rng }));
@@ -396,7 +396,7 @@
   Run.fromSave = function (o) {
     const r = new Run(o.seed, (o.data && o.data.charId) || 'OATHBURNER');
     Object.assign(r, o.data);
-    r.deck = o.data.deck.map((c) => Object.assign(r.newCard(c.id, c.up), c.left != null ? { left: c.left } : {}, c.ench ? { ench: c.ench } : {}, c.rider ? { rider: c.rider } : {}));
+    r.deck = o.data.deck.map((c) => Object.assign(r.newCard(c.id, c.up), c.left != null ? { left: c.left } : {}, c.ench ? { ench: c.ench } : {}, c.rider ? { rider: c.rider } : {}, c.grow ? { grow: c.grow } : {}));
     for (const [k, v] of Object.entries(o.rng)) if (r.rng[k]) r.rng[k].setState(v);
     return r;
   };
