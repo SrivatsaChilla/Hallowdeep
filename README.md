@@ -103,6 +103,8 @@ The run saves in the browser after every change outside combat and at the start 
 
 A run timer sits at the right end of the top bar. It counts only while a run is open and the page is visible, is saved with the run (Continue resumes it), and shows the final time on the end screen. The top bar stays pinned to the top of scrolling screens. `python3 dev/timer_check.py` tests the timer and its place in the bar at 16 screen sizes.
 
+The map button beside Deck in the top bar (or the M key) opens a read-only map from any screen of a run, fights included, scrolled to the room you are in; Esc, M or Close returns. Coming back to the map after a fight, event, shop or rest also scrolls to the room you are in, with the next choices just above it.
+
 Ascension (0 to 10) is unlocked one level at a time, per character, as in the original: win a run on a level to unlock the next one for that character. Each character card on the title screen has its own Ascension picker, capped at its highest unlocked level. Each level adds one modifier on top of the ones below it, and the top bar shows the level during a run. `python3 dev/ascension_unlock.py` tests the unlock flow in a browser.
 
 Hover anything that mentions another thing (a relic that enchants a card, adds a card, gives a potion, or uses a keyword) and a panel explains it: enchantments and keywords as text, cards drawn as cards. On touch screens, tap a relic or potion, or press and hold a choice, shop item or reward, to read the same.

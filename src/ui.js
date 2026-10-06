@@ -258,7 +258,7 @@
         <span class="stat gold"><span class="lbl">Gold</span> ${r.gold}</span>
         <span class="stat"><span class="lbl">${T('Depth')}</span> ${r.floor}</span>
       </span>
-      <button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>
+      <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}</span>
       <span class="runtime" data-key="runtime" title="Run time" aria-label="Run time ${fmtTime(r.playMs)}">${CLOCK}<span class="t">${fmtTime(r.playMs)}</span></span>
       <span class="inv">${belt()}<span class="relics">${relics}</span></span>
     </header>`;
@@ -304,6 +304,9 @@
     HD.setNames(mode);
     try { localStorage.setItem(NAME_KEY, HD.nameMode); } catch (e) { /* storage unavailable */ }
   }
+
+  const MAP_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 4.5 7 2.5l6 2 5-2v13l-5 2-6-2-5 2zM7 2.5v13M13 4.5v13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+  const openMap = () => { S.overlay = { kind: 'map', title: `Act ${S.run.act}: ${actName()}`, scrolled: false }; render(); };
 
   // ---------- run timer ----------
   const CLOCK = '<svg class="clock" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8l2.5 1.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
@@ -378,13 +381,14 @@
       </div>
       <label class="seed">Seed <input id="seed" value="${esc(S.seedDefault)}" spellcheck="false" autocomplete="off"></label>
       <div class="toggles">${namesToggle()}</div>
-      <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, Esc cancels.</p>
+      <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, M shows the map, Esc cancels.</p>
     </main>`;
   }
 
-  function mapScreen() {
+  // The map drawing. interactive = false (the map sheet opened from another screen) shows the same map, nothing clickable.
+  function mapSvg(interactive) {
     const r = S.run, m = r.map;
-    const reach = new Set(r.reachable());
+    const reach = new Set(interactive ? r.reachable() : []);
     // Rows climb from the start at the bottom to the boss at the top.
     const TOP = 150, STEP = 64;
     const X = (n) => 46 + n.c * 70 + ((HD.hashSeed(n.key + 'x') % 17) - 8);
@@ -417,6 +421,10 @@
       <text class="bosslbl" x="${boss.x}" y="${boss.y - 42}" text-anchor="middle">${esc(bossName)}</text>`;
     const startNode = `<g class="node n-start ${!r.pos ? 'here' : 'visited'}" transform="translate(${start.x} ${start.y})" aria-label="Start: ${esc(T('The Rootmother'))}"><circle r="24"/>${NODE_ICON.start}</g>
       <text class="startlbl" x="${start.x}" y="${start.y + 44}" text-anchor="middle">${r.act === 1 || !HD.ANCIENTS[r.ancient] ? T('The Rootmother') : T(HD.ANCIENTS[r.ancient].name)}</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" class="mapsvg">${lines}${nodes}${bossNode}${startNode}</svg>`;
+  }
+  function mapScreen() {
+    const r = S.run;
     const legend = Object.entries(NODE_LABEL).filter(([k]) => k !== 'boss').map(([k, v]) =>
       `<li><svg viewBox="${k === 'boss' ? '-18 -18 36 36' : '-13 -13 26 26'}" width="24" height="24" class="n-${k}">${NODE_ICON[k]}</svg>${v}</li>`).join('');
     const relicList = r.relics.map((x) => { const d = HD.RELICS[x.id]; return `<li><b>${esc(d.name)}</b> ${esc(d.text)}</li>`; }).join('');
@@ -424,7 +432,7 @@
       <section class="map" id="mapScroll" aria-label="Map of ${actName()}">
         <h2>Act ${r.act}: ${actName()}</h2>
         <p class="hint">${r.pos ? 'Choose the next room. You climb toward the boss at the top.' : 'Choose your first room, just above the start.'}${r.relic('MOTH_BOOTS') && r.relic('MOTH_BOOTS').charges ? ` Dashed rooms are off your path; reaching one uses a ${esc(HD.RELICS.MOTH_BOOTS.name)} charge (${r.relic('MOTH_BOOTS').charges} left).` : ''}</p>
-        <svg viewBox="0 0 ${W} ${H}" width="${W}" class="mapsvg">${lines}${nodes}${bossNode}${startNode}</svg>
+        ${mapSvg(true)}
       </section>
       <aside class="side">
         <h3>Legend</h3><ul class="legend">${legend}</ul>
@@ -633,6 +641,7 @@
     if (!o) return '';
     let body = '';
     let closable = true;
+    if (o.kind === 'map') body = `<p class="hint">You are in the ringed room. The boss waits at the top.</p><div class="mapview">${mapSvg(false)}</div>`;
     if (o.kind === 'pile') body = o.cards.length ? `<div class="grid">${o.cards.map((c) => cardHTML(c, { g: S.screen === 'combat' ? S.g : null })).join('')}</div>` : '<p>Empty.</p>';
     if (o.kind === 'choose') {
       closable = false;
@@ -948,9 +957,11 @@
     BG.set(S.screen === 'combat' ? 'fight' : 'calm');
     if (S.screen === 'map' && S.scrollMap) {
       S.scrollMap = false;
-      const el = $('.node.reach');
-      const box = document.getElementById('mapScroll');
-      if (el && box) box.scrollTop = Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - box.clientHeight * 0.62);
+      scrollToRoom(document.getElementById('mapScroll'), $('.map .node.here') || $('.map .node.reach'));
+    }
+    if (S.overlay && S.overlay.kind === 'map' && !S.overlay.scrolled) {
+      S.overlay.scrolled = true;
+      scrollToRoom($('.overlay .sheet'), $('.mapview .node.here') || $('.mapview .node.n-start'));
     }
     if (S.screen === 'combat' && S.g) {
       const g = S.g;
@@ -1063,6 +1074,19 @@
       }
       const want = `${Math.ceil(drop + 6)}px`;
       if (hand.style.paddingBottom !== want) hand.style.paddingBottom = want;
+    }
+  }
+  // Put a map room about 60% of the way down whichever element scrolls (the map box, the sheet, or the page itself).
+  function scrollToRoom(box, el) {
+    if (!el) return;
+    const ROOM_AT = 0.6;
+    const r = el.getBoundingClientRect();
+    if (box && box.scrollHeight > box.clientHeight + 1) {
+      const b = box.getBoundingClientRect();
+      box.scrollTop = Math.max(0, r.top - b.top + box.scrollTop - box.clientHeight * ROOM_AT);
+    } else {
+      const page = document.scrollingElement || document.documentElement;
+      page.scrollTop = Math.max(0, r.top + page.scrollTop - innerHeight * ROOM_AT);
     }
   }
   function flushFx() {
@@ -1321,7 +1345,7 @@
     r.hp = g.p.hp; r.maxHp = g.p.maxHp;
     r.combatDone(S.kind === 'event' ? 'monster' : S.kind);
     if (S.ev && S.ev.page === 'FOUGHT') { const d = HD.EVENTS[S.ev.id]; if (d.onWin) d.onWin(r, S.ev, g); S.ev = null; }
-    if (S.kind === 'event') { setTimeout(() => { S.screen = 'map'; checkPending(); render(); }, reduced() ? 0 : 650); return; }
+    if (S.kind === 'event') { setTimeout(() => { S.screen = 'map'; S.scrollMap = true; checkPending(); render(); }, reduced() ? 0 : 650); return; }
     S.reward = r.combatRewards(S.kind, g);
     // Let the last enemy finish falling before the spoils appear.
     setTimeout(() => { S.screen = 'reward'; render(); }, reduced() ? 0 : 650);
@@ -1472,6 +1496,7 @@
         return;
       }
       case 'end': return endTurn();
+      case 'peek-map': return openMap();
       case 'log': S.showLog = !S.showLog; return render();
       case 'pile': {
         const byName = (xs) => xs.slice().sort((a, b) => CARDS[a.id].name.localeCompare(CARDS[b.id].name));
@@ -1623,8 +1648,13 @@
     if (ev.key === 'Escape') {
       if (drag && drag.on) { const d = drag; drag = null; return cancelDrag(d.c, d.k); }
       if (S.overlay && S.overlay.kind === 'cardinfo') { S.overlay = S.overlay.prev || null; return render(); }
-      if (S.overlay && ['pile', 'potion', 'info'].includes(S.overlay.kind)) { S.overlay = null; return render(); }
+      if (S.overlay && ['pile', 'potion', 'info', 'map'].includes(S.overlay.kind)) { S.overlay = null; return render(); }
       if (S.sel || S.selPotion != null) { S.sel = null; S.selPotion = null; return render(); }
+    }
+    // M shows the map from any screen of a run (and closes it again).
+    if ((ev.key === 'm' || ev.key === 'M') && S.run && !['title', 'end', 'map'].includes(S.screen) && (!S.overlay || S.overlay.kind === 'map')) {
+      if (S.overlay) { S.overlay = null; return render(); }
+      return openMap();
     }
     if (S.screen !== 'combat' || S.overlay) return;
     if (ev.key === 'e' || ev.key === 'E') return endTurn();

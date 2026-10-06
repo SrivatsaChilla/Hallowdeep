@@ -918,3 +918,11 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .clutch .clutch-ico { width: 14px; height: 14px; }
   .clutch .hpbar { width: 60px; }
 }
+
+/* ---------- the map from any screen: a Map button beside Deck, and a read-only map sheet ---------- */
+.bar .barbtns { display: inline-flex; align-items: center; gap: .4rem; }
+.bar .mapbtn { display: inline-grid; place-items: center; padding: .3em .5em; }
+.bar .mapbtn svg { width: 1.15em; height: 1.15em; }
+.mapview { text-align: center; }
+.mapview .mapsvg { width: min(100%, 640px); }
+.mapview .node { cursor: default; }
