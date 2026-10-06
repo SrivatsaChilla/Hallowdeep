@@ -886,3 +886,17 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .cell svg { width: 12px; height: 12px; }
   .cell b, .cell i { min-width: 12px; height: 12px; font-size: .58rem; padding: 0 2px; }
 }
+
+/* ---------- the Unburied: sigil and Clutch (Osty) under the portrait ---------- */
+.sigil.unburied .body { fill: #2b2433; stroke: #b9a3d6; }
+.sigil.unburied .eye { fill: #e6d9ff; stroke: #e6d9ff; }
+.clutch { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 2px 8px 2px 4px; border-radius: 999px; background: #1d1a17; border: 1.5px solid #8a76a8; }
+.clutch .clutch-ico { width: 18px; height: 18px; fill: #e6d9ff; stroke: #3a2f47; stroke-width: .8; }
+.clutch .hpbar { width: 76px; }
+.clutch.down { border-style: dashed; opacity: .6; }
+.clutch .cdown { font-size: .75rem; color: var(--ink2); }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .clutch { margin-top: 3px; padding: 1px 6px 1px 3px; }
+  .clutch .clutch-ico { width: 14px; height: 14px; }
+  .clutch .hpbar { width: 60px; }
+}
