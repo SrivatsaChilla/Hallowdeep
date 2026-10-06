@@ -1045,8 +1045,10 @@
     const swing = compact() ? 0 : cards[0].offsetHeight * 1.15 * Math.sin((tilt * Math.PI) / 180);
     const n = cards.length, cw = cards[0].offsetWidth, avail = hand.clientWidth - (compact() ? 8 : 40) - 2 * swing;
     const minShow = compact() ? 0.25 : 0.28;
-    // Phones overlap each card onto the one before it (2m per gap); wider screens split it on both sides.
-    let m = compact() ? Math.min(2, (avail - n * cw) / (2 * Math.max(1, n - 1))) : Math.min(3, (avail - n * cw) / (2 * n));
+    // Phones overlap each card onto the one before it (2m per gap); wider screens split it on both sides and always
+    // overlap neighbours a little (WIDE_OVERLAP of a card's width per side), so a roomy screen still shows a tight fan.
+    const WIDE_OVERLAP = 0.06;
+    let m = compact() ? Math.min(2, (avail - n * cw) / (2 * Math.max(1, n - 1))) : Math.min(-cw * WIDE_OVERLAP, (avail - n * cw) / (2 * n));
     m = Math.max(m, -(cw * (1 - minShow)) / 2);
     m = Math.round(m * 10) / 10;
     if (m !== S.handM) { S.handM = m; hand.style.setProperty('--m', `${m}px`); }
