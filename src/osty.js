@@ -77,7 +77,7 @@
     this.say(`${e.name}'s Knell tolls.`);
     e.hp = 0;
     await this.kill(e);
-    await this.hook('doomKilled', e);
+    for (const s of this.party()) await this.withSeat(s, () => this.hook('doomKilled', e));
   };
   C.addWraiths = async function (n, where = 'draw', up = false) { for (let i = 0; i < n && !this.over; i++) await this.create(this.makeCard('WRAITH', up), where); };
 

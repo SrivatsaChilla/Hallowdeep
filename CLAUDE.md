@@ -65,6 +65,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
     node test/necro_cards.js                 # Clutch (Osty), Knell (Doom) and the Necrobinder's cards
     node test/sim.js 100                     # headless random runs; CHAR=VEILED, CROWNED, WIREBOUND or UNBURIED, ASC=10 env vars
     node test/extra/invariants.js 300        # fuzzing for state invariants
+    node test/mp_checks.js                   # multiplayer combat rules (scaling, shared enemy turns, falling, theft)
+    node test/mp_sim.js 300                  # random 2 to 4 player fights, each replayed from its action log; ASC=10
     node dev/verify.js ../spire-codex/data-beta/v0.111.0/eng          # number parity, expect 0 mismatches
     node dev/audit.js ../spire-codex/data/eng ../spire-codex/data-beta/v0.111.0/eng   # 7 audit sections, all ok
     python3 dev/qa_devices.py [device...]    # real fights through the UI at 16 screen sizes (slow; run in batches)
@@ -78,7 +80,7 @@ dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js); the charac
 
 ## Before committing
 
-Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, necro_cards.js, a short sim for each character, and the browser tests that
+Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, necro_cards.js, mp_checks.js, a short mp_sim, a short sim for each character, and the browser tests that
 touch what changed (any layout change: qa_devices on a few sizes plus qa_resize). Keep commits focused.
 
 Commit messages: imperative summary line under about 60 characters, blank line, then a body explaining what changed
@@ -120,6 +122,14 @@ dev/gen_necro.py.
   the portrait, card art, names.js. Parity 0 mismatches, audit all ok, test/necro_cards.js 50 checks, sims 0 errors.
   Approximations in FIDELITY.md ("The Unburied").
 - Next: the browser suites once Playwright is installed (qa_devices has an UNBURIED fight; bot.py takes "necro" seeds).
+
+## Multiplayer (co-op, in progress)
+
+Rules, design and status are in dev/MULTIPLAYER.md. Built on the `multiplayer` branch. The combat engine has seats:
+per-player state lives on `g.seat` and the old names (`g.p`, `g.hand`, `g.run`...) point at the active seat, so a new
+field the engine keeps on the Combat must go in `Combat.SEAT_KEYS` (per player) or `Combat.SHARED_KEYS` (test/sim.js
+fails otherwise). Enemy moves use `each` for what they do to every player and `fx` for what they do once. With one
+player the engine must stay exactly as before: compare the `digest` that test/sim.js prints before and after a change.
 
 ## Backlog
 

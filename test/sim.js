@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const digest = require('crypto').createHash('sha1'); // fingerprint of every fight, to check that refactors change nothing
 const ctx = vm.createContext({ console, setTimeout, Math, Promise });
 for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'neow2', 'ascension_data', 'ascension']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
@@ -56,6 +57,10 @@ async function fight(run, enc, kind, stats) {
     }
     if (!g.over) await g.endTurn();
   }
+  // Every field the engine keeps on the Combat must be either per-player (a seat) or shared, or multiplayer breaks.
+  const stray = Object.keys(g).filter((k) => !HD.Combat.SHARED_KEYS.includes(k));
+  if (stray.length) throw new Error(`unclassified combat fields: ${stray.join(', ')}`);
+  digest.update([enc, g.turn, g.p.hp, g.p.maxHp, ...g.enemies.map((e) => e.hp), ...g.log].join('|'));
   return g;
 }
 
@@ -173,7 +178,7 @@ async function fight(run, enc, kind, stats) {
   const neverCards = HD.POOL(HD.CHARS[CHAR].color).concat(HD.POOL('colorless')).map((d) => d.id).filter((id) => !stats.played[id]);
   const neverPotions = Object.values(HD.POTIONS).filter((d) => !d.passive && d.pool !== 'token').map((d) => d.id).filter((id) => !stats.potions[id]);
   const neverRelics = allRelics.filter((id) => !stats.relicsSeen[id]);
-  console.log(JSON.stringify({ cardSet: HD.version, ascension: Number(process.env.ASC || 0), secondBosses: stats.secondBosses || 0, runs: N, bossWins: stats.wins, errors: stats.errors, floors: stats.floors,
+  console.log(JSON.stringify({ digest: digest.digest('hex').slice(0, 16), cardSet: HD.version, ascension: Number(process.env.ASC || 0), secondBosses: stats.secondBosses || 0, runs: N, bossWins: stats.wins, errors: stats.errors, floors: stats.floors,
     encounters: Object.keys(stats.encs).length, encountersNever: Object.keys(HD.ENC).filter((k) => !stats.encs[k] && HD.ENC[k].pool !== 'event'), actsCleared: stats.actsCleared, unknownRooms: stats.unknown, eventsSeen: Object.keys(stats.events).length,
     eventsNever: Object.keys(HD.EVENTS).filter((id) => !stats.events[id]), eventDeaths: Object.keys(stats.deaths).filter((k) => k.startsWith('event:')).length, neowOfferSizes: stats.neow, cardsNeverPlayed: neverCards, potionsNeverUsed: neverPotions, relicsNeverHeld: neverRelics }, null, 1));
 })();

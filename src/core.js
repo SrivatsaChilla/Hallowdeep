@@ -44,6 +44,8 @@
   HD.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   let uidCounter = 1;
   HD.uid = () => uidCounter++;
+  // Multiplayer: every client starts a fight from the same uid, so cards and enemies match across machines.
+  HD.setUid = (n) => { uidCounter = n; };
 
   // Keyword glossary shown as tooltips. Written for HallowDeep.
   HD.TERMS = {

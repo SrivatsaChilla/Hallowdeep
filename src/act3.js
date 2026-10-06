@@ -15,7 +15,7 @@
     for (const o of c) { r -= o[1]; if (r < 0) return o[0]; }
     return c[c.length - 1][0];
   };
-  const steal = (key, stolenKey, n) => async (g, e) => { g.addPw(g.p, key, -n); e[stolenKey] = (e[stolenKey] || 0) + n; e.pw[key === 'might' ? 'possessMight' : 'possessPoise'] = e[stolenKey]; };
+  const steal = (key, stolenKey, n) => async (g, e) => { g.addPw(g.p, key, -n); g.seize(e, key, n); e[stolenKey] = (e[stolenKey] || 0) + n; e.pw[key === 'might' ? 'possessMight' : 'possessPoise'] = e[stolenKey]; };
 
   // ---------- status cards ----------
   const card = (id, o) => { CARDS[id] = Object.assign({ id, target: 'self', v: {}, up: {}, kw: [], tags: [], color: 'status', rarity: 'Status', type: 'Status' }, o); };
@@ -69,10 +69,10 @@
       SMOTHER: { name: 'Smother', atk: 30 }, FURIOUS_PUMMELING: { name: 'Furious Pummeling', atk: 4, hits: 4 } },
     ai: (e) => cyc(e, ['VOMIT_ICHOR', 'FURIOUS_PUMMELING', 'LEECHING_HUG', 'SMOTHER']) });
   mon('FADED', { name: 'The Faded', hp: [106, 106], approx: true, gap: 'attacks',
-    moves: { MIASMA: { name: 'Miasma', block: 8, fx: async (g, e) => { await steal('poise', 'stolenPoise', 2)(g, e); g.addPw(e, 'poise', 2); } }, DREAD: { name: 'Dread', atk: 12 } },
+    moves: { MIASMA: { name: 'Miasma', block: 8, each: steal('poise', 'stolenPoise', 2), fx: async (g, e) => { g.addPw(e, 'poise', 2); } }, DREAD: { name: 'Dread', atk: 12 } },
     ai: (e) => cyc(e, ['MIASMA', 'DREAD']) });
   mon('STRAYED', { name: 'The Strayed', hp: [93, 93],
-    moves: { DEBILITATING_SMOG: { name: 'Debilitating Smog', buff: { might: 2 }, fx: steal('might', 'stolenMight', 2) }, EYE_LASERS: { name: 'Eye Lasers', atk: 4, hits: 2 } },
+    moves: { DEBILITATING_SMOG: { name: 'Debilitating Smog', buff: { might: 2 }, each: steal('might', 'stolenMight', 2) }, EYE_LASERS: { name: 'Eye Lasers', atk: 4, hits: 2 } },
     ai: (e) => cyc(e, ['DEBILITATING_SMOG', 'EYE_LASERS']) });
   mon('BULWARK', { name: 'Living Bulwark', hp: [55, 55], init: { rampart: 25 },
     moves: { SHIELD_SLAM: { name: 'Shield Slam', atk: 6 }, SMASH: { name: 'Smash', atk: 16, buff: { might: 3 } } },

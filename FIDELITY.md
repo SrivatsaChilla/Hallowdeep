@@ -131,6 +131,17 @@ Midnight and Outrage are multiplayer-only in the v0.111 data (they count cards E
 
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).
 
+## Multiplayer (in progress)
+
+Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.md. Built so far is the combat engine for
+2 to 4 players (no screens or network yet). Approximations:
+- Enemy HP, Block and scaled powers round down.
+- If only some players get an extra turn, they play it while the others wait; the enemies act after.
+- Steal moves take from every player and give each their share back on death; the enemy's own gain happens once per move
+  (The Faded gains 2 Poise, The Strayed 2 Might).
+- Accelerant (Quickening) adds up across players for every Toxin tick.
+- "When an enemy dies", Knell kills and end-of-fight effects trigger for every standing player.
+
 ## Ascension
 
 Levels 1 to 10 follow ascensions.json and the mechanics constants: 8 elites per act instead of 5 (A1), Ancients heal 80% of missing HP (A2), 25% less Gold from fights and chests (A3), 2 potion slots (A4), Ascender's Bane (A5), the Scarcity rarity numbers (A7: Rare 1.49%/5%/4.5% and half the rarity growth), each monster's Ascension HP (A8) and each move's Ascension damage (A9) from the monster data for the chosen card set, and a second Act 3 boss (A10).

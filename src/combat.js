@@ -4,37 +4,93 @@
   const CARDS = HD.CARDS;
   const TICK = ['exposed', 'sapped', 'brittle', 'dampened', 'debilitate'];
 
+  // Per-player combat state lives on a seat. The Combat reads and writes the active seat's copy under these names, so
+  // engine code written for one player works for any of them. Everything else (enemies, turn, rng, log) is shared.
+  const SEAT_KEYS = ['run', 'p', 'hand', 'draw', 'discard', 'ash', 'energy', 'maxEnergy', 't', 'rs', 'stars', 'orbs', 'orbSlots',
+    'hadOrbSlots', 'osty', 'facing', 'current', 'ending', 'lostHpTimes', 'hpLostFirst', 'hpLostPhase', 'lastHurtTurn',
+    'firstTurnEnergy', 'firstTurnDraw', 'extraDrawThisTurn', 'leftover', 'drawLocked', 'nibCard', 'lastAS', 'circuitSpent',
+    'pendingKeepSwinging', 'endTurnAfterPlay', 'outbreakCount', 'maulBonus', 'pincer', 'playedCombat', 'burnedCount',
+    'drawsCounted', 'drawnCombat', 'extraCardReward', 'turn'];
+  // Enemy powers that grow with the party like HP does: Curl Up, Flutter, Plow, Rampart, Reattach, Regen (wiki list;
+  // Hardened Shell, Shriek and Skittish are not built here).
+  const MP_SCALED = ['curlUp', 'flutter', 'plow', 'rampart', 'reattach', 'regen'];
+  const SHARED_KEYS = ['ui', 'kind', 'rng', 'mrng', 'encId', 'enc', 'round', 'queue', 'over', 'won', 'phase', 'enemies', 'log', 'leader', 'seats', 'seat'];
+
   class Combat {
     constructor(run, encId, ui, kind = 'monster') {
-      this.run = run;
       this.ui = ui || HD.autoUI;
       this.kind = kind;
       this.rng = run.rng.combat;
       this.mrng = run.rng.monster;
       this.encId = encId;
       this.enc = HD.ENC[encId];
-      this.p = { isPlayer: true, name: HD.charName(run.charId), hp: run.hp, maxHp: run.maxHp, block: 0, pw: {}, fresh: {} };
-      this.maxEnergy = 3;
-      this.energy = 0;
-      this.turn = 0;
+      this.round = 0; // rounds of the fight; each player also counts their own turns
       this.over = false;
       this.won = false;
       this.phase = 'start';
-      this.draw = []; this.hand = []; this.discard = []; this.ash = [];
-      this.t = this.freshTurn();
-      this.lostHpTimes = 0;
-      this.hpLostFirst = false;
-      this.hpLostPhase = 0;
-      this.firstTurnEnergy = 0;
-      this.firstTurnDraw = 0;
-      this.extraDrawThisTurn = 0;
-      this.leftover = 0;
-      this.rs = {}; // per-combat relic flags
-      this.stars = 0; // the Regent's second resource; carries over between turns, no cap
-      this.orbs = []; // the Defect's Cells (orbs.js); index 0 is the rightmost
-      this.orbSlots = (HD.CHARS[run.charId] && HD.CHARS[run.charId].orbSlots) || 0; this.hadOrbSlots = this.orbSlots > 0;
       this.enemies = [];
       this.log = [];
+      this.seats = [];
+      this.seat = this.addSeat(run);
+    }
+    // A player in this fight: their Run (deck, relics, potions, gold) and everything the fight tracks for them.
+    addSeat(run) {
+      const ch = HD.CHARS[run.charId];
+      const s = { index: this.seats.length, run,
+        p: { isPlayer: true, name: HD.charName(run.charId), hp: run.hp, maxHp: run.maxHp, block: 0, pw: {}, fresh: {} },
+        turn: 0, maxEnergy: 3, energy: 0, draw: [], hand: [], discard: [], ash: [], t: this.freshTurn(),
+        lostHpTimes: 0, hpLostFirst: false, hpLostPhase: 0, firstTurnEnergy: 0, firstTurnDraw: 0, extraDrawThisTurn: 0, leftover: 0,
+        rs: {}, // per-combat relic flags
+        stars: 0, // the Regent's second resource; carries over between turns, no cap
+        orbs: [], // the Defect's Cells (orbs.js); index 0 is the rightmost
+        orbSlots: (ch && ch.orbSlots) || 0 };
+      s.hadOrbSlots = s.orbSlots > 0;
+      Object.defineProperty(s.p, 'seat', { value: s }); // hidden, so saves and copies of the player never loop
+      this.seats.push(s);
+      return s;
+    }
+    // Runs fn as one player: every per-player name (p, hand, energy, run...) points at that seat until fn settles.
+    async withSeat(s, fn) { const prev = this.seat; this.seat = s; try { return await fn(); } finally { this.seat = prev; } }
+    // The same for a synchronous read, such as a cost or damage preview on the screen.
+    asSeat(s, fn) { const prev = this.seat; this.seat = s; try { return fn(); } finally { this.seat = prev; } }
+    get multi() { return this.seats.length > 1; }
+    // Players still standing; and everyone an event concerns (the standing players, plus the active one even if they fell).
+    living() { return this.seats.filter((s) => !s.dead); }
+    party() { return this.seats.filter((s) => !s.dead || s === this.seat); }
+    // The active player falls. The fight is lost only when every player has fallen.
+    downed() {
+      this.p.hp = 0; this.seat.dead = true; this.seat.ready = false;
+      if (this.seats.every((s) => s.dead)) { this.over = true; this.won = false; }
+    }
+
+    // ---------- multiplayer scaling (wiki): enemy HP, Block and some powers grow with the party; attacks do not ----------
+    // The act factor in tenths: 1.1 in Act 1, 1.2 after that, 1.3 for the Act 3 boss.
+    mpFactor() { const act = this.seats[0].run.act || 1; return act === 1 ? 11 : act >= 3 && this.kind === 'boss' ? 13 : 12; }
+    mpScale(n) { const k = this.seats.length; return k > 1 && n > 0 ? Math.floor((n * k * this.mpFactor()) / 10) : n; }
+    mpPower(key, n) {
+      const k = this.seats.length;
+      if (k <= 1 || typeof n !== 'number') return n;
+      if (key === 'plate') return n * ((k - 1) * 2 + 1);
+      if (key === 'ward') return n + k - 1;
+      if (key === 'slippery') return n * k;
+      return MP_SCALED.includes(key) ? this.mpScale(n) : n;
+    }
+    mpPowers(init) { const pw = {}; for (const [key, n] of Object.entries(init || {})) pw[key] = this.mpPower(key, n); return pw; }
+
+    // ---------- multiplayer actions ----------
+    // One player's action as plain data (cards and enemies by uid), so it can travel. Actions resolve one at a time.
+    act(i, a) {
+      const go = () => this.withSeat(this.seats[i], () => this.doAct(a));
+      this.queue = (this.queue || Promise.resolve()).then(go, go);
+      return this.queue;
+    }
+    async doAct(a) {
+      const foe = this.enemies.find((e) => e.uid === a.target) || null;
+      if (a.k === 'play') { const c = this.hand.find((x) => x.uid === a.card); if (c) await this.playCard(c, foe); }
+      else if (a.k === 'potion') await this.usePotion(a.slot, foe);
+      else if (a.k === 'end') await this.endTurn();
+      else if (a.k === 'unend') this.cancelEndTurn();
+      await this.endRound(); // the last player still playing may have fallen
     }
     freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false, starsGained: 0, starsSpent: 0, created: 0, energySpent: 0 }; }
 
@@ -48,8 +104,8 @@
       if (A && A.atk && asc >= 9) d = Object.assign({}, d, { moves: Object.fromEntries(Object.entries(d.moves).map(([k, m]) => [k, A.atk[k] != null && m.atk != null ? Object.assign({}, m, { atk: A.atk[k] }) : m])) });
       // Ascension 8 (Tough Enemies): more HP.
       const hpr = A && A.hp ? A.hp : d.hp;
-      const hp = this.mrng.range(hpr[0], hpr[1]);
-      const e = { uid: HD.uid(), id, def: d, name: d.name, hp, maxHp: hp, block: 0, pw: Object.assign({}, d.init || {}),
+      const hp = this.mpScale(this.mrng.range(hpr[0], hpr[1]));
+      const e = { uid: HD.uid(), id, def: d, name: d.name, hp, maxHp: hp, block: 0, pw: this.mpPowers(d.init),
         fresh: {}, hist: [], last: null, alive: true, intent: null, spawned: !!o.spawned };
       if (o.at != null) this.enemies.splice(o.at, 0, e); else this.enemies.push(e);
       return e;
@@ -65,17 +121,28 @@
       const ids = this.enc.build ? this.enc.build(this.mrng) : this.enc.mons;
       for (const id of ids) this.spawn(id);
       if (this.enc.leader) this.leader = this.enemies.find((e) => e.id === this.enc.leader);
+      for (const s of this.seats) this.asSeat(s, () => this.dealDeck());
+      for (const e of this.enemies) { this.chooseIntent(e); if (e.pw.plate) e.block += e.pw.plate; }
+      const mark = this.seats.find((s) => s.run.marked && s.run.marked.includes(s.run.pos));
+      if (mark) { for (const e of this.enemies) e.hp = 1; mark.run.marked = mark.run.marked.filter((k) => k !== mark.run.pos); this.say('The marked foes are already half dead.'); }
+      for (const s of this.seats) {
+        await this.withSeat(s, async () => {
+          if (this.enemies.some((e) => e.pw.backAttack)) { this.facing = this.enemies[0].uid; this.p.pw.surrounded = 1; }
+          await this.rh('battleStart');
+          this.refresh();
+        });
+        if (this.over) break;
+      }
+      this.checkEnd();
+      if (!this.over) await this.startTurn();
+    }
+
+    // The active player's draw pile at the start of the fight: the deck shuffled, Opening cards on top.
+    dealDeck() {
       const deck = this.rng.shuffle(this.run.deck.map((c) => Object.assign(this.makeCard(c.id, c.up), { src: c }, c.ench ? { ench: { ...c.ench } } : {}, c.rider ? { rider: c.rider } : {}, c.grow ? { grow: c.grow } : {})));
       if (this.has('PALE_SEED')) for (const c of deck) if (this.isCut(c) || CARDS[c.id].tags.includes('Brace')) c.addKw = ['Fleeting'];
       const opening = deck.filter((c) => HD.kwOf(c).includes('Opening'));
       this.draw = deck.filter((c) => !opening.includes(c)).concat(opening);
-      for (const e of this.enemies) { this.chooseIntent(e); if (e.pw.plate) e.block += e.pw.plate; }
-      if (this.run.marked && this.run.marked.includes(this.run.pos)) { for (const e of this.enemies) e.hp = 1; this.run.marked = this.run.marked.filter((k) => k !== this.run.pos); this.say('The marked foes are already half dead.'); }
-      if (this.enemies.some((e) => e.pw.backAttack)) { this.facing = this.enemies[0].uid; this.p.pw.surrounded = 1; }
-      await this.rh('battleStart');
-      this.refresh();
-      this.checkEnd();
-      if (!this.over) await this.startTurn();
     }
 
     // ---------- queries ----------
@@ -118,7 +185,7 @@
       return Math.max(0, k);
     }
     canPlay(c) {
-      if (this.over || this.phase !== 'player' || this.ending) return false;
+      if (this.over || this.phase !== 'player' || this.ending || this.seat.ready || this.seat.dead) return false;
       const d = CARDS[c.id];
       if (d.cost === null || HD.kwOf(c).includes('Unplayable')) return false;
       if (this.p.pw.ringing && this.t.cards >= 1) return false;
@@ -229,7 +296,7 @@
       }
     }
     async damage(t, amount, o = {}) {
-      if (this.over || (!t.isPlayer && (!t.alive || t.respawning))) return 0;
+      if (this.over || (!t.isPlayer && (!t.alive || t.respawning)) || (t.isPlayer && t.seat.dead)) return 0;
       let dmg = Math.max(0, amount);
       if (t.pw.intangible) dmg = Math.min(dmg, 1);
       const blocked = Math.min(t.block, dmg);
@@ -242,7 +309,7 @@
       if (dmg > 0) await this.loseHp(t, dmg, o);
       else if (!blocked) this.emit('hit', t, 0);
       if (!t.isPlayer && o.attack && dmg > 0 && (o.src === this.p || o.osty) && !this.over) await this.hook('attackDealt', t, dmg, o);
-      if (t.isPlayer && o.attack && dmg > 0 && this.p.pw.gambit && !this.over) { this.say('You went all in, and lost.'); this.p.hp = 0; this.over = true; this.won = false; return dmg; }
+      if (t.isPlayer && o.attack && dmg > 0 && this.p.pw.gambit && !this.over) { this.say('You went all in, and lost.'); this.downed(); return dmg; }
       if (t.isPlayer && o.src && o.attack && dmg > 0 && !this.over) {
         if (o.src.pw.paperCuts) { this.p.maxHp = Math.max(1, this.p.maxHp - o.src.pw.paperCuts); this.p.hp = Math.min(this.p.hp, this.p.maxHp); this.say(`You lose ${o.src.pw.paperCuts} Max HP.`); }
         if (o.src.pw.painfulStabs) this.addStatus({ id: 'GASH', n: o.src.pw.painfulStabs, to: 'discard' });
@@ -300,7 +367,7 @@
         const jar = this.run.potions.indexOf('MOTH_JAR');
         if (jar >= 0) { this.run.potions[jar] = null; p.hp = Math.max(1, Math.floor(p.maxHp * 0.3)); this.say('The moth breaks free and you rise.'); }
         else if (this.has('SHED_TAIL') && !this.run.relic('SHED_TAIL').used) { this.run.relic('SHED_TAIL').used = true; p.hp = Math.max(1, Math.floor(p.maxHp * 0.5)); this.say('You shed your tail and live.'); }
-        else { p.hp = 0; this.over = true; this.won = false; return; }
+        else { this.downed(); return; }
       }
       if (!this.hpLostFirst) { this.hpLostFirst = true; if (this.has('KNOT_BOX')) await this.drawCards(3); }
       if (this.phase === 'player') {
@@ -332,25 +399,44 @@
         const at = this.enemies.indexOf(e) + 1;
         for (let i = 0; i < e.pw.infested; i++) this.chooseIntent(this.spawn('SQUIRMER', { spawned: true, at: at + i }));
       }
-      if (e.pw.illusion && this.leader && this.leader.alive) e.reviveTurn = this.turn + 1;
-      if (e.pw.reattach && this.alive().some((x) => x.pw.reattach)) { e.reviveTurn = this.turn + 2; e.reviveHp = e.pw.reattach; }
-      if (e.stolenMight) { this.addPw(this.p, 'might', e.stolenMight); this.say(`Your Might returns.`); e.stolenMight = 0; }
-      if (e.stolenPoise) { this.addPw(this.p, 'poise', e.stolenPoise); this.say(`Your Poise returns.`); e.stolenPoise = 0; }
-      if (e.stolen) { this.run.gold += e.stolen; this.say(`You take back ${e.stolen} Gold.`); e.stolen = 0; }
+      if (e.pw.illusion && this.leader && this.leader.alive) e.reviveTurn = this.round + 1;
+      if (e.pw.reattach && this.alive().some((x) => x.pw.reattach)) { e.reviveTurn = this.round + 2; e.reviveHp = e.pw.reattach; }
+      this.giveBack(e);
       for (const x of this.alive()) if (x.pw.crabRage) { this.addPw(x, 'might', 6); x.block += 99; this.say(`${x.name} flies into a rage.`); }
       if (this.leader === e) {
         for (const x of this.enemies) { if (!x.reviveHp) x.reviveTurn = null; if (x !== e && x.alive && x.pw.minion) { x.alive = false; x.fled = true; this.say(`${x.name} flees.`); } }
       }
-      await this.hook('onEnemyDeath', e);
+      for (const s of this.party()) await this.withSeat(s, () => this.hook('onEnemyDeath', e));
       this.checkEnd();
+    }
+    // What an enemy takes from the active player (Might, Poise, Gold) goes back to that player when it dies.
+    seize(e, key, n) {
+      const took = (e.took = e.took || {});
+      const mine = (took[this.seat.index] = took[this.seat.index] || {});
+      mine[key] = (mine[key] || 0) + n;
+    }
+    giveBack(e) {
+      for (const s of this.seats) {
+        const t = e.took && e.took[s.index];
+        if (!t) continue;
+        this.asSeat(s, () => {
+          if (t.might) { this.addPw(this.p, 'might', t.might); this.say('Your Might returns.'); }
+          if (t.poise) { this.addPw(this.p, 'poise', t.poise); this.say('Your Poise returns.'); }
+          if (t.gold) { this.run.gold += t.gold; this.say(`You take back ${t.gold} Gold.`); }
+        });
+      }
+      e.took = null; e.stolenMight = 0; e.stolenPoise = 0; e.stolen = 0;
     }
     checkEnd() {
       if (this.over) return;
-      if (this.p.hp <= 0) { this.over = true; this.won = false; }
+      for (const s of this.seats) if (s.p.hp <= 0) s.dead = true;
+      if (this.seats.every((s) => s.dead)) { this.over = true; this.won = false; }
       else if (!this.alive().length) {
         this.over = true; this.won = true;
-        for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.combatWon) || []) f(this);
-        if (this.p.pw.improvement) { const xs = this.run.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type)); for (let i = 0; i < this.p.pw.improvement && xs.length; i++) this.run.upgrade(xs.splice(this.rng.int(xs.length), 1)[0]); }
+        for (const s of this.living()) this.asSeat(s, () => {
+          for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.combatWon) || []) f(this);
+          if (this.p.pw.improvement) { const xs = this.run.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type)); for (let i = 0; i < this.p.pw.improvement && xs.length; i++) this.run.upgrade(xs.splice(this.rng.int(xs.length), 1)[0]); }
+        });
       }
     }
     async gainBlock(n, fromCard) {
@@ -399,8 +485,8 @@
       if (!c) return null;
       if ((this.p.pw.confused || (c.ench && c.ench.id === 'SLITHER')) && typeof CARDS[c.id].cost === 'number') c.confCost = this.rng.int(4);
       this.drawnCombat = (this.drawnCombat || 0) + 1;
-      if (this.phase === 'player' && this.p.pw.quicksilver) for (const e of this.alive()) this.damage(e, this.p.pw.quicksilver, {});
-      if (this.phase === 'player' && this.p.pw.acidTide) for (const e of this.alive()) this.applyToxin(e, this.p.pw.acidTide);
+      if (this.phase === 'player' && this.p.pw.quicksilver) for (const e of this.alive()) await this.damage(e, this.p.pw.quicksilver, {});
+      if (this.phase === 'player' && this.p.pw.acidTide) for (const e of this.alive()) await this.applyToxin(e, this.p.pw.acidTide);
       if (this.p.pw.automation) { this.drawsCounted = (this.drawsCounted || 0) + 1; if (this.drawsCounted % 10 === 0) this.gainEnergy(this.p.pw.automation); }
       if (this.p.pw.chains && this.phase === 'player' && (this.t.drawn || 0) < this.p.pw.chains) { c.bound = true; this.t.drawn = (this.t.drawn || 0) + 1; }
       this.hand.push(c);
@@ -467,7 +553,7 @@
     }
     // A Toxin tick: lose HP equal to Toxin (ignores Guard), then Toxin drops by 1. Quickening adds extra ticks.
     async toxinTick(e) {
-      for (let i = 0; i < 1 + (this.p.pw.quickening || 0) && e.alive && e.pw.toxin; i++) {
+      for (let i = 0; i < 1 + this.seats.reduce((a, x) => a + (x.p.pw.quickening || 0), 0) && e.alive && e.pw.toxin; i++) {
         await this.loseHp(e, e.pw.toxin);
         if (e.alive && e.pw.toxin) this.addPw(e, 'toxin', -1);
         if (this.over) return;
@@ -689,7 +775,7 @@
     potionTarget(i) { const d = HD.POTIONS[this.run.potions[i]]; return d ? d.target : null; }
     canUsePotion(i) {
       const d = HD.POTIONS[this.run.potions[i]];
-      return !!d && !d.passive && !this.over && this.phase === 'player' && !this.ending;
+      return !!d && !d.passive && !this.over && this.phase === 'player' && !this.ending && !this.seat.ready && !this.seat.dead;
     }
     async usePotion(i, tg) {
       if (!this.canUsePotion(i)) return false;
@@ -706,10 +792,19 @@
     }
 
     // ---------- turn flow ----------
+    // A new round: every standing player's turn starts together, in seat order.
     async startTurn() {
       if (this.over) return;
-      this.turn++;
+      this.round++;
       this.phase = 'player';
+      for (const s of this.seats) { s.ready = false; s.ended = false; }
+      const seats = this.living();
+      for (const s of seats) { await this.withSeat(s, () => this.seatTurnStart(s === seats[0])); if (this.over) return; }
+    }
+    // One player's start of turn. The lead (the first standing player) also runs the enemies' upkeep for the round.
+    async seatTurnStart(lead) {
+      if (this.over) return;
+      this.turn++;
       this.hpLostPhase = 0;
       this.t = this.freshTurn();
       const p = this.p;
@@ -717,9 +812,9 @@
       if (p.pw.intangible) this.addPw(p, 'intangible', -1);
       this.drawLocked = false;
       if (p.pw.shrink && !this.shrunk()) delete p.pw.shrink;
-      for (const e of this.enemies) {
+      if (lead) for (const e of this.enemies) {
         const canRevive = e.reviveHp ? this.alive().some((x) => x.pw.reattach) : this.leader && this.leader.alive;
-        if (!e.alive && !e.fled && e.reviveTurn != null && e.reviveTurn <= this.turn && canRevive) {
+        if (!e.alive && !e.fled && e.reviveTurn != null && e.reviveTurn <= this.round && canRevive) {
           e.alive = true; e.hp = Math.min(e.maxHp, e.reviveHp || e.maxHp); e.block = 0; e.reviveTurn = null; e.reviveHp = 0;
           this.chooseIntent(e);
           this.say(`${e.name} re-forms.`);
@@ -739,12 +834,12 @@
       if (p.pw.clarity) { this.extraDrawThisTurn += 1; this.addPw(p, 'clarity', -1); }
       if (p.pw.nextDraw) { this.extraDrawThisTurn += p.pw.nextDraw; delete p.pw.nextDraw; }
       if (p.pw.nextBlock) { const b = p.pw.nextBlock; delete p.pw.nextBlock; await this.gainBlock(b, false); }
-      for (const e of this.alive()) if (e.pw.rampart) for (const x of this.alive()) if (x !== e && x.def.rampartTarget) x.block += e.pw.rampart;
+      if (lead) for (const e of this.alive()) if (e.pw.rampart) for (const x of this.alive()) if (x !== e && x.def.rampartTarget) x.block += e.pw.rampart;
       for (const c of [...this.hand, ...this.draw, ...this.discard]) c.bound = false;
       if (p.barkRing) { for (const x of p.barkRing) { await this.gainBlock(x.n, false); x.turns--; } p.barkRing = p.barkRing.filter((x) => x.turns > 0); }
       await this.rh('turnStart');
       if (this.over) return;
-      for (const e of this.enemies) e.hitsTurn = 0;
+      if (lead) for (const e of this.enemies) e.hitsTurn = 0;
       for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.turnStart) || []) { await f(this); if (this.over) return; }
       for (const c of this.discard.filter((x) => x.returnNext)) { c.returnNext = false; const i = this.discard.indexOf(c); if (i < 0) continue; this.discard.splice(i, 1); this.addToHand(c); }
       if (p.pw.prepTime) this.addPw(p, 'vigor', p.pw.prepTime);
@@ -800,11 +895,38 @@
         if (!this.over) await this.endTurn();
       }
     }
+    // A player ends their turn. Once every standing player has, each one's turn ends in seat order, then the enemies act.
     async endTurn() {
-      if (this.over || this.phase !== 'player' || this.ending) return;
+      if (this.over || this.phase !== 'player' || this.ending || this.seat.ready || this.seat.dead) return;
+      this.seat.ready = true;
+      await this.endRound();
+    }
+    // Take back End Turn while someone else is still playing.
+    cancelEndTurn() { if (this.phase === 'player' && !this.over && this.seat.ready) this.seat.ready = false; }
+    async endRound() {
+      const seats = this.living();
+      if (this.over || this.phase !== 'player' || !seats.length || seats.some((s) => !s.ready)) return;
+      const again = [];
+      for (const s of seats) {
+        if (s.ended) continue;
+        s.ended = true;
+        if (await this.withSeat(s, () => this.seatTurnEnd())) again.push(s);
+        if (this.over) return;
+      }
+      // Extra turns skip the enemies. If only some players get one, the others wait for them.
+      if (again.length && again.length === this.living().length) return this.startTurn();
+      if (again.length) {
+        for (const s of again) { s.ready = false; s.ended = false; await this.withSeat(s, () => this.seatTurnStart(false)); if (this.over) return; }
+        return;
+      }
+      await this.enemyTurn();
+      if (!this.over) await this.startTurn();
+    }
+    // One player's end of turn. Returns true if they take another turn.
+    async seatTurnEnd() {
       this.ending = true;
       const p = this.p;
-      const done = () => { this.ending = false; return this.checkEnd(); };
+      const done = () => { this.ending = false; this.checkEnd(); return false; };
       for (const f of (HD.ENGINE_HOOKS && HD.ENGINE_HOOKS.turnEnd) || []) { await f(this); if (this.over) return done(); }
       const top = this.draw[this.draw.length - 1];
       if (top && CARDS[top.id].playFromDrawTopAtTurnEnd && !this.over) { this.draw.pop(); await this.autoPlay(top, {}); if (this.over) return done(); }
@@ -826,7 +948,7 @@
       if (p.pw.plate) await this.gainBlock(p.pw.plate, false);
       await this.rh('turnEnd');
       if (this.over) return done();
-      if (p.pw.doom && p.hp <= p.pw.doom) { p.hp = 0; this.say('Your Knell tolls.'); this.over = true; this.won = false; return done(); }
+      if (p.pw.doom && p.hp <= p.pw.doom) { this.say('Your Knell tolls.'); this.downed(); return done(); }
       if (p.pw.regen) { this.heal(p.pw.regen); this.addPw(p, 'regen', -1); }
       if (p.pw.ritual) this.addPw(p, 'might', p.pw.ritual);
       for (const c of this.hand.slice()) {
@@ -868,21 +990,14 @@
       if (this.has('OLD_TEARS') && this.energy >= 1) this.addPw(p, 'nextEnergy', 2);
       if (this.has('DIAMOND_CROWN') && HD.RELICS.DIAMOND_CROWN.halve && this.t.cards <= 2) p.pw.diadem = 1;
       this.ending = false;
-      if (p.pw.extraTurn) {
-        delete p.pw.extraTurn;
-        this.say('You take an extra turn.');
-        if (!this.over) await this.startTurn();
-        return;
-      }
+      if (p.pw.extraTurn) { delete p.pw.extraTurn; this.say('You take an extra turn.'); return true; }
       if (this.has('OLD_EYE') && !this.rs.oldEye && this.t.cards === 0) {
         this.rs.oldEye = true;
         for (const c of this.hand.splice(0)) await this.burn(c);
         this.say('Time bends. You take another turn.');
-        if (!this.over) await this.startTurn();
-        return;
+        return true;
       }
-      await this.enemyTurn();
-      if (!this.over) await this.startTurn();
+      return false;
     }
     chooseIntent(e) {
       if (!e.alive) return;
@@ -891,7 +1006,7 @@
     }
     async enemyTurn() {
       this.phase = 'enemy';
-      this.hpLostPhase = 0;
+      for (const s of this.seats) s.hpLostPhase = 0;
       for (const e of this.alive().slice()) { if (e.pw.toxin) { await this.toxinTick(e); if (this.over) return; } }
       for (const e of this.alive()) {
         delete e.pw.intangible;
@@ -914,17 +1029,19 @@
         delete e.pw.mightDown;
         if (e.alive && e.pw.doom && e.hp <= e.pw.doom) { await this.doomKill(e); if (this.over) return; }
       }
-      for (const t of [this.p, ...this.alive()]) {
+      for (const t of [...this.seats.map((s) => s.p), ...this.alive()]) {
         for (const k of TICK) {
           if (!t.pw[k]) continue;
           if (t.fresh[k]) delete t.fresh[k]; else this.addPw(t, k, -1);
         }
       }
       for (const e of this.alive()) this.chooseIntent(e);
-      if (this.p.pw.sandpit && !this.over) {
-        this.addPw(this.p, 'sandpit', -1);
-        if (!this.p.pw.sandpit) { this.say('The sand swallows you.'); this.p.hp = 0; this.over = true; this.won = false; }
-      }
+      for (const s of this.living()) this.asSeat(s, () => {
+        if (this.p.pw.sandpit && !this.over) {
+          this.addPw(this.p, 'sandpit', -1);
+          if (!this.p.pw.sandpit) { this.say('The sand swallows you.'); this.downed(); }
+        }
+      });
     }
     // Slumbering creatures wake after enough turns or hits.
     slumberTick(e) {
@@ -936,23 +1053,34 @@
       const m = e.def.moves[id];
       if (m && !m.sleep && !m.stun) {
         this.say(`${e.name} uses ${m.name}.`);
-        let dealt = 0;
         if (m.atk != null) {
+          // Every standing player is hit, and each blocks on their own. Imbalanced: one player blocking it all stuns it.
           const hits = m.hitsFn ? m.hitsFn(e) : m.hits || 1;
+          const dealt = new Map();
           for (let i = 0; i < hits; i++) {
             if (!e.alive || this.over) break;
-            dealt += await this.damage(this.p, this.enemyDmg(e, m.atk), { attack: true, src: e });
+            for (const s of this.living()) {
+              const n = await this.withSeat(s, () => this.damage(this.p, this.enemyDmg(e, m.atk), { attack: true, src: e }));
+              dealt.set(s, (dealt.get(s) || 0) + n);
+              if (!e.alive || this.over) break;
+            }
           }
-          if (e.pw.imbalanced && !dealt && e.alive) { e.forceIntent = 'STUN'; this.say(`${e.name} loses its balance.`); }
+          if (e.pw.imbalanced && (!dealt.size || [...dealt.values()].some((n) => !n)) && e.alive) { e.forceIntent = 'STUN'; this.say(`${e.name} loses its balance.`); }
         }
         if (this.over) return;
-        if (m.escape) { e.alive = false; e.fled = true; this.say(`${e.name} escapes${e.stolen ? ` with ${e.stolen} of your Gold` : ''}.`); e.stolen = 0; this.checkEnd(); return; }
+        if (m.escape) { e.alive = false; e.fled = true; this.say(`${e.name} escapes${e.stolen ? ` with ${e.stolen} of your Gold` : ''}.`); e.stolen = 0; e.took = null; this.checkEnd(); return; }
+        // each: what the move does to every standing player; fx: what it does once.
+        if (m.each && e.alive) for (const s of this.living()) { await this.withSeat(s, () => m.each(this, e)); if (this.over) return; }
         if (m.fx && e.alive) { await m.fx(this, e); if (this.over) return; }
         if (e.alive) {
-          if (m.block) e.block += m.block + (e.pw.poise || 0);
-          if (m.buff) for (const k in m.buff) this.addPw(e, k, m.buff[k]);
-          if (m.debuff) for (const k in m.debuff) await this.applyToPlayer(k, m.debuff[k], e);
-          if (m.status) this.addStatus(m.status);
+          if (m.block) e.block += this.mpScale(m.block) + (e.pw.poise || 0);
+          if (m.buff) for (const k in m.buff) this.addPw(e, k, this.mpPower(k, m.buff[k]));
+          for (const s of this.living()) {
+            await this.withSeat(s, async () => {
+              if (m.debuff) for (const k in m.debuff) await this.applyToPlayer(k, m.debuff[k], e);
+              if (m.status) this.addStatus(m.status);
+            });
+          }
           if (m.summon && this.alive().filter((x) => x.id === m.summon).length < 3) this.chooseIntent(this.spawn(m.summon, { at: 0 }));
         }
       }
@@ -977,6 +1105,9 @@
       return { kind: kinds[0] || 'unknown', kinds, name: m.name, dmg: m.atk != null ? this.enemyDmg(e, m.atk) : null, hits: m.hitsFn ? m.hitsFn(e) : m.hits || 1, block: m.block || 0 };
     }
   }
+  for (const k of SEAT_KEYS) Object.defineProperty(Combat.prototype, k, { get() { return this.seat[k]; }, set(v) { this.seat[k] = v; }, configurable: true });
+  Combat.SEAT_KEYS = SEAT_KEYS;
+  Combat.SHARED_KEYS = SHARED_KEYS;
   HD.Combat = Combat;
 
   // Headless chooser for tests and simulations.

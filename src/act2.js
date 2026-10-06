@@ -86,7 +86,7 @@
       ? 'ILLUSION' : rnd(g, e, [['PIERCING_GAZE', 1, true], ['SAIL', 1, true], ['HARDENING_STRIKE', 1, true]])) });
   mon('FRIGHT', { name: 'Fright', hp: [21, 21], init: { illusion: 1, minion: 1 }, moves: { SLAM: { name: 'Slam', atk: 16 } }, ai: () => 'SLAM' });
   mon('PILFER_HOPPER', { name: 'Pilfer Hopper', hp: [79, 79], init: { escapeArtist: 1 }, approx: true,
-    moves: { THIEVERY: { name: 'Thievery', atk: 17, fx: async (g, e) => { const n = Math.min(15, g.run.gold); g.run.gold -= n; e.stolen = (e.stolen || 0) + n; if (n) g.say(`${e.name} steals ${n} Gold.`); } },
+    moves: { THIEVERY: { name: 'Thievery', atk: 17, each: async (g, e) => { const n = Math.min(15, g.run.gold); g.run.gold -= n; e.stolen = (e.stolen || 0) + n; g.seize(e, 'gold', n); if (n) g.say(`${e.name} steals ${n} Gold.`); } },
       FLUTTER: { name: 'Flutter', buff: { flutter: 5 } }, HAT_TRICK: { name: 'Hat Trick', atk: 21 }, NAB: { name: 'Nab', atk: 14 }, ESCAPE: { name: 'Escape', escape: true } },
     ai: (e) => cyc(e, ['THIEVERY', 'FLUTTER', 'HAT_TRICK', 'NAB', 'ESCAPE'], 4) });
   mon('BURROWER', { name: 'Burrower', hp: [87, 87],
@@ -118,13 +118,13 @@
       LASER: { name: 'Laser', atk: 31 }, RECHARGE: { name: 'Recharge', sleep: true } },
     ai: (e) => cyc(e, ['TARGETING_RETICLE', 'PRECISION_BEAM', 'CHARGE_UP', 'LASER', 'RECHARGE']) });
   mon('LORE_FIEND', { name: 'Lore Fiend', hp: [379, 379], approx: true,
-    moves: { CURSE_OF_KNOWLEDGE: { name: 'Curse of Knowledge', fx: async (g, e) => { e.curses = (e.curses || 0) + 1; g.addStatus({ id: g.mrng.pick(HD.RANDOM_CURSES), n: 1, to: 'draw' }); }, debuff: {} },
+    moves: { CURSE_OF_KNOWLEDGE: { name: 'Curse of Knowledge', each: async (g) => { g.addStatus({ id: g.mrng.pick(HD.RANDOM_CURSES), n: 1, to: 'draw' }); }, fx: async (g, e) => { e.curses = (e.curses || 0) + 1; }, debuff: {} },
       SLAP: { name: 'Slap', atk: 17 }, KNOWLEDGE_OVERWHELMING: { name: 'Overwhelm', atk: 8, hits: 3 },
       PONDER: { name: 'Ponder', atk: 11, buff: { might: 2 }, fx: async (g, e) => { e.hp = Math.min(e.maxHp, e.hp + 30); g.emit('heal', e, 30); } } },
     ai: (e) => ({ undefined: 'CURSE_OF_KNOWLEDGE', CURSE_OF_KNOWLEDGE: 'SLAP', SLAP: 'KNOWLEDGE_OVERWHELMING', KNOWLEDGE_OVERWHELMING: 'PONDER',
       PONDER: (e.curses || 0) < 3 ? 'CURSE_OF_KNOWLEDGE' : 'SLAP' })[lastReal(e)] });
   mon('GLUTTON', { name: 'The Glutton', hp: [321, 321], approx: true,
-    moves: { LIQUIFY_GROUND: { name: 'Liquify Ground', fx: async (g) => { g.addPw(g.p, 'sandpit', 8); g.addStatus({ id: 'SCRAMBLE', n: 2, to: 'draw' }); }, debuff: {} },
+    moves: { LIQUIFY_GROUND: { name: 'Liquify Ground', each: async (g) => { g.addPw(g.p, 'sandpit', 8); g.addStatus({ id: 'SCRAMBLE', n: 2, to: 'draw' }); }, debuff: {} },
       THRASH: { name: 'Thrash', atk: 8, hits: 2 }, THRASH_MOVE_2: { name: 'Thrash', atk: 8, hits: 2 }, LUNGING_BITE: { name: 'Lunging Bite', atk: 28 }, SALIVATE: { name: 'Salivate', buff: { might: 2 } } },
     ai: (e) => cyc(e, ['LIQUIFY_GROUND', 'THRASH', 'LUNGING_BITE', 'SALIVATE', 'THRASH_MOVE_2'], 1) });
 

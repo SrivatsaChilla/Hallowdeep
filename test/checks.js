@@ -135,7 +135,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   g2 = await mk2('BURROWER_WEAK'); const bur = g2.enemies[0]; bur.pw.burrowed = 1; bur.block = 5; await g2.damage(bur, 8, { attack: true, src: g2.p }); eq('Burrowed: breaking its Guard stuns it', [bur.intent, bur.pw.burrowed || 0], ['STUN', 0]);
   g2 = await mk2('CRABS'); const [claw, cannon] = g2.enemies; await g2.kill(claw); eq('Crab Rage: the survivor gains 6 Might and 99 Guard', [cannon.pw.might, cannon.block >= 99], [6, true]);
   g2 = await mk2('CRABS'); g2.facing = g2.enemies[0].uid; eq('Flanking: the crab behind you deals 50% more', [g2.enemyDmg(g2.enemies[1], 10), g2.enemyDmg(g2.enemies[0], 10)], [15, 10]);
-  g2 = await mk2('CENTICOIL'); const head = g2.enemies[0]; await g2.kill(head); g2.turn += 2; await g2.endTurn();
+  g2 = await mk2('CENTICOIL'); const head = g2.enemies[0]; await g2.kill(head); g2.round += 2; await g2.endTurn();
   eq('Centicoil: a dead segment reattaches with 25 HP', [head.alive, head.hp], [true, 25]);
   g2 = await mk2('GLUTTON'); g2.enemies[0].intent = 'SALIVATE'; g2.p.pw.sandpit = 1; await g2.endTurn(); eq('Sandpit reaching 0 ends the run', [g2.over, g2.won], [true, false]);
   g2 = await mk2('HOPPER_WEAK'); const hop = g2.enemies[0]; hop.pw.flutter = 2; eq('Flutter halves Attack damage', g2.atkDmg(10, hop, g2.makeCard('CUT')), 5);
