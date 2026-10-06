@@ -2,7 +2,7 @@
 // Usage: node test/triggers.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension'])
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'neow2', 'ascension_data', 'ascension'])
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
 HD.setVersion('0.111');
@@ -225,6 +225,20 @@ const play = async (g, id, t) => { const c = g.hand.find((x) => x.id === id); aw
     await play(g, 'SO_DECREED'); const before = g.hand.some((c) => c.id === 'SO_DECREED');
     await play(g, 'WARD_OFF'); await play(g, 'WARD_OFF'); await play(g, 'WARD_OFF');
     eq('Make It So: back to hand after the third Skill of the turn', [before, g.hand.some((c) => c.id === 'SO_DECREED')], [false, true]);
+  }
+
+  // ---------- the Defect (the Wirebound) ----------
+  {
+    const g = await fight('WIREBOUND', { hand: ['MIRROR_FORM', 'POUND', 'POUND'], draw: [], discard: [] });
+    g.enemyTurn = async () => {}; await play(g, 'MIRROR_FORM'); await g.endTurn();
+    g.hand = ['POUND', 'POUND'].map((id) => g.makeCard(id, false)); g.energy = 9; const h0 = hp(g)[0];
+    await play(g, 'POUND'); const first = hp(g)[0] - h0; await play(g, 'POUND');
+    eq('Echo Form: only the first card each turn is played an extra time', [first, hp(g)[0] - h0], [12, 18]);
+  }
+  {
+    const g = await fight('WIREBOUND', { hand: [], draw: ['DRAIN'], discard: [] });
+    g.energy = 3; await g.drawCards(1);
+    eq('Void: drawing it loses 1 Energy', g.energy, 2);
   }
 
   console.log(fails ? `${fails} of ${n} FAILED` : `all ${n} trigger checks passed`);

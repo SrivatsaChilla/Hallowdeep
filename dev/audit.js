@@ -4,7 +4,7 @@
 const fs = require('fs'), vm = require('vm'), path = require('path'), { execFileSync } = require('child_process');
 const [STABLE, BETA] = [process.argv[2], process.argv[3]];
 if (!STABLE || !BETA) { console.error('Usage: node dev/audit.js <stable data dir> <v0.111 data dir>   (the eng/ folders of a Spire Codex export)'); process.exit(2); }
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'neow2', 'ascension_data', 'ascension', 'names', 'naming'];
 const ctx = vm.createContext({ console, Math, Promise, setTimeout, CSS: { escape: (s) => s } });
 for (const f of FILES) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD;
@@ -99,6 +99,7 @@ const REVIEWED = {
   SEARING_MARK: 'Exhaust 1 card = from your hand', ROUTINE: 'applies while in hand, as in the original', STONE_STANCE: 'this turn = until your next turn',
   FIRE_WALL: 'this turn = until your next turn', CONJURED_EDGE: 'free to play this turn = costs 0 this turn', MAIM: 'Strength returns at the end of the enemy turn',
   EARTHSHAPER: 'turn into = Transform', CRUSHING_STAMP: 'Energy icon in a cost phrase', KEEP_SWINGING: 'costs 0', ROT_OATH: 'cost 0', WINDFALL: 'cards that cost 0',
+  ROLLING_POUND: 'costs 0', RAVENOUS: '0-cost', PISTON_FIST: 'costs 1 less', SCRAP_PICK: 'cost 0', ASSEMBLY: 'costs 0', LEARNING_POUND: 'costs 0', GATHER_ROUND: 'cost 0',
   NEEDLEPOINT: 'costs 1 less', LUNGE: 'costs 0', 'relic COLD_CREAM': 'Energy carries over to the next turn', 'relic WITHERED_HAND': 'free that turn = free this turn',
   'relic SPADE': 'Dig finds a random relic', 'relic THE_RUNNER': 'restocks what you buy', 'relic CHIME': 'keeps your hand on turn 1', 'potion STEADY_SERUM': 'keeps your hand',
   'potion MOTH_JAR': 'the potion is used up', 'potion SHACKLE_VIAL': 'Strength returns at the end of the enemy turn',
@@ -128,18 +129,18 @@ const tokensOf = (raw) => {
     const c = D.beta.cards[orig] || D.stable.cards[orig], d = HD.CARDS[ours];
     if (!c || !d || d.coop || c.multiplayer_only || (d.only && d.only !== HD.version)) continue;
     let mine = ''; try { mine = `${kwText(d, false)} ${strip(d.text(HD.vals({ id: ours, up: false }), F, { id: ours, up: false }, null))}`; } catch (e) { mine = 'ERROR ' + e.message; }
-    const want = tokensOf(`${(c.keywords || []).join(' ')} ${strip(c.description)}`), have = tokensOf(HD.sub(mine));
+    const want = tokensOf(`${(c.keywords || []).join(' ')} ${strip(c.description)}`), have = tokensOf(mine); // card text is already in original names after setNames
     const miss = [...want].filter((k) => !have.has(k)), extra = [...have].filter((k) => !want.has(k));
     if ((miss.length || extra.length) && REVIEWED[ours]) { lines.push(`   reviewed ${ours}: ${REVIEWED[ours]}`); continue; }
-    if (miss.length || extra.length) { bad++; lines.push(`   ${ours} (${c.name}): data has [${miss.join(', ')}] that ours lacks; ours has [${extra.join(', ')}] the data lacks`, `      data: ${strip(c.description).slice(0, 140)}`, `      ours: ${HD.sub(strip(mine)).slice(0, 140)}`); }
+    if (miss.length || extra.length) { bad++; lines.push(`   ${ours} (${c.name}): data has [${miss.join(', ')}] that ours lacks; ours has [${extra.join(', ')}] the data lacks`, `      data: ${strip(c.description).slice(0, 140)}`, `      ours: ${strip(mine).slice(0, 140)}`); }
   }
   for (const [kind, table, ours] of [['relic', MAP.relics, HD.RELICS], ['potion', MAP.potions, HD.POTIONS]]) {
     for (const [orig, id] of Object.entries(table)) {
       const x = D.beta[kind + 's'][orig] || D.stable[kind + 's'][orig], d = ours[id]; if (!x || !d) continue;
-      const want = tokensOf(strip(x.description)), have = tokensOf(HD.sub(d.text || ''));
+      const want = tokensOf(strip(x.description)), have = tokensOf(d.text || '');
       const miss = [...want].filter((k) => !have.has(k)), extra = [...have].filter((k) => !want.has(k));
       if ((miss.length || extra.length) && REVIEWED[`${kind} ${id}`]) { lines.push(`   reviewed ${kind} ${id}: ${REVIEWED[`${kind} ${id}`]}`); continue; }
-      if (miss.length || extra.length) { bad++; lines.push(`   ${kind} ${id} (${x.name}): data has [${miss.join(', ')}] ours lacks; ours has [${extra.join(', ')}]`, `      data: ${strip(x.description).slice(0, 140)}`, `      ours: ${HD.sub(d.text || '').slice(0, 140)}`); }
+      if (miss.length || extra.length) { bad++; lines.push(`   ${kind} ${id} (${x.name}): data has [${miss.join(', ')}] ours lacks; ours has [${extra.join(', ')}]`, `      data: ${strip(x.description).slice(0, 140)}`, `      ours: ${(d.text || '').slice(0, 140)}`); }
     }
   }
   section('Text names the same mechanics (original names, v0.111)', lines, bad);

@@ -97,7 +97,22 @@ Approximations:
 - Resonance's Strength loss on enemies is permanent and is not blocked by Artifact, as with Malaise.
 - Monologue does not count itself; The Sealed Throne, Monologue and Make It So do not trigger from cards that play themselves (Bombardment, I Am Invincible).
 
-## Audit fixes (v0.111)
+## The Wirebound (the Defect)
+
+Built from the v0.111 data: 75 HP, 99 Gold, 3 Energy, 3 Orb Slots, 4 Strikes, 4 Defends, Zap and Dualcast, Cracked Core. All 86 solo cards, Fuel and Void, 9 relics and 3 potions, with every cost, number, keyword, target and type from the generated src/defect_data.js (dev/verify.js: 0 mismatches). The 5 multiplayer-only Defect cards are defined but never offered. Orb rules are in dev/DEFECT.md.
+
+Card text follows the card where it disagrees with the power text (Trash to Treasure Channels 1, Creative AI adds 1 Power, Consuming Shadow Evokes 1 Orb, per copy).
+
+Approximations:
+- Losing Orb Slots (Bulk Up) removes the newest Orbs without Evoking them; Channeling with 0 slots does nothing once the character has had slots.
+- FTL counts the cards played before it this turn.
+- "Whenever you create a Status" counts Status cards your own cards and powers create, not ones enemies add.
+- Storm and Subroutine do not trigger for the Power card that gives them.
+- Glass's Evoke is double its current passive, so it shrinks with the passive.
+- Emotion Chip checks HP lost from the start of your previous turn through the enemy turn.
+- Power Cell picks its 2 zero-cost cards before the opening draw.
+
+
 
 Found by dev/audit.js and fixed: Axebot's Stock (it is replaced twice when killed, +10 Max HP each time; the fight is one Axebot in v0.111), the move order of Tunneler (Strike from Below repeats until it is dug out), Bowlbug (Nectar), Cubex Construct, Thieving Hopper and Torch Head Amalgam, original move names for 15 Act 1 monsters, and Neow's missing relics: Fishing Rod, Kaleidoscope, and the v0.111 Dowsing Rod (with Dowsing and Abundance) and Neow's Sacrifice (with Ambergris). Circlet is given when the relic pools run dry. Not built: Massive Scroll (co-op cards) and Scroll Boxes (card packs not in the data).
 

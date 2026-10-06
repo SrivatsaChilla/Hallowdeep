@@ -3,7 +3,7 @@
 // Usage: node test/regent_cards.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'neow2', 'ascension_data', 'ascension'])
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'neow2', 'ascension_data', 'ascension'])
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx);
 const HD = ctx.HD; HD.setVersion('0.111');
 let fails = 0, n = 0;

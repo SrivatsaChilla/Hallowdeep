@@ -17,7 +17,7 @@ for extra in sys.argv[2:]:
 
 # Our current names and encounter compositions, read from the game data itself.
 js = """const vm=require('vm'),fs=require('fs');const ctx=vm.createContext({console,Math,Promise,setTimeout});
-for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','neow2','ascension_data','ascension'])vm.runInContext(fs.readFileSync('src/'+f+'.js','utf8'),ctx);
+for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','neow2','ascension_data','ascension'])vm.runInContext(fs.readFileSync('src/'+f+'.js','utf8'),ctx);
 const HD=ctx.HD, pick=(o,f)=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,f(v)]));
 const enc=pick(HD.ENC,(e)=>{let m=e.mons;if(!m){const s=new Set();for(let i=0;i<60;i++)e.build({pick:(a)=>a[i%a.length],range:(a)=>a,int:(n)=>i%n,next:()=>((i*37)%100)/100,shuffle:(a)=>a}).forEach(x=>s.add(x));m=[...s];}return {name:e.name,mons:m,kind:e.kind||e.pool||'',act:e.act||1};});
 console.log(JSON.stringify({events:pick(HD.EVENTS,d=>d.name),cards:pick(HD.CARDS,d=>d.name),mons:pick(HD.MON,d=>({name:d.name,moves:Object.keys(d.moves),alias:(HD.MOVE_ALIASES||{})[d.id]||{}})),relics:pick(HD.RELICS,d=>d.name),potions:pick(HD.POTIONS,d=>d.name),enc,pw:pick(HD.PW,p=>p.n)}));"""

@@ -31,6 +31,8 @@
       this.leftover = 0;
       this.rs = {}; // per-combat relic flags
       this.stars = 0; // the Regent's second resource; carries over between turns, no cap
+      this.orbs = []; // the Defect's Cells (orbs.js); index 0 is the rightmost
+      this.orbSlots = (HD.CHARS[run.charId] && HD.CHARS[run.charId].orbSlots) || 0; this.hadOrbSlots = this.orbSlots > 0;
       this.enemies = [];
       this.log = [];
     }
@@ -63,7 +65,7 @@
       const ids = this.enc.build ? this.enc.build(this.mrng) : this.enc.mons;
       for (const id of ids) this.spawn(id);
       if (this.enc.leader) this.leader = this.enemies.find((e) => e.id === this.enc.leader);
-      const deck = this.rng.shuffle(this.run.deck.map((c) => Object.assign(this.makeCard(c.id, c.up), c.ench ? { ench: { ...c.ench }, src: c } : {}, c.rider ? { rider: c.rider } : {})));
+      const deck = this.rng.shuffle(this.run.deck.map((c) => Object.assign(this.makeCard(c.id, c.up), { src: c }, c.ench ? { ench: { ...c.ench } } : {}, c.rider ? { rider: c.rider } : {}, c.grow ? { grow: c.grow } : {})));
       if (this.has('PALE_SEED')) for (const c of deck) if (this.isCut(c) || CARDS[c.id].tags.includes('Brace')) c.addKw = ['Fleeting'];
       const opening = deck.filter((c) => HD.kwOf(c).includes('Opening'));
       this.draw = deck.filter((c) => !opening.includes(c)).concat(opening);
@@ -110,6 +112,7 @@
       if (d.costFn) k = d.costFn(this, c, k);
       if (d.type === 'Attack' && this.p.pw.tangled) k += 1;
       if (d.type === 'Skill' && this.p.pw.freeSkill) k = 0;
+      if (d.type === 'Power' && this.p.pw.freePower) k = 0;
       if (this.hollowFree() || c.freeTurn || c.freeCombat || (d.type === 'Attack' && this.p.pw.keepSwinging) || (d.type === 'Skill' && this.p.pw.rot)) k = 0;
       return Math.max(0, k);
     }
@@ -281,6 +284,7 @@
       if (this.has('LAST_HEARTBEAT')) { n = Math.min(n, 20 - this.hpLostPhase); if (n <= 0) return; }
       this.hpLostPhase += n;
       p.hp -= n;
+      this.lastHurtTurn = this.turn;
       this.emit('hit', p, n);
       this.lostHpTimes++;
       if (this.phase === 'player') this.t.lostHp = true;
@@ -394,6 +398,7 @@
       if (this.p.pw.chains && this.phase === 'player' && (this.t.drawn || 0) < this.p.pw.chains) { c.bound = true; this.t.drawn = (this.t.drawn || 0) + 1; }
       this.hand.push(c);
       if (CARDS[c.id].onDraw && !this.over) await CARDS[c.id].onDraw(this, c);
+      if (!this.over) await this.hook('drawn', c);
       if (this.p.pw.endlessCuts && this.isCut(c) && this.alive().length && this.phase === 'player') {
         this.hand.splice(this.hand.indexOf(c), 1);
         await this.autoPlay(c, {});
@@ -516,7 +521,7 @@
       else if (where === 'drawTop') this.draw.push(c);
       else if (where === 'draw') this.draw.splice(this.rng.int(this.draw.length + 1), 0, c);
       else this.discard.push(c);
-      if (CARDS[c.id].type === 'Status') return c;
+      if (CARDS[c.id].type === 'Status') { await this.hook('statusCreated', c); return c; }
       this.t.created++; this.rs.created = (this.rs.created || 0) + 1;
       await this.hook('created', c);
       return c;
@@ -569,6 +574,8 @@
       if (d.type === 'Skill' && this.p.pw.doubleTake) { times++; this.addPw(this.p, 'doubleTake', -1); }
       if (d.type === 'Attack' && this.p.pw.echo) { times++; this.addPw(this.p, 'echo', -1); }
       if (this.p.pw.duplicate) { times++; this.addPw(this.p, 'duplicate', -1); }
+      if (this.p.pw.echoForm && (this.t.echoed || 0) < this.p.pw.echoForm) { times++; this.t.echoed = (this.t.echoed || 0) + 1; }
+      if (d.type === 'Power' && this.p.pw.signalBoost) { times++; this.addPw(this.p, 'signalBoost', -1); }
       const prev = this.current;
       this.current = c;
       for (let i = 0; i < times; i++) {
@@ -634,6 +641,7 @@
       if (d.type === 'Skill') for (const x of this.alive()) if (x.pw.enrage) this.addPw(x, 'might', x.pw.enrage);
       if (c.bound) this.t.boundPlayed = true;
       if (d.type === 'Skill' && this.p.pw.freeSkill && !c.freeTurn) delete this.p.pw.freeSkill;
+      if (d.type === 'Power' && this.p.pw.freePower && !c.freeTurn) this.addPw(this.p, 'freePower', -1);
       if (d.type === 'Attack' || d.type === 'Skill') this.lastAS = { id: c.id, up: c.up };
       for (const e of this.alive()) if (e.pw.choked) await this.loseHp(e, e.pw.choked);
       if (this.over) return true;
@@ -821,7 +829,7 @@
         if (p.constrictSrc && p.constrictSrc.alive) { await this.damage(p, p.pw.constrict, {}); if (this.over) return done(); }
         else delete p.pw.constrict;
       }
-      for (const k of ['mightTemp', 'poiseTemp', 'seethe', 'noDraw', 'noEnergy', 'ringing', 'echo', 'duplicate']) delete p.pw[k];
+      for (const k of ['mightTemp', 'poiseTemp', 'seethe', 'noDraw', 'noEnergy', 'ringing', 'echo', 'duplicate', 'tuningTemp', 'tuningDown']) delete p.pw[k];
       if (p.pw.tangled) this.addPw(p, 'tangled', -1);
       const keep = this.handKept();
       for (const k of ['doubleTake', 'acidTide', 'shadowMerge', 'freeSkillTurn']) delete p.pw[k];

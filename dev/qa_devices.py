@@ -14,13 +14,13 @@ DEVICES = {  # name: (width, height, touch)
     'phone-large': (430, 932, True), 'phone': (390, 844, True), 'phone-small': (360, 640, True), 'phone-tiny': (320, 568, True),
     'phone-land': (844, 390, True), 'phone-land-small': (667, 375, True), 'phone-land-tiny': (568, 320, True),
 }
-FIGHTS = [('OATHBURNER', 'RIPJAW'), ('VEILED', 'OOZES'), ('OATHBURNER', 'CHOIR'), ('VEILED', 'CUPBEETLE_SWARM'), ('VEILED', 'crowd'), ('CROWNED', 'CHOIR')]
+FIGHTS = [('OATHBURNER', 'RIPJAW'), ('VEILED', 'OOZES'), ('OATHBURNER', 'CHOIR'), ('VEILED', 'CUPBEETLE_SWARM'), ('VEILED', 'crowd'), ('CROWNED', 'CHOIR'), ('WIREBOUND', 'BANDITS')]
 
 SETUP = """async ([ch, enc]) => {
   const S = HD.state; if (!HD._sleep) { HD._sleep = HD.sleep; HD.sleep = (ms) => HD._sleep(ms * 0.2); }
   S.run = new HD.Run('qa-' + enc, ch); S.run.feed = [];
-  S.run.maxHp = S.run.hp = 500; S.run.potions = ch === 'VEILED' ? ['TOXIN_FLASK', 'GHOST_JAR', 'BARK_DRAUGHT'] : ch === 'CROWNED' ? ['GLINT_FLASK', 'ROYAL_NERVE', 'BARK_DRAUGHT'] : ['BARK_DRAUGHT', 'EMBER_DRAUGHT', 'TOXIN_FLASK'];
-  for (const id of ({ VEILED: ['SOMERSAULT', 'KNIFE_FAN', 'LETHAL_DOSE', 'SLIP_AWAY', 'ENDURE'], CROWNED: ['WAR_PLUNDER', 'USURPER', 'STARTHROB', 'DISMISSAL', 'MOTE_WALL'] }[ch] || ['WAR_HORN', 'KINDLING_PACT', 'CLEAR_HANDS'])) S.run.addCard(id, false);
+  S.run.maxHp = S.run.hp = 500; S.run.potions = ch === 'VEILED' ? ['TOXIN_FLASK', 'GHOST_JAR', 'BARK_DRAUGHT'] : ch === 'CROWNED' ? ['GLINT_FLASK', 'ROYAL_NERVE', 'BARK_DRAUGHT'] : ch === 'WIREBOUND' ? ['TUNING_DRAUGHT', 'MURK_ESSENCE', 'BARK_DRAUGHT'] : ['BARK_DRAUGHT', 'EMBER_DRAUGHT', 'TOXIN_FLASK'];
+  for (const id of ({ VEILED: ['SOMERSAULT', 'KNIFE_FAN', 'LETHAL_DOSE', 'SLIP_AWAY', 'ENDURE'], CROWNED: ['WAR_PLUNDER', 'USURPER', 'STARTHROB', 'DISMISSAL', 'MOTE_WALL'], WIREBOUND: ['BOLT_BALL', 'COOL_LOGIC', 'EXTRA_CELLS', 'DOUBLE_RELEASE', 'GATHERING_MURK'] }[ch] || ['WAR_HORN', 'KINDLING_PACT', 'CLEAR_HANDS'])) S.run.addCard(id, false);
   S.run.feed.length = 0; S.overlay = null; S.sel = null;
   S.kind = 'monster'; S.screen = 'combat';
   S.g = new HD.Combat(S.run, enc === 'crowd' ? 'OOZES' : enc, HD.UI, 'monster');
