@@ -8,7 +8,7 @@
   C.ostyAlive = function () { return !!(this.osty && this.osty.alive); };
   C.summon = async function (n) {
     if (n <= 0 || this.over) return;
-    if (!this.ostyAlive()) this.osty = { uid: 'osty', name: 'Clutch', alive: true, hp: n, maxHp: n, pw: {} };
+    if (!this.ostyAlive()) this.osty = { uid: this.seat.index ? 'osty' + this.seat.index : 'osty', name: 'Clutch', alive: true, hp: n, maxHp: n, pw: {} };
     else { this.osty.maxHp += n; this.osty.hp += n; }
     await this.hook('summoned', n);
   };
@@ -35,6 +35,7 @@
     if (t) {
       if (t.pw.flutter || t.pw.soar) d *= 0.5;
       if (t.pw.exposed) d *= 1 + (this.has('PAPER_NEWT') ? 0.75 : 0.5) * (t.pw.debilitate ? 2 : 1);
+      if (t.markBy) d *= this.markMult(t, true);
     }
     return Math.max(0, Math.floor(d));
   };
@@ -50,18 +51,21 @@
       if (!t.alive && !t.pw.minion && !t.fled) fatal = true;
       if (sic) await this.summon(sic);
     }
+    await this.noteAttack(t);
     await this.hook('ostyAttacked', t);
     return { fatal };
   };
   C.ostyAttackAll = async function (base) {
     if (!this.ostyAlive() || this.over) return;
     this.t.ostyAttacks = (this.t.ostyAttacks || 0) + 1;
+    const hit = this.alive();
     for (const e of this.alive().slice()) {
       const sic = e.pw.sicEm || 0;
       await this.damage(e, this.ostyDmg(base, e), { attack: true, src: this.osty, osty: true });
       if (this.over) return;
       if (sic) await this.summon(sic);
     }
+    for (const e of hit) await this.noteAttack(e);
     await this.hook('ostyAttacked', null);
   };
   // Knell: an enemy can Ward it off; on you it just builds up.

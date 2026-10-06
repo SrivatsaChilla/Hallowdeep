@@ -1,7 +1,7 @@
 // Targeted rule checks against the reference numbers.
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ctx=vm.createContext({console,setTimeout,Math,Promise});
-for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','osty','necro_data','necro','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
+for(const f of ['core','cards','potions','monsters','relics','versions','combat','run','events','act2','act3','colorless','enchants','events2','ancients','silent','regent_data','regent','orbs','defect_data','defect','osty','necro_data','necro','coop','neow2','ascension_data','ascension']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8'),ctx);
 const HD=ctx.HD; let fails=0;
 const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console.log('FAIL',name,a,'!=',b);} else console.log('ok  ',name); };
 (async()=>{
@@ -168,7 +168,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   gC = await mk3('GUNNER_WEAK'); gC.hand.length = 0; await gC.endTurn(); eq('Rampart: the gunner starts your turn with 25 Guard', gC.enemies[1].block >= 25, true);
   gC = await mk3('OWL_JUDGE'); const owlE = gC.enemies[0]; owlE.pw.soar = 1; eq('Soar halves Attack damage', gC.atkDmg(10, owlE, gC.makeCard('CUT')), 5);
   // ----- colorless cards -----
-  eq('Colorless: 52 solo cards (Splash waits for other characters), 11 co-op only kept out', [HD.POOL('colorless').length, Object.values(HD.CARDS).filter((d) => d.color === 'colorless' && d.coop).length], [52, 11]);
+  eq('Colorless: 52 solo cards (Splash waits for other characters), 12 co-op only kept out', [HD.POOL('colorless').length, Object.values(HD.CARDS).filter((d) => d.color === 'colorless' && d.coop).length], [52, 12]);
   const rS = new HD.Run('cshop'); const shC = rS.makeShop(); eq('Shop: 1 Uncommon and 1 Rare colorless card at a 15% markup', [shC.colorless.map((x) => HD.CARDS[x.id].rarity), shC.colorless.every((x) => x.base >= Math.round((x.rar === 'Rare' ? 150 : 75) * 1.15 * 0.95))], [['Uncommon', 'Rare'], true]);
   const rRug = new HD.Run('rug'); rRug.addRelic('WORN_RUG'); let sawCl = false; for (let i = 0; i < 300 && !sawCl; i++) sawCl = rRug.cardReward('elite').some((x) => HD.CARDS[x.id].color === 'colorless'); eq('Dingy Rug lets colorless cards into rewards', sawCl, true);
   const mkC = async (relics) => { const r = new HD.Run('cl' + relics.join()); relics.forEach((x) => r.addRelic(x)); const g = new HD.Combat(r, 'RIPJAW', HD.autoUI, 'monster'); await g.start(); return g; };

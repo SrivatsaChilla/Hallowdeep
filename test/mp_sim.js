@@ -1,4 +1,5 @@
-// Multiplayer fights, headless: random parties of 2 to 4 (any characters) play random interleaved actions.
+// Multiplayer fights, headless: random parties of 2 to 4 (any characters, co-op cards in their decks) play random
+// interleaved actions.
 // Checks invariants after every action, and replays each fight from its action log: lockstep needs the same result.
 // Usage: node test/mp_sim.js [fights]   (ASC=10 for Ascension)
 const fs = require('fs');
@@ -6,7 +7,7 @@ const path = require('path');
 const vm = require('vm');
 const crypto = require('crypto');
 const ctx = vm.createContext({ console, setTimeout, Math, Promise });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'neow2', 'ascension_data', 'ascension']) {
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro','coop', 'neow2', 'ascension_data', 'ascension']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 }
 const HD = ctx.HD;
@@ -15,12 +16,17 @@ const N = +process.argv[2] || 200;
 const ASC = Number(process.env.ASC || 0);
 const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
 const KINDS = ['monster', 'monster', 'elite', 'boss'];
+const COOP_PLAYED = new Set();
 
-// A run with a fuller deck and some relics, so more cards and powers get exercised.
+// A run with a fuller deck (co-op cards included) and some relics, so more cards and powers get exercised.
 function party(i, pick) {
   const runs = [];
-  for (let j = 0; j < 2 + (i % 3); j++) {
+  const size = 2 + (i % 3);
+  for (let j = 0; j < size; j++) {
     const r = new HD.Run(`mp${i}:${j}`, pick.pick(CHARS), ASC);
+    r.party = size;
+    const coop = r.pool().concat(r.pool('colorless')).filter((d) => d.coop);
+    for (let k = 0; k < 5; k++) r.addCard(r.rng.misc.pick(coop).id, r.rng.misc.next() < 0.4);
     const relics = Object.keys(HD.RELICS).filter((id) => HD.RELICS[id].rarity !== 'Starter' && ['shared', r.color].includes(HD.RELICS[id].pool || 'shared'));
     for (let k = 0; k < 8; k++) r.addCard(r.rng.misc.pick(HD.POOL(r.color)).id, r.rng.misc.next() < 0.4);
     for (const id of r.rng.misc.shuffle(relics).slice(0, 6)) if (!r.hasRelic(id)) r.addRelic(id);
@@ -35,9 +41,17 @@ function choose(g, drive) {
   // Uses its own RNG: the fight's RNG belongs to the fight, or the replay would differ.
   const foe = () => { const a = g.alive(); return a.length ? drive.pick(a).uid : null; };
   const pots = g.run.potions.map((p, k) => k).filter((k) => g.canUsePotion(k));
-  if (pots.length && drive.next() < 0.08) return { k: 'potion', slot: drive.pick(pots), target: foe() };
+  const ally = () => { const a = g.allies(); return a.length ? drive.pick(a).index : undefined; };
+  if (pots.length && drive.next() < 0.08) {
+    const slot = drive.pick(pots);
+    const throwIt = HD.POTIONS[g.run.potions[slot]].target !== 'enemy' && drive.next() < 0.3;
+    return throwIt ? { k: 'potion', slot, ally: ally() } : { k: 'potion', slot, target: foe() };
+  }
   const ok = g.hand.filter((c) => g.canPlay(c));
-  if (ok.length && drive.next() < 0.9) return { k: 'play', card: drive.pick(ok).uid, target: foe() };
+  if (ok.length && drive.next() < 0.9) {
+    const c = drive.pick(ok);
+    return HD.CARDS[c.id].target === 'ally' ? { k: 'play', card: c.uid, ally: ally() } : { k: 'play', card: c.uid, target: foe() };
+  }
   return { k: 'end' };
 }
 function check(g, where) {
@@ -79,6 +93,7 @@ async function fight(i, replay) {
     }
     if (!step) throw new Error(`${enc}: replay ran out of actions`);
     log.push(step);
+    if (step[1].k === 'play') { const c = g.seats[step[0]].hand.find((x) => x.uid === step[1].card); if (c && HD.CARDS[c.id].coop) COOP_PLAYED.add(c.id); }
     await g.act(step[0], step[1]);
     check(g, `${enc} round ${g.round}`);
   }
@@ -103,6 +118,7 @@ async function fight(i, replay) {
     }
   }
   st.avgRounds = +(st.rounds / Math.max(1, st.fights)).toFixed(1);
+  st.coopCardsPlayed = `${COOP_PLAYED.size} of ${Object.values(HD.CARDS).filter((d) => d.coop).length}`;
   delete st.rounds;
   console.log(JSON.stringify(st));
   if (st.errors || st.mismatches) process.exitCode = 1;

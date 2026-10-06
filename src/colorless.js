@@ -62,7 +62,7 @@
     play: (g, c, t, v) => g.apply(t, 'mightDown', v.loss) });
   skill('FIND', { name: 'Find', cost: 1, kw: ['Burn'], upKw: [], text: () => 'Choose 1 of 3 random cards to add to your hand. It is free this turn.',
     play: async (g) => {
-      const ids = g.rng.shuffle(HD.POOL(g.run.color).map((d) => d.id)).slice(0, 3);
+      const ids = g.rng.shuffle(g.run.pool().map((d) => d.id)).slice(0, 3);
       const [x] = await g.choose({ from: ids.map((id) => g.makeCard(id, false)), n: 1, prompt: 'Choose a card' });
       if (x) { x.freeTurn = true; g.addToHand(x); }
     } });
@@ -168,7 +168,7 @@
     const out = [];
     for (let i = 0; i < n; i++) {
       const rar = run.rng.cards.next() < 0.03 ? 'Rare' : 'Uncommon';
-      const pool = HD.POOL('colorless').filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
+      const pool = run.pool('colorless').filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
       out.push({ id: run.rng.cards.pick(pool).id, up: false });
     }
     return out;

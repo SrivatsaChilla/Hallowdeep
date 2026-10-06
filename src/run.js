@@ -73,6 +73,7 @@
       this.asc = Math.max(0, Math.min(10, asc | 0)); // Ascension level (each level includes the ones below it)
       this.playMs = 0; // run timer: time spent in this run while the page was visible
       this.color = HD.CHARS[charId].color;
+      this.party = 1; // players in the run; co-op cards join the pools when there are more
       const mk = (k) => HD.makeRng(HD.hashSeed(`${seedStr}:${k}`));
       this.rng = { map: mk('map'), combat: mk('combat'), monster: mk('monster'), cards: mk('cards'), shop: mk('shop'),
         relic: mk('relic'), gold: mk('gold'), misc: mk('misc'), enc: mk('enc'), potion: mk('potion'), neow: mk('neow'), event: mk('event') };
@@ -96,6 +97,8 @@
 
     // ---------- basics ----------
     newCard(id, up) { return { uid: HD.uid(), id, up: !!up }; }
+    // The cards this run can offer or create: the character's, or another color's, plus co-op cards in a party.
+    pool(color = this.color) { return HD.POOL(color, this.party > 1); }
     hasRelic(id) { return this.relics.some((r) => r.id === id); }
     relic(id) { return this.relics.find((r) => r.id === id); }
     hook(name, ...args) { for (const r of this.relics.slice()) { const d = HD.RELICS[r.id]; if (d && d[name]) d[name](this, r, ...args); } }
@@ -110,7 +113,7 @@
     removeCard(c) { const i = this.deck.indexOf(c); if (i >= 0) { this.deck.splice(i, 1); this.note({ kind: 'removed', id: c.id, up: c.up }); } }
     // Transform: swap a card for a different random card from the character's pool.
     transform(c) {
-      const pool = HD.POOL(this.color).filter((d) => d.id !== c.id);
+      const pool = this.pool().filter((d) => d.id !== c.id);
       this.removeCard(c);
       return this.addCard(this.rng.misc.pick(pool).id, false);
     }
@@ -243,11 +246,11 @@
       return rar;
     }
     cardReward(kind, forceRarity) {
-      const pool = HD.POOL(this.color);
+      const pool = this.pool();
       const out = [];
       for (let i = 0; i < 3; i++) {
         const rar = forceRarity || this.rollRarity(kind, kind === 'monster' || kind === 'elite' || kind === 'boss');
-        const rug = this.hasRelic('WORN_RUG') ? HD.POOL('colorless') : [];
+        const rug = this.hasRelic('WORN_RUG') ? this.pool('colorless') : [];
         const cands = pool.concat(rug).filter((d) => d.rarity === rar && !out.includes(d.id));
         out.push(this.rng.cards.pick(cands).id);
       }
@@ -279,7 +282,7 @@
       if (kind === 'monster' && this.hasRelic('SPINNING_WHEEL')) picks.push(this.rewardCards(kind));
       if (kind === 'elite' && this.hasRelic('PALE_STAR')) picks.push(this.rewardCards('elite', 'Rare'));
       if (this.hasRelic('LONG_SWEET') && this.combats % 2 === 0) {
-        const powers = HD.POOL(this.color).filter((d) => d.type === 'Power');
+        const powers = this.pool().filter((d) => d.type === 'Power');
         for (const p of picks) { const extra = this.rng.cards.pick(powers.filter((d) => !p.some((c) => c.id === d.id))); p.push({ id: extra.id, up: false }); }
       }
       if (this.hasRelic('MAGMA_LAMP') && g && g.lostHpTimes === 0) for (const p of picks) for (const c of p) if (CARDS[c.id].type !== 'Status') c.up = true;
@@ -321,7 +324,7 @@
     removalCost() { return Math.round((75 + 25 * this.removals) * this.priceMult()); }
     shopCard(type, taken) {
       const sh = this.rng.shop;
-      const pool = HD.POOL(this.color);
+      const pool = this.pool();
       let rar = this.rollRarity('shop', false);
       if (type === 'Power' && rar === 'Common') rar = 'Uncommon';
       let cands = pool.filter((d) => d.type === type && d.rarity === rar && !taken.includes(d.id));
@@ -344,7 +347,7 @@
       return { id, base: Math.round(RELIC_PRICE[HD.RELICS[id].rarity] * sh.float(0.85, 1.15)) };
     }
     shopColorless(rar) {
-      const pool = HD.POOL('colorless').filter((d) => d.rarity === rar && !(this.shop && (this.shop.colorless || []).some((x) => x.id === d.id)));
+      const pool = this.pool('colorless').filter((d) => d.rarity === rar && !(this.shop && (this.shop.colorless || []).some((x) => x.id === d.id)));
       const d = this.rng.shop.pick(pool);
       return { id: d.id, rar, base: Math.round(CARD_PRICE[rar] * 1.15 * this.rng.shop.float(0.95, 1.05)) };
     }

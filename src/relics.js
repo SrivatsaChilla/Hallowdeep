@@ -186,7 +186,7 @@
   const boon = (id, o) => relic('Ancient', id, Object.assign({ pool: 'neow' }, o));
   const bane = (id, o) => relic('Ancient', id, Object.assign({ pool: 'neow', bane: true }, o));
   boon('FADED_SCROLL', { name: 'Faded Scroll', text: 'On pickup, add a random Rare card to your deck.',
-    onPickup: (run) => run.addCard(run.rng.cards.pick(HD.POOL(run.color).filter((d) => d.rarity === 'Rare')).id) });
+    onPickup: (run) => run.addCard(run.rng.cards.pick(run.pool().filter((d) => d.rarity === 'Rare')).id) });
   boon('ECHO_HORN', { name: 'Echo Horn', text: 'At the start of Elite combats, draw 2 additional cards and gain 1 Energy.',
     battleStart: async (g) => { if (g.kind === 'elite') { g.firstTurnDraw += 2; g.firstTurnEnergy += 1; } } });
   boon('AMBER_PEARL', { name: 'Amber Pearl', text: 'On pickup, gain 150 Gold.', onPickup: (run) => run.gainGold(150) });

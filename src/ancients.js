@@ -49,7 +49,7 @@
   relic('OROBAS', 'DRIFT_LOG', { name: 'Drift Log', text: 'You may reroll each card reward once.' });
   relic('OROBAS', 'STATIC_SHRIMP', { name: 'Static Shrimp', text: 'On pickup, Enchant a Skill with Imbued.', onPickup: (run) => run.pending.push({ kind: 'enchant', id: 'IMBUED' }) });
   relic('OROBAS', 'CRYSTAL_EYE', { name: 'Crystal Eye', text: 'On pickup, obtain 2 Common cards, 2 Uncommon cards, and 1 Rare card.',
-    onPickup: (run) => { for (const rar of ['Common', 'Common', 'Uncommon', 'Uncommon', 'Rare']) run.addCard(run.rng.cards.pick(HD.POOL(run.color).filter((d) => d.rarity === rar)).id); } });
+    onPickup: (run) => { for (const rar of ['Common', 'Common', 'Uncommon', 'Uncommon', 'Rare']) run.addCard(run.rng.cards.pick(run.pool().filter((d) => d.rarity === rar)).id); } });
   relic('OROBAS', 'BRIGHT_PEARL', { name: 'Bright Pearl', text: 'At the start of each combat, add 1 Glowshard to your hand.', firstHand: async (g) => g.addToHand(g.makeCard('GLOWSHARD', false)) });
   relic('OROBAS', 'SAND_FORT', { name: 'Sand Fort', text: 'On pickup, Upgrade 6 random cards.', onPickup: (run) => upgradeRandom(run, 6) });
   relic('OROBAS', 'ELDER_TOUCH', { name: "Elder's Touch", text: 'On pickup, replace your starter relic with an ancient version.',
@@ -133,7 +133,7 @@
     onPickup: (run) => run.addCard('SPELLBOUND'), battleStart: energy });
   relic('VAKUU', 'CHOICE_RIDDLE', { name: 'Choice Riddle', text: 'At the start of each combat, add 1 of 5 random cards to your hand. It gains Retain.',
     firstHand: async (g) => {
-      const opts = g.rng.shuffle(HD.POOL(g.run.color).map((d) => d.id)).slice(0, 5).map((id) => g.makeCard(id, false));
+      const opts = g.rng.shuffle(g.run.pool().map((d) => d.id)).slice(0, 5).map((id) => g.makeCard(id, false));
       const [x] = await g.choose({ from: opts, n: 1, prompt: 'Choice Riddle: choose a card' });
       if (x) { x.addKw = ['Retain']; g.addToHand(x); }
     } });

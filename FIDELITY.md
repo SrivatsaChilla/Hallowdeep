@@ -141,6 +141,14 @@ Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.m
   (The Faded gains 2 Poise, The Strayed 2 Might).
 - Accelerant (Quickening) adds up across players for every Toxin tick.
 - "When an enemy dies", Knell kills and end-of-fight effects trigger for every standing player.
+- Co-op cards that give Guard to another player (Boost, Sky Chart, Rally Cry) work it out on the card you play (your
+  Poise counts) and hand it over as it is; Shared Scar gives exactly your Guard.
+- Lurk (Sneaky) and Pile On (Gang Up) count each attack card or Clutch attack against an enemy once, however many hits.
+- Knocked Over (Knockdown) multiplies all damage from the other players; Flanked doubles only their attack damage.
+  Flanked, Knocked Over, Double Team, Take the Blow and Netherworld last until the next round starts. Deep Sleep
+  (Hibernate) lasts until your next turn, so the Rime passive at the end of your turn shares its Guard.
+- Royal Gift (Largesse) picks from the solo colorless cards. Relay Stone (The Ball) passes to a random other standing
+  player after it is played, keeping its extra damage for the rest of the fight.
 
 ## Ascension
 

@@ -18,7 +18,7 @@
         const out = [];
         for (let k = 0; k < 3; k++) {
           const r = run.rng.cards.next(), rar = r < 0.03 ? 'Rare' : r < 0.37 ? 'Uncommon' : 'Common';
-          const pool = HD.POOL(color).filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
+          const pool = run.pool(color).filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
           if (pool.length) out.push({ id: run.rng.cards.pick(pool).id, up: false });
         }
         run.pending.push({ kind: 'cards', cards: out });
@@ -46,7 +46,7 @@
   CARDS.ABUNDANCE = { id: 'ABUNDANCE', name: 'Abundance', type: 'Skill', rarity: 'Ancient', color: 'event', cost: 1, upCost: 0, target: 'self', kw: ['Burn'], tags: [], v: {}, up: {},
     text: () => 'Choose 1 of 3 Upgraded Powers to add to your hand. It is free to play this turn.',
     play: async (g) => {
-      const ids = g.rng.shuffle(HD.POOL(g.run.color).filter((d) => d.type === 'Power').map((d) => d.id)).slice(0, 3);
+      const ids = g.rng.shuffle(g.run.pool().filter((d) => d.type === 'Power').map((d) => d.id)).slice(0, 3);
       const [x] = await g.choose({ from: ids.map((id) => g.makeCard(id, true)), n: 1, prompt: 'Choose a Power' });
       if (x) { x.freeTurn = true; g.addToHand(x); }
     } };

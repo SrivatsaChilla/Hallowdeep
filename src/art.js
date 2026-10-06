@@ -292,6 +292,18 @@
     ROYAL_STARE: ['eye', 'crown', ['aura'], 0], DENSE_SHELL: ['shield', 'boulder', ['ring'], 0], TRIBUTE: ['coins', 'crown', ['sparks', 'aura'], 0], HUNTING_EDGE: ['sword', 'eye', ['slash', 'speed'], 0],
     SEVEN_LIGHTS: ['orbs', 'shards', ['sparks', 'speed'], 0], BLADEMASTER: ['sword', 'sword', ['slash', 'aura'], 28], THE_ARMORER: ['anvil', 'hammer', ['sparks', 'aura'], 0], IRON_RULE: ['crown', 'chains', ['ash'], 0],
     HOLLOW_FORM: ['mask', 'swirl', ['ash', 'aura'], 0], STARSTORM: ['fireball', 'orbs', ['speed', 'sparks'], 0], THE_LOCKED_THRONE: ['crown', 'chains', ['aura', 'sparks'], 0],
+    // co-op cards
+    HOPE_BEACON: ['tower', 'flame', ['aura'], 0], OWN_BELIEF: ['heart', 'uparrow', ['sparks'], 0], COORDINATED: ['fist', 'fist', ['speed'], 0],
+    PILE_ON: ['fist', 'burst', ['speed', 'quake'], 0], HUDDLE: ['cards', 'ring', ['aura'], 0], TAKE_THE_BLOW: ['shield', 'wall', ['ring'], 0],
+    KNOCK_OVER: ['boulder', 'burst', ['quake'], -12], BOOST: ['shield', 'uparrow', ['aura'], 0], COPYCAT: ['mask', 'shield', ['ring'], 0],
+    RALLY_CRY: ['warhorn', 'shield', ['ring'], 0], DOUBLE_TEAM: ['sword', 'sword', ['slash'], 20], RELAY_STONE: ['boulder', null, ['speed', 'sparks'], 15],
+    KNIFE_CHORUS: ['dagger', 'dagger', ['sparks', 'speed'], 30], BREW_SHARE: ['drops', 'tear', ['drops'], 0], FADE_OUT: ['cloak', 'swirl', ['aura'], 0],
+    LURK: ['eye', 'cloak', ['ash'], 0], FLANK_HELP: ['dagger', 'claw', ['slash'], -20], POWER_SHARE: ['bolt', 'orbs', ['sparks'], 0],
+    DEEP_SLEEP: ['moon', 'shards', ['aura'], 0], KICK_START: ['bolt', 'uparrow', ['speed'], 0], MIMIC_ROUTINE: ['mask', 'cards', ['ring'], 0],
+    ALL_HANDS: ['fist', 'orbs', ['sparks'], 0], DIN: ['warhorn', 'skull', ['quake'], 0], PEEK_BEYOND: ['eye', 'skull', ['ash'], 0],
+    BONE_LEGION: ['bone', 'skull', ['ash', 'quake'], 0], WRAITHBOUND: ['chains', 'skull', ['aura'], 0], NETHERWORLD: ['roots', 'skull', ['ash'], 0],
+    SKY_CHART: ['scroll', 'crown', ['sparks'], 0], SHARED_ANVIL: ['anvil', 'hammer', ['sparks', 'ring'], 0], ROYAL_GIFT: ['crown', 'cards', ['aura'], 0],
+    WAR_COUNCIL: ['banner', 'scroll', ['ring'], 0], COUNSEL: ['scroll', 'eye', ['aura'], 0],
   };
 
   const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };

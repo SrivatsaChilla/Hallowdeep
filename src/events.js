@@ -45,7 +45,7 @@
     const out = [];
     for (let i = 0; i < n; i++) {
       const rar = rarityFn();
-      const pool = HD.POOL(run.color).filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
+      const pool = run.pool().filter((d) => d.rarity === rar && !out.some((c) => c.id === d.id));
       out.push({ id: run.rng.event.pick(pool).id, up: false });
     }
     return out;

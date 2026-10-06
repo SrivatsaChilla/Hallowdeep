@@ -14,7 +14,7 @@
   // Enemy powers that grow with the party like HP does: Curl Up, Flutter, Plow, Rampart, Reattach, Regen (wiki list;
   // Hardened Shell, Shriek and Skittish are not built here).
   const MP_SCALED = ['curlUp', 'flutter', 'plow', 'rampart', 'reattach', 'regen'];
-  const SHARED_KEYS = ['ui', 'kind', 'rng', 'mrng', 'encId', 'enc', 'round', 'queue', 'over', 'won', 'phase', 'enemies', 'log', 'leader', 'seats', 'seat'];
+  const SHARED_KEYS = ['ui', 'kind', 'rng', 'mrng', 'encId', 'enc', 'round', 'queue', 'mp', 'over', 'won', 'phase', 'enemies', 'log', 'leader', 'seats', 'seat'];
 
   class Combat {
     constructor(run, encId, ui, kind = 'monster') {
@@ -30,6 +30,7 @@
       this.phase = 'start';
       this.enemies = [];
       this.log = [];
+      this.mp = {}; // co-op scratch: guards for effects that echo to the other players
       this.seats = [];
       this.seat = this.addSeat(run);
     }
@@ -57,6 +58,38 @@
     // Players still standing; and everyone an event concerns (the standing players, plus the active one even if they fell).
     living() { return this.seats.filter((s) => !s.dead); }
     party() { return this.seats.filter((s) => !s.dead || s === this.seat); }
+    // Other standing players, from the active seat's side.
+    allies() { return this.living().filter((s) => s !== this.seat); }
+    // The ally a card or potion aims at: the one chosen if they still stand, otherwise a random other player.
+    allyFor(t) {
+      if (t && t.isPlayer && !t.seat.dead && t.seat !== this.seat) return t.seat;
+      const a = this.allies();
+      return a.length ? this.rng.pick(a) : null;
+    }
+    // Run fn as one ally (given their creature), or as every standing player in seat order.
+    async asAlly(t, fn) { if (t && t.isPlayer && !t.seat.dead) return this.withSeat(t.seat, fn); }
+    async everyone(fn) { for (const s of this.living()) { await this.withSeat(s, fn); if (this.over) return; } }
+    // Co-op debuffs on an enemy that only help the other players (Flanking, Knockdown, Tag Team).
+    async mark(t, key, n) { if (await this.apply(t, key, n)) (t.markBy = t.markBy || {})[key] = this.seat.index; }
+    marked(t, key) { return t.pw[key] && t.markBy && t.markBy[key] !== this.seat.index ? t.pw[key] : 0; }
+    // The active player's damage to a marked enemy: Flanking doubles attacks, Knockdown multiplies all of it.
+    markMult(t, attack) { return t.markBy ? (attack && this.marked(t, 'flanked') ? 2 : 1) * (this.marked(t, 'knocked') || 1) : 1; }
+    // The active player attacked t. Gang Up counts these; Sneaky answers them.
+    async noteAttack(t) {
+      if (!this.multi || !t || t.isPlayer) return;
+      const by = (t.hitBy = t.hitBy || {});
+      by[this.seat.index] = (by[this.seat.index] || 0) + 1;
+      const me = this.seat;
+      for (const s of this.allies()) { await this.withSeat(s, () => this.hook('allyAttacked', t, me)); if (this.over) return; }
+    }
+    attacksByOthers(t) { return t && t.hitBy ? Object.entries(t.hitBy).reduce((a, [k, n]) => a + (+k === this.seat.index ? 0 : n), 0) : 0; }
+    // Co-op effects that last "this turn" end when the next round starts.
+    mpRoundStart() {
+      for (const e of this.enemies) { delete e.pw.flanked; delete e.pw.knocked; delete e.pw.tagTeam; e.markBy = null; e.hitBy = null; }
+      for (const s of this.seats) { delete s.p.pw.underworld; delete s.p.pw.covered; delete s.p.pw.intercept; s.cover = null; }
+    }
+    // Who an enemy attack hits: every standing player, but hits on a covered player go to whoever covers them.
+    hitList() { return this.living().map((s) => (s.cover && !s.cover.dead ? s.cover : s)); }
     // The active player falls. The fight is lost only when every player has fallen.
     downed() {
       this.p.hp = 0; this.seat.dead = true; this.seat.ready = false;
@@ -85,7 +118,7 @@
       return this.queue;
     }
     async doAct(a) {
-      const foe = this.enemies.find((e) => e.uid === a.target) || null;
+      const foe = this.enemies.find((e) => e.uid === a.target) || (a.ally != null && this.seats[a.ally] ? this.seats[a.ally].p : null);
       if (a.k === 'play') { const c = this.hand.find((x) => x.uid === a.card); if (c) await this.playCard(c, foe); }
       else if (a.k === 'potion') await this.usePotion(a.slot, foe);
       else if (a.k === 'end') await this.endTurn();
@@ -188,6 +221,7 @@
       if (this.over || this.phase !== 'player' || this.ending || this.seat.ready || this.seat.dead) return false;
       const d = CARDS[c.id];
       if (d.cost === null || HD.kwOf(c).includes('Unplayable')) return false;
+      if (d.target === 'ally' && !this.allies().length) return false;
       if (this.p.pw.ringing && this.t.cards >= 1) return false;
       if (this.t.cards >= 3 && this.hand.some((x) => x.id === 'ROUTINE')) return false;
       if (this.t.cards >= 6 && this.has('VELVET_COLLAR')) return false;
@@ -213,6 +247,7 @@
       if (isAtk && c.ench && this.has('ODD_LIGHTER')) d += 9;
       if (isAtk && this.p.pw.vigor) d += this.p.pw.vigor;
       d += (this.p.pw.might || 0) + (this.p.pw.mightTemp || 0);
+      for (const f of HD.ATK_ADD) d += f(this, c, t, isAtk);
       if (this.p.pw.sapped) d *= 0.75;
       if (this.shrunk()) d *= 0.7;
       if (t) {
@@ -228,6 +263,7 @@
       if (en && en.mult) d *= en.mult;
       if (isAtk && this.p.pw.doubleAtk) d *= 2;
       if (c && this.nibCard === c) d *= 2;
+      if (t && t.markBy) d *= this.markMult(t, true);
       return Math.max(0, Math.floor(d));
     }
     enemyDmg(e, base) {
@@ -240,6 +276,7 @@
       if (this.p.pw.diadem) d *= 0.5;
       if (this.p.pw.exposed) d *= 1.5;
       if (this.p.pw.stoneStance && e.pw.exposed) d *= 0.5;
+      for (const f of HD.TAKEN_MODS) d = f(this, d, e);
       return Math.max(0, Math.floor(d));
     }
     poise() { return (this.p.pw.poise || 0) + (this.p.pw.poiseTemp || 0) + (this.has('BUCKLE') && this.noPotions() ? 2 : 0); }
@@ -288,16 +325,20 @@
         await this.damage(t, this.atkDmg(base, t, c), { attack: true, src: this.p });
         if (!t.alive && !t.pw.minion && !t.fled) fatal = true;
       }
+      await this.noteAttack(t);
       return { fatal };
     }
     async attackAll(base, hits, c = null) {
+      const hit = this.alive();
       for (let i = 0; i < hits; i++) {
         for (const e of this.alive()) { await this.damage(e, this.atkDmg(base, e, c), { attack: true, src: this.p }); if (this.over) return; }
       }
+      for (const e of hit) await this.noteAttack(e);
     }
     async damage(t, amount, o = {}) {
       if (this.over || (!t.isPlayer && (!t.alive || t.respawning)) || (t.isPlayer && t.seat.dead)) return 0;
       let dmg = Math.max(0, amount);
+      if (!t.isPlayer && !o.attack && t.markBy) dmg = Math.floor(dmg * this.markMult(t, false));
       if (t.pw.intangible) dmg = Math.min(dmg, 1);
       const blocked = Math.min(t.block, dmg);
       t.block -= blocked;
@@ -308,7 +349,11 @@
       if (!t.isPlayer && t.pw.burrowed && blocked && t.block === 0) { delete t.pw.burrowed; t.forceIntent = 'STUN'; t.intent = 'STUN'; this.say(`${t.name} is dug out and dazed.`); }
       if (dmg > 0) await this.loseHp(t, dmg, o);
       else if (!blocked) this.emit('hit', t, 0);
-      if (!t.isPlayer && o.attack && dmg > 0 && (o.src === this.p || o.osty) && !this.over) await this.hook('attackDealt', t, dmg, o);
+      if (!t.isPlayer && o.attack && dmg > 0 && (o.src === this.p || o.osty) && !this.over) {
+        await this.hook('attackDealt', t, dmg, o);
+        const me = this.seat;
+        if (this.multi) for (const s of this.allies()) { if (this.over) break; await this.withSeat(s, () => this.hook('allyAttackDealt', t, dmg, me)); }
+      }
       if (t.isPlayer && o.attack && dmg > 0 && this.p.pw.gambit && !this.over) { this.say('You went all in, and lost.'); this.downed(); return dmg; }
       if (t.isPlayer && o.src && o.attack && dmg > 0 && !this.over) {
         if (o.src.pw.paperCuts) { this.p.maxHp = Math.max(1, this.p.maxHp - o.src.pw.paperCuts); this.p.hp = Math.min(this.p.hp, this.p.maxHp); this.say(`You lose ${o.src.pw.paperCuts} Max HP.`); }
@@ -455,6 +500,7 @@
       if (b <= 0) return;
       this.p.block = Math.min(999, this.p.block + b);
       this.emit('guard', this.p, b);
+      if (this.multi && this.phase === 'player' && !this.mp.echo) await this.hook('blockGained', b);
       if (this.p.pw.siege) { const e = this.randomEnemy(); if (e) await this.damage(e, this.p.pw.siege, {}); }
     }
     async selfLoseHp(n) { await this.loseHp(this.p, n, { direct: true }); }
@@ -490,6 +536,7 @@
       if (this.p.pw.automation) { this.drawsCounted = (this.drawsCounted || 0) + 1; if (this.drawsCounted % 10 === 0) this.gainEnergy(this.p.pw.automation); }
       if (this.p.pw.chains && this.phase === 'player' && (this.t.drawn || 0) < this.p.pw.chains) { c.bound = true; this.t.drawn = (this.t.drawn || 0) + 1; }
       this.hand.push(c);
+      if (this.multi) for (const s of this.party()) { if (this.over) break; await this.withSeat(s, () => this.hook('anyDrawn', c)); }
       if (CARDS[c.id].onDraw && !this.over) await CARDS[c.id].onDraw(this, c);
       if (!this.over) await this.hook('drawn', c);
       if (this.p.pw.endlessCuts && this.isCut(c) && this.alive().length && this.phase === 'player') {
@@ -652,7 +699,7 @@
       for (let i = 0; i < times && !this.over; i++) { this.count(d); await this.resolve(c, d.target === 'enemy' ? (tg && tg.alive ? tg : this.randomEnemy()) : null, 0); this.t.played++; }
       if (!this.over) await this.settle(c, false);
     }
-    randomPoolCard(filter) { return this.rng.pick(HD.POOL(this.run.color).filter(filter)).id; }
+    randomPoolCard(filter) { return this.rng.pick(this.run.pool().filter(filter)).id; }
     // Whirligig: refill an empty hand during your turn.
     async topCheck() {
       if (this.has('WHIRLIGIG') && this.phase === 'player' && !this.ending && !this.over && !this.hand.length && (this.draw.length || this.discard.length)) await this.drawOne();
@@ -669,12 +716,14 @@
       if (this.p.pw.duplicate) { times++; this.addPw(this.p, 'duplicate', -1); }
       if (this.p.pw.echoForm && (this.t.echoed || 0) < this.p.pw.echoForm) { times++; this.t.echoed = (this.t.echoed || 0) + 1; }
       if (d.type === 'Power' && this.p.pw.signalBoost) { times++; this.addPw(this.p, 'signalBoost', -1); }
+      if (d.type === 'Attack' && tg && !tg.isPlayer && this.marked(tg, 'tagTeam')) { times++; this.addPw(tg, 'tagTeam', -1); }
       const prev = this.current;
       this.current = c;
       for (let i = 0; i < times; i++) {
         let t = tg;
         if (d.target === 'enemy' && (!t || !t.alive)) t = this.randomEnemy();
         if (d.target === 'enemy' && !t) break;
+        if (d.target === 'ally') { const s = this.allyFor(t); t = s ? s.p : null; if (!t) break; }
         await d.play(this, c, t, HD.vals(c), x);
         if (this.over) break;
       }
@@ -699,6 +748,7 @@
       if (d.type === 'Power') return;
       const to = d.settleTo && !forceBurn ? d.settleTo(this, c) : null;
       if (to === 'hand') { this.addToHand(c); return; }
+      if (to === 'gone') return; // the card put itself somewhere else
       if (to === 'drawTop') { this.draw.push(c); return; }
       if (forceBurn || HD.kwOf(c).includes('Burn') || (this.p.pw.rot && d.type === 'Skill')) await this.burn(c);
       else if (this.p.pw.nostalgia && !this.t.nostalgia && (d.type === 'Attack' || d.type === 'Skill')) { this.t.nostalgia = true; this.draw.push(c); }
@@ -783,8 +833,14 @@
       if (d.target === 'enemy' && (!tg || !tg.alive)) tg = this.randomEnemy();
       if (tg && d.target === 'enemy') this.facing = tg.uid;
       this.run.potions[i] = null;
-      this.say(`You drink ${d.name}.`);
-      await d.use(this, tg);
+      // Co-op: a potion you would drink can be thrown to another player instead.
+      if (d.target !== 'enemy' && tg && tg.isPlayer && tg.seat !== this.seat && !tg.seat.dead) {
+        this.say(`You throw ${d.name} to ${tg.name}.`);
+        await this.withSeat(tg.seat, () => d.use(this, null));
+      } else {
+        this.say(`You drink ${d.name}.`);
+        await d.use(this, tg);
+      }
       if (!this.over) await this.rh('onPotion', d);
       this.checkEnd();
       await this.topCheck();
@@ -798,6 +854,7 @@
       this.round++;
       this.phase = 'player';
       for (const s of this.seats) { s.ready = false; s.ended = false; }
+      if (this.multi) this.mpRoundStart();
       const seats = this.living();
       for (const s of seats) { await this.withSeat(s, () => this.seatTurnStart(s === seats[0])); if (this.over) return; }
     }
@@ -959,7 +1016,7 @@
         if (p.constrictSrc && p.constrictSrc.alive) { await this.damage(p, p.pw.constrict, {}); if (this.over) return done(); }
         else delete p.pw.constrict;
       }
-      for (const k of ['mightTemp', 'poiseTemp', 'seethe', 'noDraw', 'noEnergy', 'ringing', 'echo', 'duplicate', 'tuningTemp', 'tuningDown']) delete p.pw[k];
+      for (const k of ['mightTemp', 'poiseTemp', 'seethe', 'noDraw', 'noEnergy', 'ringing', 'echo', 'duplicate', 'tuningTemp', 'tuningDown', 'concoct']) delete p.pw[k];
       if (p.pw.tangled) this.addPw(p, 'tangled', -1);
       const keep = this.handKept();
       for (const k of ['doubleTake', 'acidTide', 'shadowMerge', 'freeSkillTurn']) delete p.pw[k];
@@ -1059,7 +1116,7 @@
           const dealt = new Map();
           for (let i = 0; i < hits; i++) {
             if (!e.alive || this.over) break;
-            for (const s of this.living()) {
+            for (const s of this.hitList()) {
               const n = await this.withSeat(s, () => this.damage(this.p, this.enemyDmg(e, m.atk), { attack: true, src: e }));
               dealt.set(s, (dealt.get(s) || 0) + n);
               if (!e.alive || this.over) break;
@@ -1105,6 +1162,10 @@
       return { kind: kinds[0] || 'unknown', kinds, name: m.name, dmg: m.atk != null ? this.enemyDmg(e, m.atk) : null, hits: m.hitsFn ? m.hitsFn(e) : m.hits || 1, block: m.block || 0 };
     }
   }
+  // Damage modifiers other modules register (co-op cards): ATK_ADD adds to a player's attack, TAKEN_MODS changes what an
+  // enemy deals to the active player.
+  HD.ATK_ADD = HD.ATK_ADD || [];
+  HD.TAKEN_MODS = HD.TAKEN_MODS || [];
   for (const k of SEAT_KEYS) Object.defineProperty(Combat.prototype, k, { get() { return this.seat[k]; }, set(v) { this.seat[k] = v; }, configurable: true });
   Combat.SEAT_KEYS = SEAT_KEYS;
   Combat.SHARED_KEYS = SHARED_KEYS;

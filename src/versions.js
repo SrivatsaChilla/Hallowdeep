@@ -33,7 +33,6 @@
     FINAL_EMBER: { v: { dmg: 18 } },
     ESCALATE: { v: { dmg: 10 }, up: { inc: 5 } },
     FEINT_CUT: { v: { str: 3 } },
-    TAKE_THE_HITS: { text: () => 'Take 50% more damage from enemies. Allies take 50% less damage from enemies. (Co-op only)' },
     PROVOKE: { rarity: 'Common', v: { blk: 6 } },
     BOULDER: { v: { dmg: 20 } },
     UNWIND: { v: { blk: 16 } },

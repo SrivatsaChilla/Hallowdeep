@@ -12,7 +12,7 @@
   const basics = (run, tag) => run.removable().filter((c) => CARDS[c.id].rarity === 'Basic' && CARDS[c.id].tags.includes(tag));
   const upgradeRandom = (run, n) => run.rng.event.shuffle(run.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type))).slice(0, n).forEach((c) => run.upgrade(c));
   const downgradeRandom = (run, n) => run.rng.event.shuffle(run.deck.filter((c) => c.up)).slice(0, n).forEach((c) => { c.up = false; run.note({ kind: 'downgraded', id: c.id }); });
-  const classCard = (run, f) => run.rng.event.pick(HD.POOL(run.color).filter(f)).id;
+  const classCard = (run, f) => run.rng.event.pick(run.pool().filter(f)).id;
   const tradeable = (run) => run.relics.filter((r) => HD.RELICS[r.id] && HD.RELICS[r.id].rarity !== 'Starter');
   const gold = (n) => `Gain ${n} Gold.`;
 

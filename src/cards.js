@@ -369,5 +369,6 @@
       for (const x of xs) { g.discard.splice(g.discard.indexOf(x), 1); g.addToHand(x); }
     } });
 
-  HD.POOL = (color) => Object.values(CARDS).filter((d) => d.color === color && ['Common', 'Uncommon', 'Rare'].includes(d.rarity) && !d.coop && (!d.only || d.only === HD.version));
+  // A card pool. Co-op cards join it only in multiplayer runs (run.pool() passes that in).
+  HD.POOL = (color, multi) => Object.values(CARDS).filter((d) => d.color === color && ['Common', 'Uncommon', 'Rare'].includes(d.rarity) && (!d.coop || multi) && (!d.only || d.only === HD.version));
 })();

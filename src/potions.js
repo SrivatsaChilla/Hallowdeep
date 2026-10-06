@@ -7,7 +7,7 @@
 
   // Offer 3 random pool cards of a type; the pick goes to hand, free this turn.
   const offer = async (g, filter, prompt) => {
-    const ids = g.rng.shuffle(HD.POOL(g.run.color).filter(filter).map((d) => d.id)).slice(0, 3);
+    const ids = g.rng.shuffle(g.run.pool().filter(filter).map((d) => d.id)).slice(0, 3);
     const opts = ids.map((id) => g.makeCard(id, false));
     const [c] = await g.choose({ from: opts, n: 1, prompt });
     if (c) { c.freeTurn = true; g.addToHand(c); }

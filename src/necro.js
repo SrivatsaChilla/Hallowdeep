@@ -190,7 +190,7 @@
   relic('Rare', 'RIBBON_MARKER', { name: 'Ribbon Marker', text: 'At the end of each turn, a random Retained card costs 1 less until played.',
     turnEnd: async (g) => { const xs = g.hand.filter((x) => typeof CARDS[x.id].cost === 'number' && g.staysAtEndOfTurn(x)); if (!xs.length) return; const x = g.rng.pick(xs); x.bonusCost = (x.bonusCost || 0) - 1; x.ribbon = (x.ribbon || 0) + 1; } });
   relic('Rare', 'WIDE_BRIM', { name: 'Wide Brim', text: 'At the start of each combat, add 2 random Fleeting cards to your hand.',
-    firstHand: async (g) => { const pool = HD.POOL(g.run.color).filter((d) => d.kw.includes('Fleeting')); const ids = pool.length ? pool : HD.POOL('unburied').filter((d) => d.kw.includes('Fleeting'));
+    firstHand: async (g) => { const pool = g.run.pool().filter((d) => d.kw.includes('Fleeting')); const ids = pool.length ? pool : g.run.pool('unburied').filter((d) => d.kw.includes('Fleeting'));
       for (let i = 0; i < 2 && ids.length; i++) await g.create(g.makeCard(g.rng.pick(ids).id, false), 'hand'); } });
   relic('Rare', 'BONE_TILE', { name: 'Bone Tile', text: 'Whenever you play a card that costs 3 or more, gain 1 Energy.', afterPlay: async (g, r, c, d, paid) => { if (paid >= 3) g.gainEnergy(1); } });
   relic('Shop', 'DEATHLESS_SEAL', { name: 'Deathless Seal', text: 'Enemies with at least as much Knell as HP deal 50% less damage.' });

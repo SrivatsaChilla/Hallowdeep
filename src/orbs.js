@@ -13,13 +13,15 @@
     if (released && g.p.pw.rumble && e.alive && !g.over) await g.damage(e, g.p.pw.rumble, {});
   };
   const core = (g) => (g.has('CHARGED_CORE') ? 1 : 0);
+  // Rime's Guard. Deep Sleep (co-op) gives every other player the same Guard.
+  const rimeGuard = async (g, n) => { await g.gainBlock(n, false); if (g.p.pw.hibernate) for (const s of g.allies()) await g.withSeat(s, () => g.gainBlock(n, false)); };
   // Each Cell: passive and release amounts for display and play, when its passive runs, and what it does.
   HD.ORBS = {
     BOLT: { name: 'Bolt', at: 'end', pass: (g) => 3 + g.focus() + core(g), rel: (g) => 8 + g.focus() + core(g),
       passive: (g, o, t) => boltHit(g, g.orbAmt(o, 'pass'), t, false), release: (g, o) => boltHit(g, g.orbAmt(o, 'rel'), null, true),
       text: (p, r) => `Passive: at the end of your turn, deal ${p} damage to a random enemy. Release: deal ${r} damage to a random enemy.` },
     RIME: { name: 'Rime', at: 'end', pass: (g) => 2 + g.focus(), rel: (g) => 5 + g.focus(),
-      passive: (g, o) => g.gainBlock(g.orbAmt(o, 'pass'), false), release: (g, o) => g.gainBlock(g.orbAmt(o, 'rel'), false),
+      passive: (g, o) => rimeGuard(g, g.orbAmt(o, 'pass')), release: (g, o) => rimeGuard(g, g.orbAmt(o, 'rel')),
       text: (p, r) => `Passive: at the end of your turn, gain ${p} Guard. Release: gain ${r} Guard.` },
     MURK: { name: 'Murk', at: 'end', start: 6, pass: (g) => 6 + g.focus(), rel: (g, o) => o.val,
       passive: (g, o) => { o.val += g.orbAmt(o, 'pass'); }, release: async (g, o) => { const e = lowestHp(g); if (e) await g.damage(e, o.val, {}); },

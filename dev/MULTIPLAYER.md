@@ -45,6 +45,18 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 - Enemy moves: attacks, debuffs and status cards go to every standing player. A move's `each(g, e)` runs once per player
   (theft, curses, Sandpit) and `fx(g, e)` once. Stolen Might, Poise and Gold go back to whoever lost them.
 
+### Co-op cards (src/coop.js)
+
+- All 37 multiplayer-only cards, built on the stubs in each character's file. Six were new and got HallowDeep names: Sky
+  Chart (Constellation), Shared Anvil (Hammer Time), Royal Gift (Largesse), War Council (Plot), Counsel (Tutor) and
+  Relay Stone (The Ball).
+- `run.party` is the number of players; `run.pool()` adds co-op cards to every card pool when it is above 1.
+- A card with `target: 'ally'` aims at another player (`{ k: 'play', card, ally: seatIndex }`) and cannot be played
+  without one. Potions you would drink can be thrown to another player the same way.
+- Engine pieces they use: `g.allies()`, `g.asAlly(t, fn)`, `g.everyone(fn)`; marks on enemies that only help the other
+  players (`g.mark`, Flanked, Knocked Over, Double Team); `seat.cover` for Take the Blow; the hooks `allyAttacked`,
+  `allyAttackDealt`, `blockGained` and `anyDrawn`; and `HD.ATK_ADD` / `HD.TAKEN_MODS` for All Hands and Take the Hits.
+
 ### Network (next)
 
 - Lockstep inside combat only. At the start of a fight every client sends its Run snapshot (`toSave`). The host sends
@@ -67,7 +79,7 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 | 0 | Rules research (this file) | done |
 | 1 | Seats; solo unchanged | done |
 | 2a | N players in the engine: rounds, enemy turn for all, falling, scaling, theft | done (test/mp_checks.js, test/mp_sim.js) |
-| 2b | The 37 co-op cards, multiplayer card pools, throwing potions, Intercept/Covered, Tank | next |
+| 2b | The 37 co-op cards, multiplayer card pools, throwing potions, Intercept/Covered, Tank | done (test/coop_cards.js) |
 | 3 | Net layer: transport, host sequencer, snapshot exchange, desync hash, N-client test in Node | |
 | 4 | WebRTC, lobby, barriers, map vote, Mend, treasure picks | |
 | 5 | Allies on the combat screen (phones too), animations for other players' cards | |
