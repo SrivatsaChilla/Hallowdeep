@@ -14,7 +14,7 @@ async def main():
         await pg.goto(HTML_URL); await pg.wait_for_timeout(300)
         await pg.evaluate("()=>localStorage.clear()"); await pg.reload(); await pg.wait_for_timeout(300)
         print('fresh title has Continue:', await pg.query_selector('[data-act=resume]') is not None)
-        await pg.fill('#seed','save1'); await pg.click('button.hero'); await pg.wait_for_timeout(200)
+        await pg.evaluate("HD.nextSeed = 'save1'"); await pg.click('button.hero'); await pg.wait_for_timeout(200)
         await pg.click('[data-act=gift]'); await pg.wait_for_timeout(200)
         while await pg.evaluate("!!HD.state.overlay"):
             if await pg.query_selector('.overlay .card'): await pg.click('.overlay .card')

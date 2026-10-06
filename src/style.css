@@ -79,8 +79,6 @@ button.loot { display: block; width: 100%; max-width: 640px; text-align: left; m
 .hero .go { margin-top: auto; background: var(--wax); color: #f6ead2; border-radius: 8px; padding: .3em 1em; font-weight: 700; }
 button.hero:hover { border-color: var(--wax); }
 .hero.locked { opacity: .55; justify-content: center; border-style: dashed; }
-.seed { display: flex; gap: .5rem; align-items: center; margin-bottom: .8rem; }
-.seed input { font: inherit; padding: .35em .6em; border-radius: 6px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); width: 9rem; }
 
 /* ---------- sigils ---------- */
 .sigil .body { fill: var(--panel); stroke: var(--ink); stroke-width: 3; }

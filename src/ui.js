@@ -371,7 +371,6 @@
           <span class="hsub">${ch.hp} HP, ${ch.energy} Energy. Starts with ${esc(rl.name)}: ${esc(rl.text)}</span>
           <span class="go">Descend${lvl ? ` (A${lvl})` : ''}</span>
         </button>${ascPicker(id)}</div>`; };
-    if (!S.seedDefault) S.seedDefault = S.lastSeed || Math.random().toString(36).slice(2, 8);
     return `<main class="title" data-key="scr-title">
       <h1>HallowDeep</h1>
       <p class="lede">Fight your way through ${HD.ACT} with a deck that grows as you go.</p>
@@ -379,7 +378,6 @@
       <div class="roster">
         ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}
       </div>
-      <label class="seed">Seed <input id="seed" value="${esc(S.seedDefault)}" spellcheck="false" autocomplete="off"></label>
       <div class="toggles">${namesToggle()}</div>
       <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, M shows the map, Esc cancels.</p>
     </main>`;
@@ -1283,10 +1281,9 @@
     render();
   }
   function startRun(charId) {
-    const input = document.getElementById('seed');
-    const seed = (input && input.value.trim()) || Math.random().toString(36).slice(2, 8);
-    S.lastSeed = seed;
-    S.seedDefault = null;
+    // Every run gets a fresh random seed (the end screen shows it). Tests and bots can set HD.nextSeed first to pick one.
+    const seed = HD.nextSeed || Math.random().toString(36).slice(2, 8);
+    HD.nextSeed = null;
     const cid = HD.CHARS[charId] ? charId : 'OATHBURNER';
     S.run = new HD.Run(seed, cid, ascChosen(cid));
     S.run.feed = [];
