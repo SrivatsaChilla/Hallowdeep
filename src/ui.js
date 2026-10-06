@@ -521,12 +521,48 @@
     </main>`;
   }
 
+  // After a fight: a Loot list of one-line rows. Gold, potions and relics are taken with a click; a card reward opens
+  // its own Choose a Card screen (Back returns here with the reward kept, Skip gives it up).
+  const CARD_ROW_ICON = '<svg class="rowico" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="2" width="12" height="16" rx="2" fill="#e9dcc0" stroke="#3a2a1a" stroke-width="1.4"/><rect x="6" y="4.5" width="8" height="5.5" rx="1" fill="#8a3a2a"/><path d="M6.5 12.5h7M6.5 14.8h5" stroke="#3a2a1a" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  function lootRow(it, i) {
+    const r = S.run, arg = `rw:${i}`, key = `data-key="lr-${i}"`;
+    if (it.kind === 'gold') return `<button class="loot lootrow" ${key} data-act="take" data-arg="${arg}">${COIN}<span>${r.goldPreview(it.n)} Gold</span></button>`;
+    if (it.kind === 'relic') { const d = HD.RELICS[it.id]; return `<button class="loot lootrow" ${key} data-act="take" data-arg="${arg}">${HD.relicIcon(it.id)}<span><b>${esc(d.name)}</b><small>${esc(d.text)}</small></span></button>`; }
+    if (it.kind === 'potion') {
+      const d = HD.POTIONS[it.id], full = r.freeSlot() < 0;
+      return `<button class="loot lootrow" ${key} data-act="take" data-arg="${arg}" ${full ? 'disabled' : ''}>${HD.potionIcon(it.id)}<span><b>${esc(d.name)}</b><small>${full ? 'Your belt is full. Use or discard a potion from the top bar first.' : esc(d.text)}</small></span></button>`;
+    }
+    if (it.kind === 'cards') {
+      const left = (it.n || 1) - (it.got || 0);
+      return `<button class="loot lootrow cardrow" ${key} data-act="open-cards" data-arg="${i}">${CARD_ROW_ICON}<span>${left > 1 ? `Add ${left} cards to your deck` : 'Add a card to your deck'}</span></button>`;
+    }
+    return '';
+  }
+  function chooseCardScreen(i) {
+    const r = S.run, it = S.reward[i], arg = `rw:${i}`, left = (it.n || 1) - (it.got || 0);
+    return `${bar()}<main class="panel choosecards" data-key="scr-choose-${r.floor}-${i}">
+      <h2 class="ribbon">Choose a Card</h2>
+      ${left > 1 ? `<p class="hint">Pick ${left} cards.</p>` : ''}
+      <div class="pickrow">${it.cards.map((c, j) => (c.taken ? '' : cardHTML({ uid: `${arg}:${j}`, id: c.id, up: c.up, ench: c.ench }, { act: 'takecard', arg: `${arg}:${j}`, style: `--i:${j}` }))).join('')}</div>
+      <div class="choosebtns">
+        <button class="ghost" data-act="close-cards">Back</button>
+        <button class="primary" data-act="skip" data-arg="${arg}">${it.got ? 'Done' : 'Skip'}</button>
+        ${r.hasRelic('DRIFT_LOG') && !it.rerolled && !it.got ? `<button class="ghost" data-act="reroll" data-arg="${arg}">Reroll (once)</button>` : ''}
+        ${r.hasRelic('OLD_WING') && !it.got ? `<button class="ghost" data-act="sacrifice" data-arg="${arg}">Sacrifice these cards</button>` : ''}
+      </div>
+    </main>`;
+  }
   function rewardScreen() {
     const r = S.run;
-    return `${bar()}<main class="panel" data-key="scr-reward-${r.floor}">
-      <h2>${S.kind === 'boss' ? `${actName()} falls quiet` : 'Spoils'}</h2>
-      ${itemsHTML(S.reward, 'rw')}
-      <button class="primary" data-act="continue">${S.kind === 'boss' ? 'Finish the act' : 'Back to the map'}</button>
+    const open = S.pickCards != null && S.reward[S.pickCards] && !S.reward[S.pickCards].taken ? S.pickCards : null;
+    if (open == null) S.pickCards = null; else return chooseCardScreen(open);
+    const rows = S.reward.map((it, i) => (it.taken ? '' : lootRow(it, i))).join('');
+    const left = S.reward.some((it) => !it.taken);
+    return `${bar()}<main class="panel lootscreen" data-key="scr-reward-${r.floor}">
+      <h2 class="ribbon">Loot!</h2>
+      ${S.kind === 'boss' ? `<p class="hint">${esc(actName())} falls quiet.</p>` : ''}
+      <div class="lootbox">${rows || '<p class="lootempty">Nothing left to take.</p>'}</div>
+      <button class="primary lootgo" data-act="continue">${S.kind === 'boss' ? 'Finish the act' : left ? 'Skip' : 'Continue'}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </main>`;
   }
 
@@ -1538,6 +1574,8 @@
       }
       case 'toss': r.potions[o.i] = null; S.overlay = null; return render();
       case 'take': { const [l, i] = arg.split(':'); takeItem(l, +i); return render(); }
+      case 'open-cards': S.pickCards = +arg; return render();
+      case 'close-cards': S.pickCards = null; return render();
       case 'takecard': { const [l, i, j] = arg.split(':'); takeItem(l, +i, +j); return render(); }
       case 'skip': { const [l, i] = arg.split(':'); const items = l === 'rw' ? S.reward : o.items; items[+i].taken = true; if (l === 'bn' && items.every((x) => x.taken)) { S.overlay = null; checkPending(); } return render(); }
       case 'bonus-done': S.overlay = null; checkPending(); return render();

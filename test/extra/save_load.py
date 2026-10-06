@@ -35,7 +35,7 @@ async def main():
         await pg.evaluate("()=>{const S=HD.state; for(const e of S.g.alive()) e.hp=1; S.run.potions[0]='BLASTING_VIAL'; HD.render();}")
         await pg.click('.vial[data-arg="0"]'); await pg.click('[data-act=drink]'); await pg.wait_for_timeout(1500)
         for _ in range(6):
-            el = await pg.query_selector('[data-act=take], [data-act=takecard]')
+            el = await pg.query_selector('[data-act=take], [data-act=takecard], [data-act=open-cards]')
             if not el: break
             await el.click(); await pg.wait_for_timeout(150)
         await pg.click('[data-act=continue]'); await pg.wait_for_timeout(300)

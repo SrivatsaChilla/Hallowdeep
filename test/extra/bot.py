@@ -62,7 +62,7 @@ async def main():
                     if not await click('.hand .card.playable'): await click('[data-act=end]')
                     continue
                 if s == 'reward':
-                    if not await click('[data-act=take], [data-act=takecard]'): await click('[data-act=continue]')
+                    if not await click('[data-act=take]:not([disabled]), [data-act=takecard], [data-act=open-cards]'): await click('[data-act=continue]')
                     continue
                 if s == 'rest':
                     if not await click('[data-act=rest]'): await click('[data-act=to-map]')
