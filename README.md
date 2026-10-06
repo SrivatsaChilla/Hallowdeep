@@ -50,6 +50,7 @@ Run all three after every change. `node dev/verify.js <codex data-beta/v0.111.0/
     src/relics.js    relics as hooks (battleStart, turnStart, afterPlay, onBurn, afterCombat, onPickup...)
     src/combat.js    combat engine, no DOM
     src/run.js       map generation, encounter picks, rewards, shop, rest
+    src/sigils.js    the playable characters' emblems and the map node icons
     src/ui.js        screens and input
     src/style.css    tokens (light and dark), cards, layout
     src/index.html   template the build fills in

@@ -89,16 +89,7 @@
     unknown: '<text x="8" y="13" text-anchor="middle" font-size="13" font-weight="700">?</text>',
   };
   const icon = (k) => `<svg class="ico" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">${ICON[k] || ICON.unknown}</svg>`;
-  const NODE_ICON = {
-    monster: '<path d="M-7 -7 7 7M7 -7 -7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
-    elite: '<path d="M-8 6-10-8-3-2 0-9 3-2 10-8 8 6z" fill="currentColor"/>',
-    rest: '<path d="M0-10c6 6 7 12 0 19-7-7-5-12 0-19z" fill="currentColor"/>',
-    shop: '<circle r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M0-4v8" stroke="currentColor" stroke-width="2.2"/>',
-    treasure: '<rect x="-8" y="-5" width="16" height="11" rx="1.5" fill="currentColor"/><path d="M-8-1h16" stroke="var(--panel)" stroke-width="1.6"/>',
-    unknown: '<text y="6" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor">?</text>',
-    boss: '<path d="M-12 8-15-11-5-3 0-13 5-3 15-11 12 8z" fill="currentColor"/>',
-    start: '<path d="M-9 7h18M-6 7V-2l6-6 6 6v9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>',
-  };
+  const NODE_ICON = HD.NODE_ICONS; // map node icons live in sigils.js
   const NODE_LABEL = { monster: 'Fight', elite: 'Elite', rest: 'Rest site', shop: 'Shop', treasure: 'Treasure', unknown: 'Unknown', boss: 'Boss' };
 
   // Abstract creature sigil, derived from the monster id. Original art stand-in.
@@ -117,16 +108,10 @@
     for (let i = 0; i < eyes; i++) inner += `<circle cx="${50 + (i - (eyes - 1) / 2) * 14}" cy="${46 + (h % 7)}" r="${4 + (h % 3)}" class="eye"/>`;
     return `<svg class="sigil" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="--d:${-(HD.hashSeed(id + 'd') % 3000)}ms"><polygon points="${pts.join(' ')}" class="body"/>${inner}</svg>`;
   }
-  const SIGILS = {
-    VEILED: ['veiled', '<path class="body" d="M50 6C74 18 86 38 86 58c0 18-16 32-36 36C30 90 14 76 14 58 14 38 26 18 50 6z"/><path class="eye" d="M50 26 57 60 50 72 43 60z"/><path class="eye" d="M40 66h20" stroke-width="5"/>'],
-    CROWNED: ['crowned', '<path class="body" d="M12 78 16 28 34 50 50 14 66 50 84 28 88 78z"/><path class="body" d="M12 78h76v12H12z"/><path class="eye" d="M50 46l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z"/>'],
-    UNBURIED: ['unburied', '<path class="body" d="M50 8C72 8 86 24 86 44c0 12-6 20-12 25v17H26V69C20 64 14 56 14 44 14 24 28 8 50 8z"/><circle class="eye" cx="37" cy="45" r="8"/><circle class="eye" cx="63" cy="45" r="8"/><path class="eye" d="M40 74v10M50 74v10M60 74v10" stroke-width="4"/>'],
-    WIREBOUND: ['wirebound', '<path class="body" d="M44 6h12l2 10 8 3 8-6 8 8-6 8 3 8 10 2v12l-10 2-3 8 6 8-8 8-8-6-8 3-2 10H44l-2-10-8-3-8 6-8-8 6-8-3-8-10-2V44l10-2 3-8-6-8 8-8 8 6 8-3z"/><circle class="eye" cx="50" cy="50" r="11"/>'],
-    OATHBURNER: ['', '<path class="body" d="M50 6 88 20v28c0 22-17 38-38 46C29 86 12 70 12 48V20z"/><path class="eye" d="M50 28c11 11 13 22 0 36-13-14-9-25 0-36z"/>'],
-  };
+  // The playable characters' emblems live in sigils.js.
   const playerSigil = (size, charId) => {
-    const [cls, art] = SIGILS[charId || (S.run && S.run.charId)] || SIGILS.OATHBURNER;
-    return `<svg class="sigil me ${cls}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">${art}</svg>`;
+    const id = HD.SIGILS[charId || (S.run && S.run.charId)] ? charId || S.run.charId : 'OATHBURNER';
+    return `<svg class="sigil me ${id.toLowerCase()}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">${HD.SIGILS[id]}</svg>`;
   };
 
   const GLINT = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.5 5.6 6.1.6-4.6 4.1 1.3 6-5.3-3.1-5.3 3.1 1.3-6L1.4 7.7l6.1-.6z"/></svg>';
@@ -433,7 +418,7 @@
     const startNode = `<g class="node n-start ${!r.pos ? 'here' : 'visited'}" transform="translate(${start.x} ${start.y})" aria-label="Start: ${esc(T('The Rootmother'))}"><circle r="24"/>${NODE_ICON.start}</g>
       <text class="startlbl" x="${start.x}" y="${start.y + 44}" text-anchor="middle">${r.act === 1 || !HD.ANCIENTS[r.ancient] ? T('The Rootmother') : T(HD.ANCIENTS[r.ancient].name)}</text>`;
     const legend = Object.entries(NODE_LABEL).filter(([k]) => k !== 'boss').map(([k, v]) =>
-      `<li><svg viewBox="-12 -12 24 24" width="22" height="22" class="n-${k}">${NODE_ICON[k]}</svg>${v}</li>`).join('');
+      `<li><svg viewBox="${k === 'boss' ? '-18 -18 36 36' : '-13 -13 26 26'}" width="24" height="24" class="n-${k}">${NODE_ICON[k]}</svg>${v}</li>`).join('');
     const relicList = r.relics.map((x) => { const d = HD.RELICS[x.id]; return `<li><b>${esc(d.name)}</b> ${esc(d.text)}</li>`; }).join('');
     return `${bar()}<main class="mapwrap" data-key="scr-map">
       <section class="map" id="mapScroll" aria-label="Map of ${actName()}">

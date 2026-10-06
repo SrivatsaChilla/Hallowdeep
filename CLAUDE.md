@@ -38,7 +38,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
   - monsters.js, act2.js, act3.js: monsters and encounters; events.js, events2.js; ancients.js, neow2.js
   - combat.js: the Combat class (turns, damage, piles, Stars, Forge, card creation, hooks)
   - run.js: the Run class (map, rewards, shop, saves); ascension.js + ascension_data.js (generated)
-  - versions.js: v0.111 patch; enchants.js; naming.js + names.js; art.js (SVG card art); ui.js (all screens, input)
+  - versions.js: v0.111 patch; enchants.js; naming.js + names.js; art.js (SVG card art); sigils.js (character
+    emblems and map node icons); ui.js (all screens, input)
 - ui.js renders HTML strings and morphs the DOM (data-key keeps elements stable). Clicks go through data-act handlers.
 - Phones: compact() = width <= 760 or short landscape; dragOnly() = touch input. Layout rules and tests in
   dev/qa_devices.py and dev/qa_resize.py.
