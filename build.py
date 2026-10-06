@@ -2,7 +2,7 @@
 import hashlib
 from pathlib import Path
 root = Path(__file__).parent
-order = ["core", "cards", "potions", "monsters", "relics", "versions", "combat", "run", "events", "act2", "act3", "colorless", "enchants", "events2", "ancients", "silent", "regent_data", "regent", "orbs", "defect_data", "defect", "osty", "necro_data", "necro", "coop", "neow2", "ascension_data", "ascension", "net", "names", "naming", "art", "sigils", "ui"]
+order = ["core", "cards", "potions", "monsters", "relics", "versions", "combat", "run", "events", "act2", "act3", "colorless", "enchants", "events2", "ancients", "silent", "regent_data", "regent", "orbs", "defect_data", "defect", "osty", "necro_data", "necro", "coop", "neow2", "ascension_data", "ascension", "net", "rtc", "names", "naming", "art", "sigils", "ui", "coopui"]
 js = "\n".join((root / "src" / f"{n}.js").read_text() for n in order)
 # A fingerprint of this build: multiplayer only lets players with the same build play together.
 js += f"\nHD.BUILD = '{hashlib.sha1(js.encode()).hexdigest()[:12]}';\n"

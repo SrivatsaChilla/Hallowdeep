@@ -63,10 +63,19 @@
       this.fights = 0;
       this.hashes = new Map();
       this.onEvent = o.onEvent || (() => {});
+      this.seed = o.seed; // the run's seed (random when not given)
+      this.authority = o.authority || null; // () => the host player's Run, which decides rooms and encounters
+      this.run = null; // the party's run: { seed, at, votes, asks }
     }
     connect(link) {
       link.onMessage((text) => this.receive(link, text));
-      link.onClose(() => { const s = this.seats.find((x) => x.link === link); if (s) { s.live = false; this.onEvent({ t: 'left', seat: this.seats.indexOf(s) }); } });
+      link.onClose(() => {
+        const s = this.seats.find((x) => x.link === link);
+        if (!s) return;
+        s.live = false;
+        this.onEvent({ t: 'left', seat: this.seats.indexOf(s) });
+        if (!this.run) this.broadcast(this.lobby()); else { this.mapState(); this.resolve(); this.tryEventFight(); }
+      });
     }
     send(link, m) { link.send(JSON.stringify(m)); }
     broadcast(m) { const text = JSON.stringify(m); for (const s of this.seats) if (s.live) s.link.send(text); }
@@ -78,6 +87,8 @@
       const seat = this.seatOf(link);
       if (seat === null) return;
       if (m.t === 'snap') return this.snap(seat, m);
+      if (m.t === 'char' && !this.run && HD.CHARS[m.id]) { this.seats[seat].char = m.id; return this.broadcast(this.lobby()); }
+      if (this.run && ['at-map', 'vote', 'ev-fight', 'mend'].includes(m.t)) return this.party(seat, m);
       if (!this.fight || m.f !== this.fight.f) return;
       if (m.t === 'act' && validAct(m.a)) return this.sequence({ s: seat, a: m.a });
       if (m.t === 'pick' && validPick(m)) return this.sequence({ s: seat, pick: { pi: m.pi, uids: m.uids } });
@@ -87,11 +98,12 @@
       if (m.build !== this.build) return this.send(link, { t: 'reject', reason: 'version', build: this.build });
       let seat;
       if (isInt(m.rejoin) && this.seats[m.rejoin] && !this.seats[m.rejoin].live) { seat = m.rejoin; this.seats[seat].link = link; this.seats[seat].live = true; }
-      else if (this.fight) return this.send(link, { t: 'reject', reason: 'in a fight' });
+      else if (this.fight || this.run) return this.send(link, { t: 'reject', reason: 'already playing' });
       else if (this.seats.length >= this.max) return this.send(link, { t: 'reject', reason: 'full' });
       else { seat = this.seats.length; this.seats.push({ link, name: String(m.name || `Player ${seat + 1}`).slice(0, 24), live: true }); }
       this.send(link, { t: 'welcome', seat, names: this.seats.map((s) => s.name) });
       this.onEvent({ t: 'joined', seat });
+      if (!this.run) this.broadcast(this.lobby());
       if (this.fight && this.fight.snaps) {
         const { f, enc, kind, snaps, uidBase, log } = this.fight;
         this.send(link, { t: 'fight', f, enc, kind, snaps, uidBase });
@@ -114,6 +126,61 @@
       F.uidBase = Math.max(...F.got.map((x) => x.uid)) + 10000;
       delete F.got;
       this.broadcast({ t: 'fight', f: F.f, enc: F.enc, kind: F.kind, snaps: F.snaps, uidBase: F.uidBase });
+    }
+    // ---------- the party outside fights ----------
+    lobby() { return { t: 'lobby', players: this.seats.map((s) => ({ name: s.name, char: s.char || null, live: s.live })) }; }
+    live() { return this.seats.map((s, i) => (s.live ? i : -1)).filter((i) => i >= 0); }
+    // Start the run once every player has picked a hero. Each player makes their own run; the maps come from one seed.
+    startRun(asc = 0) {
+      if (this.run || !this.seats.length || this.seats.some((s) => s.live && !s.char)) return false;
+      const seed = this.seed || Math.random().toString(36).slice(2, 8);
+      this.run = { seed, at: [], votes: [], asks: [] };
+      this.rng = HD.makeRng(HD.hashSeed(`${seed}:party`));
+      this.broadcast({ t: 'run', seed, asc, chars: this.seats.map((s) => s.char) });
+      return true;
+    }
+    party(seat, m) {
+      const R = this.run;
+      if (m.t === 'at-map') { R.at[seat] = true; R.votes[seat] = null; this.mapState(); return this.tryEventFight(); }
+      if (m.t === 'vote') {
+        const r = this.authority && this.authority();
+        if (!R.at[seat] || typeof m.key !== 'string' || !r || !r.reachable().includes(m.key)) return;
+        R.votes[seat] = m.key; this.mapState(); return this.resolve();
+      }
+      if (m.t === 'ev-fight' && HD.ENC[m.enc] && ['monster', 'elite', 'event'].includes(m.kind)) { R.asks.push({ seat, enc: m.enc, kind: m.kind }); return this.tryEventFight(); }
+      if (m.t === 'mend' && isInt(m.to) && m.to !== seat && this.seats[m.to]) return this.broadcast({ t: 'mended', from: seat, to: m.to });
+    }
+    mapState() { const R = this.run; this.broadcast({ t: 'mapstate', at: this.seats.map((s, i) => !!R.at[i]), votes: this.seats.map((s, i) => R.votes[i] || null) }); }
+    // Everyone standing is at the map and has voted: pick the room (at random, weighted by votes) and what is in it.
+    resolve() {
+      const R = this.run, live = this.live();
+      if (!live.length || !live.every((i) => R.at[i] && R.votes[i]) || R.asks.length) return;
+      const key = this.rng.pick(live.map((i) => R.votes[i]));
+      const room = this.roomFor(key);
+      R.at = []; R.votes = [];
+      this.broadcast(Object.assign({ t: 'go', key }, room));
+      if (room.enc) this.startFight(room.enc, room.kind);
+    }
+    roomFor(key) {
+      const r = this.authority();
+      if (key === 'BOSS') return { room: 'boss', enc: r.boss, kind: 'boss' };
+      let type = r.map.nodes[key].type;
+      if (type === 'unknown') {
+        r.hook('onUnknown');
+        type = r.rollUnknown();
+        if (type === 'event') { const pool = r.eventPool(); if (pool.length) return { room: 'event', event: this.rng.pick(pool) }; type = 'monster'; }
+      }
+      if (type === 'monster' || type === 'elite') return { room: type, enc: r.pickEncounter(type), kind: type };
+      return { room: type };
+    }
+    // An event that turns into a fight pulls the whole party in, once nobody is still in the middle of a room.
+    tryEventFight() {
+      const R = this.run;
+      if (!R || !R.asks.length || !this.live().every((i) => R.at[i] || R.asks.some((a) => a.seat === i))) return;
+      const ask = R.asks.shift();
+      R.asks = []; R.at = []; R.votes = [];
+      this.broadcast({ t: 'go-fight', by: ask.seat, enc: ask.enc, kind: ask.kind });
+      this.startFight(ask.enc, ask.kind === 'event' ? 'monster' : ask.kind);
     }
     sequence(x) {
       const m = Object.assign({ t: 'seq', f: this.fight.f, n: this.fight.log.length }, x);
@@ -150,6 +217,12 @@
     }
     send(m) { this.link.send(JSON.stringify(m)); }
     hello(rejoin) { this.rejoin = rejoin; this.send({ t: 'hello', build: this.build, name: this.name, rejoin }); }
+    // The party outside fights.
+    pickChar(id) { this.send({ t: 'char', id }); }
+    atMap() { this.send({ t: 'at-map' }); }
+    vote(key) { this.send({ t: 'vote', key }); }
+    eventFight(enc, kind) { this.send({ t: 'ev-fight', enc, kind }); }
+    mend(to) { this.send({ t: 'mend', to }); }
     // This player's moves. They take effect when the host's numbered copy comes back.
     act(a) { if (this.g && !this.g.over) { this.waiting = true; this.send({ t: 'act', f: this.f, a }); } }
     receive(text) {
@@ -159,23 +232,34 @@
       if (m.t === 'reject') return this.onEvent(m);
       if (m.t === 'snap-req') return this.send({ t: 'snap', f: m.f, run: this.run.toSave(), uid: HD.uidPeek() });
       if (m.t === 'fight') return this.begin(m);
+      // The party moves before anything else can happen, so the next fight's snapshot already has the new room.
+      if (m.t === 'go' && this.run && typeof m.key === 'string') this.run.moveTo(m.key);
+      if (m.t === 'lobby' || m.t === 'mapstate' || m.t === 'go' || m.t === 'go-fight') return this.onEvent(m);
+      if (m.t === 'run') {
+        this.run = new HD.Run(`${m.seed}:${this.seat}`, m.chars[this.seat], m.asc || 0, { party: m.chars.length, mapSeed: m.seed });
+        this.chars = m.chars;
+        return this.onEvent(m);
+      }
+      // Mend: another player healed you for 30% of your Max HP at a rest site.
+      if (m.t === 'mended') { if (m.to === this.seat && this.run && this.run.hp > 0) this.run.heal(Math.floor(this.run.maxHp * 0.3)); return this.onEvent(m); }
       if (m.f !== this.f) return;
       if (m.t === 'catchup') { for (const x of m.log) this.seq(x); return; }
       if (m.t === 'seq') return this.seq(m);
       if (m.t === 'desync') return this.onEvent(m);
     }
-    // The same start on every machine: the players' runs as sent, the same uid start, the host's run first (its RNG
-    // drives the fight). On a rejoin this player's own run also comes from the snapshot.
+    // The same start on every machine: every seat's run rebuilt from the snapshots (this player's too, so no copy
+    // can differ), the same uid start, the host's run first (its RNG drives the fight). The fight's copy of this
+    // player's run becomes this.run: the screen picks it up from the 'fight' event.
     begin(m) {
-      const runs = m.snaps.map((x, i) => (i === this.seat && !this.rejoin ? this.run : HD.Run.fromSave(x)));
+      const runs = m.snaps.map((x) => HD.Run.fromSave(x));
       this.run = runs[this.seat];
       this.rejoin = undefined;
       HD.setUid(m.uidBase);
       const g = new HD.Combat(runs[0], m.enc, this.netUI(), m.kind);
       for (const r of runs.slice(1)) g.addSeat(r);
-      Object.assign(this, { g, f: m.f, applied: 0, nextN: 0, early: {}, lastRound: -1, picks: g.seats.map(() => ({ next: 0, got: {}, wait: {} })), waiting: false });
-      this.chain = Promise.resolve().then(() => g.start()).then(() => this.report(-1));
-      this.onEvent({ t: 'fight', g });
+      Object.assign(this, { g, f: m.f, applied: 0, nextN: 0, early: {}, lastRound: -1, endSent: false, picks: g.seats.map(() => ({ next: 0, got: {}, wait: {} })), waiting: false });
+      this.chain = Promise.resolve().then(() => g.start()).then(() => { this.report(-1); this.onEvent({ t: 'applied', n: -1 }); });
+      this.onEvent({ t: 'fight', g, run: this.run });
     }
     // The host's numbered messages, used strictly in number order even if a link delivers them out of order.
     seq(m) {
@@ -193,11 +277,13 @@
         this.onEvent({ t: 'applied', n: m.n });
       });
     }
-    // After the round changes (and when the fight ends), send the host this copy's fingerprint.
+    // After the round changes, and once when the fight ends, send the host this copy's fingerprint. Nothing after
+    // that: moves still arriving do nothing, and the rewards screen is already changing this player's run.
     report(n) {
       const g = this.g;
-      if (g.round === this.lastRound && !g.over) return;
-      this.lastRound = g.over ? -2 : g.round;
+      if (this.endSent || (g.round === this.lastRound && !g.over)) return;
+      this.lastRound = g.round;
+      this.endSent = g.over;
       this.send({ t: 'hash', f: this.f, n, h: HD.fightHash(g) });
       if (g.over) this.onEvent({ t: 'over', g });
     }

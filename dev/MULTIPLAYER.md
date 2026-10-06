@@ -74,7 +74,29 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 - Links: `HD.loopPair` (in memory, in order, optional delay) for tests and one-machine play. WebRTC comes next with
   the lobby. test/net_sim.js runs each player in its own copy of the game and checks that every copy ends the same,
   that rejoining works, that tampering is caught and that bad messages are refused.
-- Out of combat is not networked yet: map votes, room barriers and shared results come with the lobby (step 4).
+
+### The party run (src/net.js, src/coopui.js, src/rtc.js)
+
+- Lobby: the host gets a room code; players join with it and each picks a hero (`char`). The host starts the run
+  (`run`: one seed): each player makes their own Run (`party`, `mapSeed`), so every map is the same and every act is
+  one floor shorter. Ascension is 0 in co-op for now.
+- Each player does their own room (rewards, shop, rest, events, chests, Ancients) and then goes back to the map
+  (`at-map`). Clicking a room there is a vote (`vote`); once everyone standing is at the map and has voted, the host
+  picks the room (weighted by votes) and what is in it, using its own run: `go` with the encounter, event or room.
+  The party moves (`run.moveTo`) inside the peer, before the next fight's snapshot.
+- Fights are the lockstep fights above. After a win, a player who fell comes back at 1 HP. A lost fight ends the
+  run for everyone. An event that turns into a fight (`ev-fight`) pulls the whole party in once nobody is mid-room
+  (`go-fight`); only the player whose event it was gets its rewards.
+- Rest sites add Mend (`mend`/`mended`: heal another player for 30% of their Max HP).
+- Internet play: WebRTC data channels, introduced through the free public PeerJS server (0.peerjs.com). It drops
+  messages that lack the fields its own client sends, so rtc.js sends them all. No TURN server: some strict networks
+  cannot connect.
+- The screen: the lobby, vote counts and who is still in a room on the map, the other players in a fight (aim ally
+  cards and thrown potions at them), "Waiting (undo)" after End turn, Mend at rest sites. In a co-op fight the screen
+  and all input read this player's seat (`mine()` in ui.js).
+- test/party_sim.js plays whole co-op runs in Node, a copy of the game per player, and checks the party stays in step.
+- Not yet: saving a co-op run, rejoining outside a fight, a timeout for a player who drops (the party waits), and a
+  shared Ancient and treasure picks (each player gets their own).
 
 ## Status
 
@@ -85,6 +107,6 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 | 2a | N players in the engine: rounds, enemy turn for all, falling, scaling, theft | done (test/mp_checks.js, test/mp_sim.js) |
 | 2b | The 37 co-op cards, multiplayer card pools, throwing potions, Intercept/Covered, Tank | done (test/coop_cards.js) |
 | 3 | Net layer: transport, host sequencer, snapshot exchange, desync hash, N-client test in Node | done (test/net_sim.js) |
-| 4 | WebRTC, lobby, barriers, map vote, Mend, treasure picks | |
-| 5 | Allies on the combat screen (phones too), animations for other players' cards | |
+| 4 | WebRTC, lobby, barriers, map vote, Mend | done (test/party_sim.js; tried in two browser tabs) |
+| 5 | Allies on the combat screen (phones too), animations for other players' cards | first pass done (allies, ally targeting, waiting); animations next |
 | 6 | Rejoin and hardening | |

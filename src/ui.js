@@ -13,6 +13,12 @@
   const $ = (sel) => document.querySelector(sel);
   const T = (s) => HD.sub(s);
   const actName = () => HD.ACT_NAMES[(S.run && S.run.act) || 1];
+  // Co-op (src/coopui.js) adds screens and actions here. In a co-op fight the screen and input always read this
+  // player's seat, even while another player's card is resolving.
+  HD.UI_SCREENS = HD.UI_SCREENS || {};
+  HD.UI_ACTS = HD.UI_ACTS || {};
+  HD.UI_OVERLAYS = HD.UI_OVERLAYS || {};
+  const mine = (fn) => (S.coop && S.g && S.me ? S.g.asSeat(S.me, fn) : fn());
   // Keyword highlighting follows the active name set.
   let kwCache = null;
   function kw() {
@@ -252,7 +258,7 @@
     }).join('');
     const hp = S.g && S.screen === 'combat' ? S.g.p : r;
     return `<header class="bar" data-key="bar">
-      <span class="who">${esc(HD.charName(r.charId))}</span>
+      <span class="who">${esc(HD.charName(r.charId))}${S.coop ? S.coop.barNote() : ''}</span>
       <span class="stats">${r.asc ? `<span class="ascbadge" tabindex="0" ${tip(`Ascension ${r.asc}`, HD.ASCENSIONS.slice(1, r.asc + 1).map((a, i) => `${i + 1}. ${HD.ascName(i + 1)}: ${HD.ascText(i + 1)}`).join(' '), 'Active levels')}>A${r.asc}</span>` : ''}
         <span class="stat hp"><span class="lbl">HP</span> ${hp.hp}/${hp.maxHp}</span>
         <span class="stat gold"><span class="lbl">Gold</span> ${r.gold}</span>
@@ -378,6 +384,7 @@
       <div class="roster">
         ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}
       </div>
+      ${HD.UI_ACTS['coop-open'] ? '<button class="ghost coopbtn" data-act="coop-open">Play together (2 to 4 players)</button>' : ''}
       <div class="toggles">${namesToggle()}</div>
       <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, M shows the map, Esc cancels.</p>
     </main>`;
@@ -411,7 +418,8 @@
       const leap = reach.has(n.key) && r.pos && r.pos !== 'BOSS' && !r.map.nodes[r.pos].next.includes(n.key);
       const cls = ['node', `n-${n.type}`, reach.has(n.key) ? 'reach' : '', leap ? 'leap' : '', visited.has(n.key) ? 'visited' : '', r.pos === n.key ? 'here' : '', r.marked && r.marked.includes(n.key) ? 'marked' : ''].join(' ');
       const act = reach.has(n.key) ? `data-act="node" data-arg="${n.key}" role="button" tabindex="0"` : '';
-      return `<g class="${cls}" transform="translate(${X(n)} ${Y(n)})" ${act} aria-label="${NODE_LABEL[n.type]}, row ${n.r + 1}"><circle r="17"/>${NODE_ICON[n.type]}</g>`;
+      const votes = S.coop && interactive ? S.coop.votesFor(n.key) : 0;
+      return `<g class="${cls}${votes ? ' voted' : ''}" transform="translate(${X(n)} ${Y(n)})" ${act} aria-label="${NODE_LABEL[n.type]}, row ${n.r + 1}${votes ? `, ${votes} vote${votes > 1 ? 's' : ''}` : ''}"><circle r="17"/>${NODE_ICON[n.type]}${votes ? `<text class="votes" x="15" y="-13">${votes}</text>` : ''}</g>`;
     }).join('');
     const bossReach = reach.has('BOSS');
     const bossName = HD.ENC[r.boss].name;
@@ -429,7 +437,7 @@
     return `${bar()}<main class="mapwrap" data-key="scr-map">
       <section class="map" id="mapScroll" aria-label="Map of ${actName()}">
         <h2>Act ${r.act}: ${actName()}</h2>
-        <p class="hint">${r.pos ? 'Choose the next room. You climb toward the boss at the top.' : 'Choose your first room, just above the start.'}${r.relic('MOTH_BOOTS') && r.relic('MOTH_BOOTS').charges ? ` Dashed rooms are off your path; reaching one uses a ${esc(HD.RELICS.MOTH_BOOTS.name)} charge (${r.relic('MOTH_BOOTS').charges} left).` : ''}</p>
+        ${S.coop ? S.coop.mapNote() : ''}<p class="hint">${S.coop ? '' : r.pos ? 'Choose the next room. You climb toward the boss at the top.' : 'Choose your first room, just above the start.'}${!S.coop && r.relic('MOTH_BOOTS') && r.relic('MOTH_BOOTS').charges ? ` Dashed rooms are off your path; reaching one uses a ${esc(HD.RELICS.MOTH_BOOTS.name)} charge (${r.relic('MOTH_BOOTS').charges} left).` : ''}</p>
         ${mapSvg(true)}
       </section>
       <aside class="side">
@@ -450,7 +458,7 @@
       else intent = it.kinds ? it.kinds.map((k) => icon(k)).join('') + (it.kind === 'defend' ? `<span>${it.block}</span>` : '') : icon(it.kind);
     }
     const tip = it.name ? `${it.name}${it.dmg != null ? `: ${it.dmg} damage${it.hits > 1 ? ` ${it.hits} times` : ''}` : ''}${it.block ? `, gains ${it.block} Guard` : ''}${it.kinds && it.kinds.includes('buff') ? ', strengthens itself' : ''}${it.kinds && it.kinds.includes('debuff') ? ', afflicts you' : ''}${it.kinds && it.kinds.includes('summon') ? ', calls help' : ''}` : it.label;
-    const targeting = live && ((S.sel && CARDS[S.sel.id].target === 'enemy') || S.selPotion != null);
+    const targeting = live && ((S.sel && CARDS[S.sel.id].target === 'enemy') || (S.selPotion != null && !(S.coop && S.coop.giving)));
     const size = e.def.hp[0] >= 150 ? 150 : e.def.hp[0] >= 80 ? 124 : e.def.hp[0] >= 30 ? 100 : 76;
     const state = (live ? '' : e.fled ? 'fled' : 'dying') + (live && g.p.pw.surrounded && g.facing === e.uid ? ' faced' : '');
     const powers = Object.entries(e.pw).filter(([k, v]) => HD.PW[k] && v).map(([k, v]) => `${HD.PW[k].n}: ${HD.PW[k].d(v)}`);
@@ -487,9 +495,9 @@
     const liftHint = (c) => (!g.canPlay(c) ? "You can't play this right now. Tap elsewhere to put it back."
       : CARDS[c.id].target === 'enemy' && g.alive().length > 1 ? 'Drag it onto an enemy to play it. Tap elsewhere to put it back.' : 'Drag it up to play it. Tap elsewhere to put it back.');
     const hint = S.sel && dragOnly() ? liftHint(S.sel)
-      : S.sel ? `Choose a target for ${esc(CARDS[S.sel.id].name)}, or press Esc.`
+      : S.sel ? `Choose ${CARDS[S.sel.id].target === 'ally' ? 'a player' : 'a target'} for ${esc(CARDS[S.sel.id].name)}, or press Esc.`
       : S.selPotion != null ? `Choose a target for ${esc(HD.POTIONS[S.run.potions[S.selPotion]].name)}, or press Esc.`
-      : g.phase === 'enemy' ? 'Enemies are acting.' : '';
+      : g.phase === 'enemy' ? 'Enemies are acting.' : S.coop ? S.coop.combatNote(g) : '';
     const stuck = g.phase === 'player' && !S.busy && !g.hand.some((c) => g.canPlay(c));
     const log = S.showLog ? `<div class="log" data-key="log" aria-live="polite">${g.log.slice(-14).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : '';
     return `${bar()}<main class="combat" data-key="scr-combat-${g.encId}-${S.run.floor}">
@@ -501,6 +509,7 @@
           <div class="chips">${chips(p)}</div>
           ${cellRow(g)}${clutchBox(g)}
         </div>
+        ${S.coop ? S.coop.alliesHTML(g) : ''}
         <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${foes}</div>
       </section>
       <p class="hint" aria-live="polite">${hint}</p>
@@ -511,7 +520,7 @@
         </div>
         <div class="hand" style="--m:${S.handM != null ? S.handM : 3}px" role="group" aria-label="Your hand">${hand || '<p class="empty">Your hand is empty.</p>'}</div>
         <div class="right">
-          <button class="primary ${stuck ? 'nudge' : ''}" data-act="end" ${g.phase !== 'player' || S.busy ? 'disabled' : ''}>End turn</button>
+          <button class="primary ${stuck && !(S.coop && g.seat.ready) ? 'nudge' : ''}" data-act="end" ${g.phase !== 'player' || S.busy || g.seat.dead ? 'disabled' : ''}>${S.coop && g.seat.ready ? 'Waiting (undo)' : 'End turn'}</button>
           <button class="ghost" data-act="pile" data-arg="discard">Discard ${g.discard.length}</button>
           <button class="ghost" data-act="pile" data-arg="ash">${T('Ash')} ${g.ash.length}</button>
           <button class="ghost small" data-act="log">${S.showLog ? 'Hide log' : 'Show log'}</button>
@@ -579,10 +588,11 @@
       clone: '<b>Clone</b><span>Duplicate every card enchanted with Clone.</span>',
       cook: '<b>Cook</b><span>Remove 2 cards. Gain 9 Max HP.</span>',
       kindle: `<b>Kindle</b><span>Relight your ${esc(HD.RELICS.GOURD_CANDLE.name)}.</span>`,
+      mend: '<b>Mend</b><span>Heal another player for 30% of their Max HP.</span>',
     };
     const done = S.restUsed || [];
     const multi = r.hasRelic('BEDROLL');
-    const open = r.restOptions().filter((o) => !done.includes(o));
+    const open = r.restOptions().concat(S.coop ? ['mend'] : []).filter((o) => !done.includes(o));
     const canAct = open.length && (multi || !done.length);
     return `${bar()}<main class="panel rest" data-key="scr-rest-${r.floor}">
       <h2>A warm hollow</h2>
@@ -673,6 +683,7 @@
   function overlayHTML() {
     const o = S.overlay;
     if (!o) return '';
+    if (HD.UI_OVERLAYS[o.kind]) return HD.UI_OVERLAYS[o.kind](o);
     let body = '';
     let closable = true;
     if (o.kind === 'map') body = `<p class="hint">You are in the ringed room. The boss waits at the top.</p><div class="mapview">${mapSvg(false)}</div>`;
@@ -710,6 +721,7 @@
       body = `<p>${esc(d.text)}</p>${d.passive ? '<p class="fine">This works on its own. Keep it in your belt.</p>' : ''}
         <div class="choices">
           ${d.passive ? '' : `<button class="primary" data-act="drink" ${usable ? '' : 'disabled'}>${d.target === 'enemy' ? 'Throw' : 'Drink'}</button>`}
+          ${S.coop && inCombat && !d.passive && d.target !== 'enemy' && S.g.allies().length ? `<button class="ghost" data-act="coop-give" data-arg="${o.i}" ${usable ? '' : 'disabled'}>Throw to another player</button>` : ''}
           <button class="ghost" data-act="toss">Discard</button>
           ${id === 'RANK_FLASK' && S.screen === 'shop' ? '<button class="ghost" data-act="throwAtMerchant">Throw at the merchant (+100 Gold)</button>' : ''}
         </div>${!usable && !d.passive ? `<p class="fine">${inCombat ? 'Wait for your turn.' : 'This one only works in combat.'}</p>` : ''}`;
@@ -941,11 +953,13 @@
   const floatStack = {};
   let rafPending = false;
   function render() {
-    const html = { title: titleScreen, ancient: ancientScreen, event: eventScreen, map: mapScreen, combat: combatScreen, reward: rewardScreen, rest: restScreen, shop: shopScreen, treasure: treasureScreen, end: endScreen }[S.screen]();
-    const t = document.createElement('div');
-    t.innerHTML = html + overlayHTML();
-    morphKids(root(), t);
-    afterRender();
+    mine(() => {
+      const screens = Object.assign({ title: titleScreen, ancient: ancientScreen, event: eventScreen, map: mapScreen, combat: combatScreen, reward: rewardScreen, rest: restScreen, shop: shopScreen, treasure: treasureScreen, end: endScreen }, HD.UI_SCREENS);
+      const t = document.createElement('div');
+      t.innerHTML = screens[S.screen]() + overlayHTML();
+      morphKids(root(), t);
+      afterRender();
+    });
   }
   function scheduleRender() {
     if (rafPending) return;
@@ -1158,7 +1172,7 @@
       S.overlay = { kind: 'choose', title: o.prompt, from: o.from, n: Math.min(o.n, o.from.length), min: o.min, picked: [], res };
       render();
     }),
-    fx: (type, t, n) => { fxq.push({ type, id: t.isPlayer ? 'p' : t.uid, n }); scheduleRender(); },
+    fx: (type, t, n) => { fxq.push({ type, id: t.isPlayer ? (S.me && t.seat !== S.me ? `a${t.seat.index}` : 'p') : t.uid, n }); scheduleRender(); },
     pace: async (g, e) => { S.acting = e.uid; render(); await HD.sleep(reduced() ? 150 : 480); S.acting = null; },
   };
 
@@ -1248,7 +1262,7 @@
     const armed = k.classList.contains('armed');
     drag = null;
     if (armed && g.canPlay(c)) {
-      const t = CARDS[c.id].target === 'enemy' ? g.alive()[0] : null;
+      const t = CARDS[c.id].target === 'enemy' ? g.alive()[0] : CARDS[c.id].target === 'ally' && g.allies().length ? g.allies()[0].p : null;
       return play(c, t, k);
     }
     cancelDrag(c, k);
@@ -1297,7 +1311,7 @@
   // Saved outside combat on every render, and once at the start of each combat (resuming restarts that fight).
   function persist(combat) {
     const r = S.run;
-    if (!r || S.screen === 'title' || S.screen === 'end') return;
+    if (!r || S.coop || S.screen === 'title' || S.screen === 'end') return;
     const shown = S.overlay && S.overlay.kind === 'bonus' ? S.overlay.items.filter((x) => !x.taken) : S.activePick ? [S.activePick] : [];
     const ui = { screen: combat ? 'combat' : S.screen, ev: S.ev, offer: S.offer, reward: S.reward, restUsed: S.restUsed, chest: S.chest, kind: S.kind, combat: combat || null, pendingFront: shown };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, version: HD.version, run: r.toSave(), ui })); } catch (e) { /* storage full or unavailable */ }
@@ -1327,9 +1341,12 @@
     S.screen = 'ancient';
     render();
   }
+  // Back to the map after a room. In co-op this tells the host this player is done and ready to vote.
+  function toMap() { S.screen = 'map'; S.scrollMap = true; if (S.coop) { S.ev = null; S.coop.atMap(); } }
   async function enterNode(key) {
     const r = S.run;
     if (S.busy || !r.reachable().includes(key)) return;
+    if (S.coop) { S.coop.vote(key); return render(); }
     r.moveTo(key);
     if (key === 'BOSS') return startCombat(r.boss, 'boss');
     const n = r.map.nodes[key];
@@ -1345,6 +1362,10 @@
     }
     if (type === 'monster') return startCombat(r.pickEncounter('monster'), 'monster');
     if (type === 'elite') return startCombat(r.pickEncounter('elite'), 'elite');
+    enterRoom(type);
+  }
+  function enterRoom(type) {
+    const r = S.run;
     if (type === 'rest') { r.hook('onRestSite'); S.restUsed = []; S.screen = 'rest'; }
     if (type === 'shop') {
       r.hook('onShop'); const sh = r.makeShop(); S.screen = 'shop';
@@ -1375,11 +1396,12 @@
     S.settled = g;
     S.sel = null; S.selPotion = null;
     if (!g.won) { r.hp = 0; S.result = 'dead'; S.screen = 'end'; S.overlay = null; clearSave(); render(); return; }
-    r.hp = g.p.hp; r.maxHp = g.p.maxHp;
+    const me = S.me || g.seat; // co-op: a player who fell comes back at 1 HP when the party wins
+    r.hp = me.dead ? 1 : me.p.hp; r.maxHp = me.p.maxHp;
     r.combatDone(S.kind === 'event' ? 'monster' : S.kind);
-    if (S.ev && S.ev.page === 'FOUGHT') { const d = HD.EVENTS[S.ev.id]; if (d.onWin) d.onWin(r, S.ev, g); S.ev = null; }
-    if (S.kind === 'event') { setTimeout(() => { S.screen = 'map'; S.scrollMap = true; checkPending(); render(); }, reduced() ? 0 : 650); return; }
-    S.reward = r.combatRewards(S.kind, g);
+    if (S.ev && S.ev.page === 'FOUGHT') { const d = HD.EVENTS[S.ev.id]; if (d.onWin) mine(() => d.onWin(r, S.ev, g)); S.ev = null; }
+    if (S.kind === 'event') { setTimeout(() => { toMap(); checkPending(); render(); }, reduced() ? 0 : 650); return; }
+    S.reward = mine(() => r.combatRewards(S.kind, g));
     // Let the last enemy finish falling before the spoils appear.
     setTimeout(() => { S.screen = 'reward'; render(); }, reduced() ? 0 : 650);
   }
@@ -1408,18 +1430,20 @@
       if (CARDS[c.id].type === 'Attack') { const me = $('[data-key="p"] .sigil'); if (me) me.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(26px)' }, { transform: 'translateX(0)' }], { duration: 300, easing: 'ease-out' }); }
     } else if (k) k.remove();
     S.hidden.add(c.uid);
+    if (S.coop) return S.coop.play(c, t);
     return engine(() => S.g.playCard(c, t));
   }
   function endTurn() {
     const g = S.g;
     if (g.phase !== 'player' || S.busy) return;
     S.sel = null;
+    if (S.coop) return S.coop.endTurn();
     engine(() => g.endTurn());
   }
-  const drink = (i, t) => engine(() => S.g.usePotion(i, t));
+  const drink = (i, t) => (S.coop ? S.coop.potion(i, t) : engine(() => S.g.usePotion(i, t)));
   // End of turn: only the cards that are leaving fly to the discard pile (or the Exhaust pile); retained cards stay put.
   UI.handLeaving = (list) => {
-    if (reduced()) return;
+    if (reduced() || (S.me && S.g && S.g.seat !== S.me)) return;
     const disc = $('[data-act=pile][data-arg=discard]'), ash = $('[data-act=pile][data-arg=ash]');
     list.forEach(({ c, burn }, i) => {
       const el = $(`[data-key="h${c.uid}"]`), to = burn ? ash : disc;
@@ -1439,6 +1463,11 @@
     if (CARDS[c.id].target === 'enemy') {
       const a = g.alive();
       if (a.length === 1) return play(c, a[0]);
+      S.sel = c; render(); return;
+    }
+    if (CARDS[c.id].target === 'ally') {
+      const a = g.allies();
+      if (a.length === 1) return play(c, a[0].p);
       S.sel = c; render(); return;
     }
     play(c, null);
@@ -1468,6 +1497,7 @@
   function restAction(o) {
     const r = S.run;
     const mark = () => { S.restUsed = (S.restUsed || []).concat(o); };
+    if (o === 'mend' && S.coop) return S.coop.pickMend(mark);
     if (o === 'rest') { r.heal(r.restHeal()); r.hook('onRest'); mark(); }
     if (o === 'lift') { const kb = r.relic('KETTLEBELL'); kb.lifts = (kb.lifts || 0) + 1; mark(); }
     if (o === 'dig') { r.addRelic(r.rollRelic()); mark(); }
@@ -1511,13 +1541,15 @@
       case 'throwAtMerchant': { const i = S.overlay.i; r.potions[i] = null; r.gainGold(100); S.overlay = null; return render(); }
       case 'ev-pick': {
         const res = r.eventChoose(S.ev, arg);
+        if (r.hp <= 0 && S.coop) r.hp = 1; // co-op: a player who falls outside a fight comes back at 1 HP
+        if (res.fight && S.coop) { S.coop.eventFight(res); checkPending(); return render(); }
         if (r.hp <= 0) { r.hp = 0; S.result = 'dead'; S.screen = 'end'; S.overlay = null; S.g = null; S.deathBy = HD.EVENTS[S.ev.id].name; clearSave(); return render(); }
         if (res.fight) return startCombat(res.fight, res.kind || 'monster');
         checkPending();
         return render();
       }
-      case 'gift': r.addRelic(arg); S.screen = 'map'; S.scrollMap = true; checkPending(); return render();
-      case 'title': S.screen = 'title'; S.overlay = null; return render();
+      case 'gift': r.addRelic(arg); toMap(); checkPending(); return render();
+      case 'title': if (S.coop) S.coop.leave(); S.screen = 'title'; S.overlay = null; return render();
       case 'node': return enterNode(arg);
       case 'card': return clickCard(g.hand.find((c) => String(c.uid) === arg));
       case 'foe': {
@@ -1562,6 +1594,7 @@
       }
       case 'drink': {
         const i = o.i;
+        if (S.coop) S.coop.giving = false;
         const d = HD.POTIONS[r.potions[i]];
         S.overlay = null;
         if (S.screen === 'combat') {
@@ -1594,9 +1627,9 @@
           S.screen = 'ancient';
           return render();
         }
-        S.screen = 'map'; S.scrollMap = true; return render();
+        toMap(); return render();
       }
-      case 'to-map': S.screen = 'map'; S.scrollMap = true; return render();
+      case 'to-map': toMap(); return render();
       case 'rest': restAction(arg); return render();
       case 'buy': { const [kind, i] = arg.split(':'); r.buy(kind, +i); checkPending(); return render(); }
       case 'remove': {
@@ -1606,18 +1639,19 @@
       }
       case 'open-chest': S.chest = Object.assign(r.treasure(), { taken: false }); return render();
       case 'take-chest': r.gainGold(S.chest.gold); r.addRelic(S.chest.relic); S.chest.taken = true; checkPending(); return render();
+      default: if (HD.UI_ACTS[act]) return HD.UI_ACTS[act](arg);
     }
   }
 
   // ---------- input ----------
-  document.addEventListener('click', (ev) => {
+  document.addEventListener('click', (ev) => mine(() => {
     if (S.suppressClick) { S.suppressClick = false; return; }
     const el = ev.target.closest('[data-act]');
     if (!el && S.screen === 'combat' && S.sel && dragOnly() && !ev.target.closest('.card')) { S.sel = null; return render(); }
     if (!el || el.disabled) return;
     if (el.dataset.act === 'info') { S.overlay = { kind: 'info', title: el.dataset.title, body: el.dataset.body }; return render(); }
     onAct(el.dataset.act, el.dataset.arg);
-  });
+  }));
   // Press and hold any card to read it up close with its keywords.
   let hold = null;
   const cancelHold = () => { if (hold) { clearTimeout(hold.t); hold = null; } };
@@ -1656,29 +1690,29 @@
     if (ev.button !== 0 || S.screen !== 'combat' || S.busy || S.overlay || !S.g) return;
     const el = ev.target.closest('.hand .card');
     if (!el) return;
-    const c = S.g.hand.find((x) => `h${x.uid}` === el.dataset.key);
+    const c = mine(() => S.g.hand.find((x) => `h${x.uid}` === el.dataset.key));
     if (c) drag = { c, el, x0: ev.clientX, y0: ev.clientY, on: false };
   });
   document.addEventListener('pointermove', (ev) => {
     S.mouse = { x: ev.clientX, y: ev.clientY };
     if (drag && !drag.on) {
       if (Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) < 12) return;
-      if (S.busy || !S.g.canPlay(drag.c)) { drag = null; return; }
-      startDrag();
+      if (S.busy || !mine(() => S.g.canPlay(drag.c))) { drag = null; return; }
+      mine(startDrag);
     }
     if (drag && drag.on) moveDrag(ev.clientX, ev.clientY);
     updateAim();
   });
   document.addEventListener('pointerup', (ev) => {
-    if (drag && drag.on) endDrag(ev.clientX, ev.clientY);
+    if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
     drag = null;
     setTimeout(() => { S.suppressClick = false; }, 0);
   });
   document.addEventListener('pointercancel', () => { if (drag && drag.on) { const d = drag; drag = null; if (d.line) d.line.remove(); cancelDrag(d.c, d.k); } drag = null; });
   window.addEventListener('resize', updateAim);
-  document.addEventListener('keydown', (ev) => {
+  document.addEventListener('keydown', (ev) => mine(() => {
     const el = document.activeElement;
-    if (el && el.tagName === 'INPUT') { if (ev.key === 'Enter' && S.screen === 'title') startRun(); return; }
+    if (el && el.tagName === 'INPUT') { if (ev.key === 'Enter' && S.screen === 'title') startRun(); if (ev.key === 'Enter' && HD.UI_ACTS['coop-enter']) HD.UI_ACTS['coop-enter'](); return; }
     if ((ev.key === 'Enter' || ev.key === ' ') && el && el.dataset && el.dataset.act && el.tagName !== 'BUTTON') { ev.preventDefault(); onAct(el.dataset.act, el.dataset.arg); return; }
     if (ev.key === 'Escape') {
       if (drag && drag.on) { const d = drag; drag = null; return cancelDrag(d.c, d.k); }
@@ -1700,7 +1734,7 @@
       if (S.selPotion != null) { if (e) drink(S.selPotion, e); return; }
       clickCard(S.g.hand[i]);
     }
-  });
+  }));
 
   // ---------- ambient background ----------
   // Slow motes drifting up through the dark: spores between fights, embers during them.
@@ -1754,6 +1788,8 @@
     render();
   };
   HD.state = S; // exposed for debugging in the console
+  // The pieces src/coopui.js builds on.
+  HD.uiApi = { S, render, scheduleRender, toMap, enterRoom, afterCombat, play, drink, checkPending, esc, T, playerSigil, hpBar, chips, bar, reduced, mine };
   HD.render = render;
   HD.UI = UI;
 })();

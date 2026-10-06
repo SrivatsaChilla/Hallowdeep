@@ -8,8 +8,9 @@
 
   // Map: 7-column grid, 15 rooms. Row 0 fights, row 8 treasure, last row rest.
   // Room counts per act: 5 elites, 3 shops, 10-14 unknown, 6-7 rests, fights fill the rest.
-  HD.genMap = function (rng, act = 1, asc = 0) {
-    const ROWS = HD.ACT_ROWS[act];
+  // short: co-op acts are one floor shorter.
+  HD.genMap = function (rng, act = 1, asc = 0, short = false) {
+    const ROWS = HD.ACT_ROWS[act] - (short ? 1 : 0);
     const nodes = {};
     const key = (r, c) => `${r},${c}`;
     const get = (r, c) => nodes[key(r, c)] || (nodes[key(r, c)] = { key: key(r, c), r, c, type: null, next: [], prev: [] });
@@ -67,16 +68,18 @@
   const CARD_PRICE = { Common: 50, Uncommon: 75, Rare: 150 };
 
   class Run {
-    constructor(seedStr, charId = 'OATHBURNER', asc = 0) {
+    // o (co-op): party is the number of players; mapSeed gives every player the same maps.
+    constructor(seedStr, charId = 'OATHBURNER', asc = 0, o = {}) {
       this.seed = seedStr;
       this.charId = charId;
       this.asc = Math.max(0, Math.min(10, asc | 0)); // Ascension level (each level includes the ones below it)
       this.playMs = 0; // run timer: time spent in this run while the page was visible
       this.color = HD.CHARS[charId].color;
-      this.party = 1; // players in the run; co-op cards join the pools when there are more
+      this.party = o.party || 1; // players in the run; co-op cards join the pools when there are more
       const mk = (k) => HD.makeRng(HD.hashSeed(`${seedStr}:${k}`));
       this.rng = { map: mk('map'), combat: mk('combat'), monster: mk('monster'), cards: mk('cards'), shop: mk('shop'),
         relic: mk('relic'), gold: mk('gold'), misc: mk('misc'), enc: mk('enc'), potion: mk('potion'), neow: mk('neow'), event: mk('event') };
+      if (o.mapSeed) this.rng.map = HD.makeRng(HD.hashSeed(`${o.mapSeed}:map`));
       const ch = HD.CHARS[charId];
       this.maxHp = ch.hp; this.hp = ch.hp; this.gold = ch.gold;
       this.deck = [];
@@ -89,7 +92,7 @@
       this.act = 1; this.floor = 0;
       this.rarityOffset = -5; this.removals = 0; this.fights = 0; this.combats = 0;
       this.encHist = []; this.eliteHist = [];
-      this.map = HD.genMap(this.rng.map, 1, this.asc);
+      this.map = HD.genMap(this.rng.map, 1, this.asc, this.party > 1);
       this.pos = null;
       this.path = [];
       this.boss = this.rng.enc.pick(HD.encPool('boss', 1));
@@ -129,7 +132,7 @@
     // A new act: fresh map, boss, weak-fight count and ? room odds. The floor count carries on.
     startAct(n) {
       this.act = n;
-      this.map = HD.genMap(this.rng.map, n, this.asc);
+      this.map = HD.genMap(this.rng.map, n, this.asc, this.party > 1);
       this.pos = null; this.path = [];
       this.fights = 0; this.encHist = []; this.eliteHist = [];
       this.boss = this.rng.enc.pick(HD.encPool('boss', n));
@@ -147,8 +150,9 @@
     neowOffer() {
       this.hp = this.maxHp;
       this.floor = 1;
-      const bane = this.rng.neow.pick(HD.NEOW.banes);
-      const boons = this.rng.neow.shuffle(HD.neowBoons(this, bane)).slice(0, 2);
+      // Co-op: no Tin Crucible (Silver Crucible) and no Moth Boots (Winged Boots).
+      const bane = this.rng.neow.pick(this.party > 1 ? HD.NEOW.banes.filter((id) => id !== 'TIN_CRUCIBLE') : HD.NEOW.banes);
+      const boons = this.rng.neow.shuffle(HD.neowBoons(this, bane).filter((id) => this.party === 1 || id !== 'MOTH_BOOTS')).slice(0, 2);
       return [...boons, bane];
     }
     gainGold(n) {
