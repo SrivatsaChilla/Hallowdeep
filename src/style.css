@@ -863,3 +863,26 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .glints { min-width: 24px; height: 24px; right: -10px; top: -8px; bottom: auto; font-size: .85rem; padding: 0 4px; }
   .glints svg { width: 10px; height: 10px; }
 }
+
+/* ---------- the Wirebound: sigil and Cells (Orbs) under the portrait ---------- */
+.sigil.wirebound .body { fill: #23303a; stroke: #7fb4d9; }
+.sigil.wirebound .eye { fill: #bfe6ff; stroke: #bfe6ff; }
+.cellrow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 100%; margin-top: 6px; }
+.cell { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #1d1a17; border: 1.5px solid var(--line); }
+.cell svg { width: 16px; height: 16px; stroke: currentColor; fill: currentColor; }
+.cell b, .cell i { position: absolute; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; display: grid; place-items: center;
+  font-size: .68rem; font-style: normal; font-weight: 700; line-height: 1; background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+.cell b { right: -7px; top: -6px; }
+.cell i { left: -7px; bottom: -6px; color: var(--ink2); }
+.cell.empty { background: transparent; border-style: dashed; opacity: .55; }
+.cell.k-bolt { color: #f2d34f; border-color: #b39a2c; }
+.cell.k-rime { color: #8fd3ff; border-color: #4f8fb3; }
+.cell.k-murk { color: #a88ad9; border-color: #6d559a; }
+.cell.k-flux { color: #ff9a66; border-color: #b3603a; }
+.cell.k-shard { color: #b8f0e6; border-color: #6fb3a6; }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .cellrow { gap: 5px; margin-top: 3px; }
+  .cell { width: 22px; height: 22px; }
+  .cell svg { width: 12px; height: 12px; }
+  .cell b, .cell i { min-width: 12px; height: 12px; font-size: .58rem; padding: 0 2px; }
+}
