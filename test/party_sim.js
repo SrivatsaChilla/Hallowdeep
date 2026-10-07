@@ -10,7 +10,7 @@ const SRC = FILES.map((f) => [f, fs.readFileSync(path.join(__dirname, '..', 'src
 const RUNS = +process.argv[2] || 6;
 const FLOORS = +process.argv[3] || 18;
 const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
-const RUN_MS = 240000;
+const RUN_MS = +(process.env.RUN_MS || 240000);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function world() {
@@ -67,9 +67,14 @@ async function partyRun(i, st) {
   const t0 = Date.now();
   const next = async (me, types) => {
     for (;;) {
+      // A vote the host dropped (the party could not reach that room): vote again, as a player would.
+      for (let j = me.q.findIndex((e) => e.t === 'mapstate'); j >= 0; j = me.q.findIndex((e) => e.t === 'mapstate')) {
+        const e = me.q.splice(j, 1)[0];
+        if (me.revote && e.at[me.peer.seat] && !e.votes[me.peer.seat]) me.revote();
+      }
       const k = me.q.findIndex((e) => types.includes(e.t));
       if (k >= 0) return me.q.splice(k, 1)[0];
-      if (Date.now() - t0 > RUN_MS) throw new Error(`waiting for ${types} at floor ${me.peer.run && me.peer.run.floor}`);
+      if (Date.now() - t0 > RUN_MS) throw new Error(`waiting for ${types} at floor ${me.peer.run && me.peer.run.floor}; host at=${JSON.stringify(host.run.at)} votes=${JSON.stringify(host.run.votes)} asks=${host.run.asks.length}; positions ${players.map((p) => p.peer.run && `${p.peer.run.act}/${p.peer.run.pos}/${p.peer.run.floor}`)}; authority reach ${host.authority().reachable()}`);
       await sleep(1);
     }
   };
@@ -118,7 +123,10 @@ async function partyRun(i, st) {
       me.peer.atMap();
       const vote = () => { const ks = run.reachable(); if (ks.length) me.peer.vote(rng.pick(ks)); };
       vote();
+      me.revote = vote;
       const m = await next(me, ['go', 'go-fight']);
+      me.revote = null;
+      if (me === players[0] && m.split) splits.push(m.split.seat);
       if (m.t === 'go-fight') { const g = await fight(me); const r = afterFight(me, g, 'event', false); if (r !== 'ok') return r; continue; }
       me.log.push(`${run.floor}:${m.key}:${m.room}:${m.enc || m.event || ''}`);
       if (m.enc) { const g = await fight(me); const r = afterFight(me, g, m.kind, true); if (r !== 'ok') return r; continue; }
@@ -157,6 +165,7 @@ async function partyRun(i, st) {
       if (m.room === 'treasure') { const t = run.treasure(); run.gainGold(t.gold); if (t.relic) run.addRelic(t.relic); drain(HD, run, rng); continue; }
     }
   };
+  const splits = []; // which seat won each split vote, in order
   const results = await Promise.all(players.map((me) => bot(me).catch((e) => { st.errors.push(`${i}: ${e.stack.split('\n').slice(0, 4).join(' | ')}`); return 'error'; })));
   // The party moved together: every player saw the same rooms on the same floors.
   if (process.env.NETDBG) {
@@ -171,14 +180,17 @@ async function partyRun(i, st) {
   }
   const logs = players.map((p) => p.log.join(' '));
   if (new Set(logs).size > 1) { st.split++; console.error(`run ${i}: players went different ways\n  ${logs.join('\n  ')}`); }
+  // Split votes take turns: with two players they must alternate.
+  st.splits += splits.length;
+  if (size === 2 && splits.some((x, k) => k && x === splits[k - 1])) { st.unfair++; console.error(`run ${i}: split votes did not alternate: ${splits}`); }
   st.runs++; st.players += size; st.floors += players[0].peer.run.floor;
   for (const r of results) st.ends[r] = (st.ends[r] || 0) + 1;
 }
 
 (async () => {
-  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, desyncs: 0, split: 0, errors: [] };
-  for (let i = 0; i < RUNS; i++) await partyRun(i, st);
+  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, splits: 0, unfair: 0, desyncs: 0, split: 0, errors: [] };
+  for (let i = process.env.ONLY ? +process.env.ONLY : 0; i < (process.env.ONLY ? +process.env.ONLY + 1 : RUNS); i++) await partyRun(i, st);
   for (const e of st.errors.slice(0, 4)) console.error(e);
-  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
-  if (st.errors.length || st.desyncs || st.split) process.exitCode = 1;
+  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, splitVotes: st.splits, unfairSplits: st.unfair, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
+  if (st.errors.length || st.desyncs || st.split || st.unfair) process.exitCode = 1;
 })();

@@ -82,7 +82,8 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   one floor shorter. Ascension is 0 in co-op for now.
 - Each player does their own room (rewards, shop, rest, events, chests, Ancients) and then goes back to the map
   (`at-map`). Clicking a room there is a vote (`vote`); once everyone standing is at the map and has voted, the host
-  picks the room (weighted by votes) and what is in it, using its own run: `go` with the encounter, event or room.
+  checks the votes against its own run (only then, since that run can lag a step behind), takes the room with the most
+  votes, settles a split by turns (`turnOrder`, announced in `go.split`) and decides what is in it, using its own run: `go` with the encounter, event or room.
   The party moves (`run.moveTo`) inside the peer, before the next fight's snapshot.
 - Fights are the lockstep fights above. After a win, a player who fell comes back at 1 HP. A lost fight ends the
   run for everyone. An event that turns into a fight (`ev-fight`) pulls the whole party in once nobody is mid-room
@@ -91,6 +92,8 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 - Internet play: WebRTC data channels, introduced through the free public PeerJS server (0.peerjs.com). It drops
   messages that lack the fields its own client sends, so rtc.js sends them all. No TURN server: some strict networks
   cannot connect.
+- Other players' moves: just before applying one, the peer emits `acting`; the screen flies a copy of their card from
+  their panel to where it lands and floats its name (or their potion's).
 - The screen: the lobby, vote counts and who is still in a room on the map, the other players in a fight (aim ally
   cards and thrown potions at them), "Waiting (undo)" after End turn, Mend at rest sites. In a co-op fight the screen
   and all input read this player's seat (`mine()` in ui.js).

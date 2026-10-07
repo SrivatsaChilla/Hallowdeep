@@ -139,29 +139,47 @@
       const seed = this.seed || Math.random().toString(36).slice(2, 8);
       this.run = { seed, at: [], votes: [], asks: [] };
       this.rng = HD.makeRng(HD.hashSeed(`${seed}:party`));
+      // Whose turn it is to win a split vote; a random order, so the host is not first.
+      this.turnOrder = this.rng.shuffle(this.seats.map((s, i) => i));
       this.broadcast({ t: 'run', seed, asc, chars: this.seats.map((s) => s.char) });
       return true;
     }
     party(seat, m) {
       const R = this.run;
       if (m.t === 'at-map') { R.at[seat] = true; R.votes[seat] = null; this.mapState(); return this.tryEventFight(); }
+      // Votes are checked when the room is picked, not now: the host player's own run may still be a step behind.
       if (m.t === 'vote') {
-        const r = this.authority && this.authority();
-        if (!R.at[seat] || typeof m.key !== 'string' || !r || !r.reachable().includes(m.key)) return;
+        if (!R.at[seat] || typeof m.key !== 'string' || m.key.length > 12) return;
         R.votes[seat] = m.key; this.mapState(); return this.resolve();
       }
       if (m.t === 'ev-fight' && HD.ENC[m.enc] && ['monster', 'elite', 'event'].includes(m.kind)) { R.asks.push({ seat, enc: m.enc, kind: m.kind }); return this.tryEventFight(); }
       if (m.t === 'mend' && isInt(m.to) && m.to !== seat && this.seats[m.to]) return this.broadcast({ t: 'mended', from: seat, to: m.to });
     }
     mapState() { const R = this.run; this.broadcast({ t: 'mapstate', at: this.seats.map((s, i) => !!R.at[i]), votes: this.seats.map((s, i) => R.votes[i] || null) }); }
-    // Everyone standing is at the map and has voted: pick the room (at random, weighted by votes) and what is in it.
+    // Everyone standing is at the map and has voted. The room with the most votes wins; a split vote goes to whoever has
+    // waited longest for a split to go their way, so the players take turns and nobody is favored.
     resolve() {
       const R = this.run, live = this.live();
       if (!live.length || !live.every((i) => R.at[i] && R.votes[i]) || R.asks.length) return;
-      const key = this.rng.pick(live.map((i) => R.votes[i]));
+      // Everyone (the host player too) is at the map now, so the host's run is up to date. A vote for a room the party
+      // cannot reach is dropped and that player picks again.
+      const reach = this.authority().reachable();
+      const bad = live.filter((i) => !reach.includes(R.votes[i]));
+      if (bad.length) { for (const i of bad) R.votes[i] = null; return this.mapState(); }
+      const count = {};
+      for (const i of live) count[R.votes[i]] = (count[R.votes[i]] || 0) + 1;
+      const most = Math.max(...Object.values(count));
+      const tied = Object.keys(count).filter((k) => count[k] === most);
+      let key = tied[0], split = null;
+      if (tied.length > 1) {
+        const seat = this.turnOrder.find((i) => live.includes(i) && tied.includes(R.votes[i]));
+        key = R.votes[seat];
+        this.turnOrder = this.turnOrder.filter((i) => i !== seat).concat(seat);
+        split = { seat, next: this.turnOrder.find((i) => live.includes(i)) };
+      }
       const room = this.roomFor(key);
       R.at = []; R.votes = [];
-      this.broadcast(Object.assign({ t: 'go', key }, room));
+      this.broadcast(Object.assign({ t: 'go', key, split }, room));
       if (room.enc) this.startFight(room.enc, room.kind);
     }
     roomFor(key) {
@@ -274,6 +292,7 @@
     use(m) {
       if (m.pick) return this.answer(m.s, m.pick);
       this.chain = this.chain.then(async () => {
+        this.onEvent({ t: 'acting', s: m.s, a: m.a }); // the screen can show the move before it resolves
         try { await this.g.act(m.s, m.a); } catch (e) { this.onEvent({ t: 'error', error: e }); }
         this.applied = m.n + 1;
         if (m.s === this.seat) this.waiting = false;

@@ -150,6 +150,9 @@ Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.m
 - Co-op runs: Ascension is 0; each player gets their own Ancient and their own chest (the original shows everyone the
   same Ancient and puts one relic per player in a shared chest); the host's relics decide what a ? room holds; a player
   who drops to 0 HP outside a fight stays at 1 HP; co-op runs are not saved.
+- Map votes: the room with the most votes wins, and a split vote goes to whoever has waited longest for a split to
+  go their way (the original picks at random, weighted by votes; players found that felt unfair). Moth Boots cannot
+  leave the path in co-op, since the party moves together.
 - Royal Gift (Largesse) picks from the solo colorless cards. Relay Stone (The Ball) passes to a random other standing
   player after it is played, keeping its extra damage for the rest of the fight.
 

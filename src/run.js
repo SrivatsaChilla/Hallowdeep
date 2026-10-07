@@ -214,7 +214,7 @@
       const cur = ns[this.pos];
       if (cur.r === this.map.rows - 1) return ['BOSS'];
       const boots = this.relic('MOTH_BOOTS');
-      if (boots && boots.charges > 0) return Object.values(ns).filter((n) => n.r === cur.r + 1).map((n) => n.key);
+      if (boots && boots.charges > 0 && this.party === 1) return Object.values(ns).filter((n) => n.r === cur.r + 1).map((n) => n.key);
       return cur.next.slice();
     }
     // Moves to a room; leaving the drawn paths spends a Moth Boots charge.

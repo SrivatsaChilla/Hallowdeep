@@ -45,7 +45,7 @@
         const state = !C.at[i] ? 'still in a room' : C.votes[i] ? 'has voted' : 'is choosing';
         return `<li${i === C.me() ? ' class="mine"' : ''}>${esc(C.nameOf(i))}${i === C.me() ? ' (you)' : ''}: ${state}</li>`;
       }).join('');
-      return `<div class="mapnote"><p>Vote for the next room by clicking it. When everyone has voted, the party goes there; if the votes differ, one is picked at random, weighted by votes.</p><ul class="partylist">${rows}</ul></div>`;
+      return `<div class="mapnote"><p>Vote for the next room by clicking it. The party goes where most players vote; when the vote is split, players take turns getting their way.</p><ul class="partylist">${rows}</ul></div>`;
     },
     barNote() { const msg = C.warn || C.toast; return `<span class="coopnote${C.warn ? ' warn' : ''}" title="Co-op">${esc(msg || `Co-op, ${C.players.filter((p) => p.live).length} players`)}</span>`; },
 
@@ -96,12 +96,29 @@
     if (e.t === 'go') go(e);
     if (e.t === 'go-fight') C.pendingFight = e;
     if (e.t === 'fight') fightStarts(e);
+    if (e.t === 'acting') shown(e);
     if (e.t === 'applied' && S.screen === 'combat' && (e.n === -1 || !C.peer.waiting)) { S.busy = false; S.hidden.clear(); S.dragUid = null; }
     if (e.t === 'over') C.peer.chain.then(() => setTimeout(() => A.afterCombat(), 0));
     if (e.t === 'mended' && e.to === C.me()) { C.toast = `${C.nameOf(e.from)} mended you.`; setTimeout(() => { C.toast = ''; A.scheduleRender(); }, 4000); }
     if (e.t === 'desync') C.warn = 'The players fell out of step in this fight.';
     if (e.t === 'closed') C.warn = 'The connection to the host was lost.';
     A.scheduleRender();
+  }
+  // A short message in the top bar.
+  function note(msg) { C.toast = msg; A.scheduleRender(); clearTimeout(note.t); note.t = setTimeout(() => { C.toast = ''; A.scheduleRender(); }, 6000); }
+  // Another player's move, just before it resolves: their card flies from their panel, their potion is named.
+  function shown(e) {
+    if (S.screen !== 'combat' || !S.g || e.s === C.me()) return;
+    const g = S.g, seat = g.seats[e.s];
+    if (!seat) return;
+    if (e.a.k === 'play') {
+      const c = seat.hand.find((x) => x.uid === e.a.card);
+      if (!c) return;
+      const t = g.enemies.find((x) => x.uid === e.a.target) || (e.a.ally != null && g.seats[e.a.ally] ? g.seats[e.a.ally].p : null);
+      A.remoteCard(e.s, c, t);
+      A.label(`a${e.s}`, HD.CARDS[c.id].name);
+    }
+    if (e.a.k === 'potion') { const id = seat.run.potions[e.a.slot]; if (id) A.label(`a${e.s}`, HD.POTIONS[id].name); }
   }
   function hostEvent(e) {
     if (e.t === 'left') { C.toast = `${C.nameOf(e.seat)} left the game.`; A.scheduleRender(); }
@@ -115,6 +132,7 @@
   }
   // The party moved (the run already did). Fights wait for the 'fight' message; other rooms open here.
   function go(e) {
+    if (e.split) note(`Split vote: ${C.nameOf(e.split.seat)}'s pick this time. ${e.split.next === e.split.seat ? '' : `Next split goes to ${C.nameOf(e.split.next)}.`}`);
     C.at = []; C.votes = [];
     S.overlay = null;
     if (e.enc) { S.kind = e.kind; return; }

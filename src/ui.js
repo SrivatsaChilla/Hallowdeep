@@ -1158,7 +1158,7 @@
       const b = el.getBoundingClientRect();
       const s = document.createElement('span');
       s.className = `float f-${f.type} ${f.n >= 20 ? 'big' : ''}`;
-      s.textContent = f.type === 'hit' ? (f.n ? `-${f.n}` : '0') : f.type === 'block' ? `${f.n} blocked` : `+${f.n}`;
+      s.textContent = f.type === 'hit' ? (f.n ? `-${f.n}` : '0') : f.type === 'block' ? `${f.n} blocked` : f.type === 'say' ? f.n : `+${f.n}`;
       s.style.left = `${b.left + b.width / 2 + (st.n % 2 ? 22 : -14) + (Math.random() * 10 - 5)}px`;
       s.style.top = `${b.top + b.height * 0.3 + (st.n % 4) * 30}px`;
       layer.appendChild(s);
@@ -1422,6 +1422,25 @@
     if (d.type === 'Power') { const p = $('[data-key="p"] .sigil'); if (p) return rectOf(p); }
     const a = $('.arena'); return a ? rectOf(a) : { x: innerWidth / 2, y: innerHeight / 2 };
   }
+  // Co-op: another player's card flies from their panel to where it lands (an enemy, a player, or their own panel).
+  function remoteCard(seat, c, t) {
+    if (reduced()) return;
+    const from = $(`[data-key="a${seat}"]`);
+    if (!from) return;
+    const box = document.createElement('div');
+    box.innerHTML = cardHTML(c, {});
+    const k = box.firstElementChild;
+    if (!k) return;
+    const r = rectOf(from);
+    k.classList.add('flying', 'remote');
+    k.style.cssText = `position:fixed;left:${r.x - 60}px;top:${r.y - 84}px;width:120px;height:168px;margin:0;transform:scale(.55);`;
+    fxLayer().appendChild(k);
+    const panel = (p) => $(`[data-key="${p.seat === S.me ? 'p' : `a${p.seat.index}`}"]`);
+    const to = t && !t.isPlayer ? destFor(c, t) : t ? rectOf(panel(t) || from) : CARDS[c.id].type === 'Power' ? r : destFor(c, null);
+    fly(k, to, { end: 0.25, mid: 0.6, ms: 520 });
+  }
+  // A short label floating over someone (another player's card or potion name).
+  const label = (id, text) => { fxq.push({ type: 'say', id, n: text }); scheduleRender(); };
   // Plays a card: the card (or its dragged copy) flies to where it lands while the engine resolves.
   function play(c, t, k) {
     if (!reduced()) {
@@ -1803,7 +1822,7 @@
   };
   HD.state = S; // exposed for debugging in the console
   // The pieces src/coopui.js builds on.
-  HD.uiApi = { S, render, scheduleRender, toMap, enterRoom, afterCombat, play, drink, checkPending, esc, T, playerSigil, hpBar, chips, bar, reduced, mine };
+  HD.uiApi = { S, render, scheduleRender, toMap, enterRoom, afterCombat, play, drink, checkPending, esc, T, playerSigil, hpBar, chips, bar, reduced, mine, remoteCard, label };
   HD.render = render;
   HD.UI = UI;
 })();

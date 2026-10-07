@@ -1002,3 +1002,4 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 /* Shown when something breaks, so nobody is left looking at a blank screen. */
 .crash { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 9999; max-width: min(92vw, 520px); padding: .9rem 1.1rem; border-radius: 12px; border: 2px solid var(--wax2); background: var(--panel); color: var(--ink); box-shadow: 0 8px 30px rgba(0,0,0,.5); text-align: center; }
 .crash p { margin: .4rem 0; word-break: break-word; }
+.float.f-say { font-family: var(--text); font-size: .95rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .05em .45em; white-space: nowrap; }
