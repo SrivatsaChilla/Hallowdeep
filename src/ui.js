@@ -1780,6 +1780,20 @@
     return { set(m) { if (m === mode) return; mode = m; pickColor(); start(); } };
   })();
 
+  // If something breaks, say so (with a way out) instead of leaving a blank or frozen screen.
+  let crashShown = false;
+  function showCrash(msg) {
+    if (crashShown || /ResizeObserver loop/.test(msg)) return;
+    crashShown = true;
+    const box = document.createElement('div');
+    box.className = 'crash';
+    box.setAttribute('role', 'alert');
+    box.innerHTML = `<b>Something went wrong.</b><p>${esc(String(msg).slice(0, 300))}</p><p class="fine">If this keeps happening, send this message to the developer.</p><div><button class="primary" data-crash="reload">Reload</button> <button class="ghost" data-crash="close">Keep playing</button></div>`;
+    box.addEventListener('click', (ev) => { const b = ev.target.closest('[data-crash]'); if (!b) return; if (b.dataset.crash === 'reload') location.reload(); else { box.remove(); crashShown = false; } });
+    document.body.appendChild(box);
+  }
+  window.addEventListener('error', (e) => showCrash(e.message || 'Unknown error'));
+  window.addEventListener('unhandledrejection', (e) => showCrash((e.reason && e.reason.message) || String(e.reason || 'Unknown error')));
   HD.boot = () => {
     let saved = null;
     try { saved = localStorage.getItem(NAME_KEY); } catch (e) { /* storage unavailable */ }

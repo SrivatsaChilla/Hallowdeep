@@ -8,6 +8,11 @@
   const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
   const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.' };
   const render = () => A.render();
+  const NAME_KEY = 'hollowdeep.name';
+  const savedName = () => { try { return HD.cleanName(localStorage.getItem(NAME_KEY)); } catch (e) { return ''; } };
+  const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* storage unavailable */ } };
+  // The nickname box on the lobby screen, saved for next time.
+  const nameFromBox = () => { const box = document.getElementById('coopname'); const n = HD.cleanName(box ? box.value : C.name); C.name = n; saveName(n); return n; };
   // Keep the screen on during co-op: a phone that sleeps stops answering the other players.
   let lock = null;
   const wake = () => { if (navigator.wakeLock && !lock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { lock = l; l.addEventListener('release', () => { lock = null; }); }, () => {}); };
@@ -16,6 +21,7 @@
 
   // One co-op session per tab. S.coop points here once the run starts.
   const C = {
+    name: savedName(),
     stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '',
     pendingFight: null, myAsk: null, giving: false,
     nameOf(i) { const p = C.players[i]; return (p && p.name) || `Player ${i + 1}`; },
@@ -127,12 +133,13 @@
 
   // ---------- hosting and joining ----------
   function join(link) {
-    C.peer = new HD.NetPeer({ link, ui: HD.UI, onEvent: onPeer });
+    C.peer = new HD.NetPeer({ link, ui: HD.UI, name: C.name, onEvent: onPeer });
     C.peer.hello();
     wake();
   }
   async function hostGame() {
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
+    nameFromBox();
     C.reset(); C.stage = 'connecting'; render();
     C.host = new HD.NetHost({ authority: () => C.peer && C.peer.run, onEvent: hostEvent });
     const [a, b] = HD.loopPair();
@@ -147,6 +154,7 @@
     const code = HD.cleanCode(box && box.value);
     if (code.length !== 5) { C.error = 'Enter the 5-letter room code.'; return render(); }
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
+    nameFromBox();
     C.reset(); C.stage = 'connecting'; render();
     try { const link = await HD.joinRoom(code); C.code = code; join(link); }
     catch (err) { C.reset(); C.error = err.message; }
@@ -160,6 +168,7 @@
     if (C.stage === 'choose') return `<main class="panel lobby" data-key="scr-lobby">
       <h1>Play together</h1>
       <p>Two to four players, each on their own device. One player hosts and shares a room code; the others join with it.</p>
+      <div class="lobbyrow"><label class="namerow">Your name <input id="coopname" data-key="coopname" maxlength="16" placeholder="Nickname" autocomplete="nickname" value="${esc(C.name)}"></label></div>
       <div class="lobbyrow"><button class="primary" data-act="coop-host">Host a game</button></div>
       <div class="lobbyrow"><input id="coopcode" data-key="coopcode" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" aria-label="Room code"><button class="primary" data-act="coop-join">Join</button></div>
       ${err}
@@ -176,6 +185,7 @@
       <h1>Play together</h1>
       ${C.code ? `<p class="roomcode">Room code <b>${esc(C.code)}</b> <button class="ghost small" data-act="coop-copy">Copy</button></p>${me === 0 ? '<p class="fine">Keep this screen open until everyone has joined.</p>' : ''}` : ''}
       <ul class="partylist">${party}</ul>
+      <div class="lobbyrow"><label class="namerow">Your name <input id="coopname" data-key="coopname-room" maxlength="16" placeholder="Nickname" autocomplete="nickname" value="${esc(C.name)}"></label><button class="ghost" data-act="coop-rename">Change</button></div>
       <h3>Pick your hero</h3>
       <div class="roster minis">${heroes}</div>
       ${me === 0 ? `<button class="primary" data-act="coop-start" ${ready ? '' : 'disabled'}>Start the run</button><p class="fine">${ready ? 'Everyone is ready.' : `Needs ${MIN_PLAYERS} to 4 players, each with a hero.`}</p>` : '<p class="fine">Waiting for the host to start the run.</p>'}
@@ -194,10 +204,16 @@
     'coop-back': () => { C.leave(); S.screen = 'title'; render(); },
     'coop-host': hostGame,
     'coop-join': joinGame,
-    'coop-enter': () => { if (S.screen === 'lobby' && C.stage === 'choose') joinGame(); },
+    'coop-enter': () => {
+      if (S.screen !== 'lobby') return;
+      const id = document.activeElement && document.activeElement.id;
+      if (id === 'coopname') return C.stage === 'room' ? HD.UI_ACTS['coop-rename']() : nameFromBox();
+      if (C.stage === 'choose') joinGame();
+    },
     'coop-char': (id) => { if (C.peer && HD.CHARS[id]) C.peer.pickChar(id); },
+    'coop-rename': () => { if (C.peer) C.peer.rename(nameFromBox()); },
     'coop-start': () => { if (C.host) C.host.startRun(0); },
-    'coop-copy': () => { try { navigator.clipboard.writeText(C.code); C.toast = 'Code copied.'; } catch (e) { /* clipboard blocked */ } render(); },
+    'coop-copy': () => { try { navigator.clipboard.writeText(C.code).catch(() => {}); C.toast = 'Code copied.'; } catch (e) { /* clipboard blocked */ } render(); },
     'coop-mend': (i) => { const o = S.overlay; S.overlay = null; C.peer.mend(+i); if (o && o.mark) o.mark(); render(); },
     'coop-give': (i) => { S.overlay = null; S.sel = null; S.selPotion = +i; C.giving = true; render(); },
     ally: (i) => {

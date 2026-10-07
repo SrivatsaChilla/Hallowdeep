@@ -15,6 +15,7 @@
   const ANSWER_WAIT_MS = 12000; // the host should answer an offer within this
   const CONNECT_WAIT_MS = 20000; // after the answer, the connection itself
   const REREGISTER_MS = 3000;
+  const BROKER_WAIT_MS = 10000; // some networks leave the connection hanging instead of refusing it
   const token = () => Math.random().toString(36).slice(2, 12);
   // The server drops messages that lack the fields its own client sends, so every payload carries them.
   const offerOf = (cid, sdp) => ({ sdp, type: 'data', connectionId: cid, label: cid, reliable: true, serialization: 'binary' });
@@ -51,13 +52,14 @@
       let ws;
       try { ws = new WebSocket(`${BROKER}?key=peerjs&id=${encodeURIComponent(id)}&token=${token()}&version=1.5.4`); } catch (e) { return reject(new Error('Could not reach the meeting server.')); }
       let hb = null, opened = false, closing = false;
+      const wait = setTimeout(() => { if (!opened) { closing = true; try { ws.close(); } catch (e) { /* not open */ } reject(new Error('Could not reach the meeting server. This network may block it; try another one.')); } }, BROKER_WAIT_MS);
       const send = (type, dst, payload) => { if (ws.readyState === 1) ws.send(JSON.stringify({ type, dst, payload })); };
       const close = () => { closing = true; clearInterval(hb); try { ws.close(); } catch (e) { /* already closed */ } };
       ws.onmessage = (ev) => {
         let m;
         try { m = JSON.parse(ev.data); } catch (e) { return; }
         if (!m || typeof m.type !== 'string') return;
-        if (m.type === 'OPEN') { opened = true; hb = setInterval(() => send('HEARTBEAT'), HEARTBEAT_MS); resolve({ send, close }); }
+        if (m.type === 'OPEN') { clearTimeout(wait); opened = true; hb = setInterval(() => send('HEARTBEAT'), HEARTBEAT_MS); resolve({ send, close }); }
         else if (m.type === 'ID-TAKEN') { close(); reject(new Error('ID-TAKEN')); }
         else if (m.type === 'ERROR') { close(); reject(new Error('The meeting server refused the connection.')); }
         else onMsg(m);

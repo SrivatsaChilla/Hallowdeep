@@ -50,6 +50,8 @@
   const validPick = (m) => isInt(m.pi) && m.pi >= 0 && Array.isArray(m.uids) && m.uids.length <= 10 && m.uids.every(isInt);
   // The default chooser for this player's own prompts. It must not touch the fight's RNG: only this machine runs it.
   const FIRST = { choose: (g, o) => o.from.slice(0, o.min != null ? o.min : o.n) };
+  // A player's nickname: printable, single spaces, at most 16 characters.
+  HD.cleanName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
   const parse = (text) => { try { const m = JSON.parse(text); return m && typeof m.t === 'string' ? m : null; } catch (e) { return null; } };
 
   // ---------- the host ----------
@@ -88,6 +90,7 @@
       if (seat === null) return;
       if (m.t === 'snap') return this.snap(seat, m);
       if (m.t === 'char' && !this.run && HD.CHARS[m.id]) { this.seats[seat].char = m.id; return this.broadcast(this.lobby()); }
+      if (m.t === 'name' && !this.run) { this.seats[seat].name = HD.cleanName(m.name) || `Player ${seat + 1}`; return this.broadcast(this.lobby()); }
       if (this.run && ['at-map', 'vote', 'ev-fight', 'mend'].includes(m.t)) return this.party(seat, m);
       if (!this.fight || m.f !== this.fight.f) return;
       if (m.t === 'act' && validAct(m.a)) return this.sequence({ s: seat, a: m.a });
@@ -100,7 +103,7 @@
       if (isInt(m.rejoin) && this.seats[m.rejoin] && !this.seats[m.rejoin].live) { seat = m.rejoin; this.seats[seat].link = link; this.seats[seat].live = true; }
       else if (this.fight || this.run) return this.send(link, { t: 'reject', reason: 'already playing' });
       else if (this.seats.length >= this.max) return this.send(link, { t: 'reject', reason: 'full' });
-      else { seat = this.seats.length; this.seats.push({ link, name: String(m.name || `Player ${seat + 1}`).slice(0, 24), live: true }); }
+      else { seat = this.seats.length; this.seats.push({ link, name: HD.cleanName(m.name) || `Player ${seat + 1}`, live: true }); }
       this.send(link, { t: 'welcome', seat, names: this.seats.map((s) => s.name) });
       this.onEvent({ t: 'joined', seat });
       if (!this.run) this.broadcast(this.lobby());
@@ -219,6 +222,7 @@
     hello(rejoin) { this.rejoin = rejoin; this.send({ t: 'hello', build: this.build, name: this.name, rejoin }); }
     // The party outside fights.
     pickChar(id) { this.send({ t: 'char', id }); }
+    rename(name) { this.send({ t: 'name', name }); }
     atMap() { this.send({ t: 'at-map' }); }
     vote(key) { this.send({ t: 'vote', key }); }
     eventFight(enc, kind) { this.send({ t: 'ev-fight', enc, kind }); }
