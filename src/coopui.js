@@ -89,7 +89,8 @@
 
     // ---------- fights ----------
     // A move leaves aiming, as in solo: the card or potion is on its way, and its slot may be empty when it lands.
-    act(a) { S.busy = true; S.sel = null; S.selPotion = null; C.peer.act(a); render(); },
+    // Nothing once the fight is over (its screen stays up a moment while the last enemy falls), as in solo.
+    act(a) { if (!S.g || S.g.over) return; S.busy = true; S.sel = null; S.selPotion = null; C.peer.act(a); render(); },
     play(c, t) { C.act({ k: 'play', card: c.uid, target: t && !t.isPlayer ? t.uid : undefined, ally: t && t.isPlayer ? t.seat.index : undefined }); },
     potion(i, t) { C.giving = false; C.act({ k: 'potion', slot: i, target: t && !t.isPlayer ? t.uid : undefined, ally: t && t.isPlayer ? t.seat.index : undefined }); },
     endTurn() { C.act({ k: S.me.ready ? 'unend' : 'end' }); },
@@ -97,10 +98,10 @@
       const aiming = (S.sel && HD.CARDS[S.sel.id].target === 'ally') || (S.selPotion != null && C.giving);
       const cards = g.seats.filter((s) => s !== S.me).map((s) => {
         const p = s.p, can = aiming && !s.dead;
-        const label = `${C.nameOf(s.index)}: ${p.hp} of ${p.maxHp} HP${p.block ? `, ${p.block} ${A.T('Guard')}` : ''}${s.dead ? ', fallen' : s.ready ? ', ended their turn' : ''}`;
+        const label = `${C.nameOf(s.index)}: ${p.hp} of ${p.maxHp} HP${p.block ? `, ${p.block} ${A.T('Guard')}` : ''}${s.gone ? ', left the game' : s.dead ? ', fallen' : s.ready ? ', ended their turn' : ''}`;
         return `<div class="ally ${s.dead ? 'down' : ''} ${can ? 'targetable' : ''} ${s.ready ? 'ready' : ''}" data-key="a${s.index}" data-ent="a${s.index}" ${can ? `data-act="ally" data-arg="${s.index}" role="button" tabindex="0"` : ''} aria-label="${esc(label)}">
           ${A.playerSigil(54, s.run.charId)}
-          <div class="fname">${esc(C.nameOf(s.index))}${s.ready ? ' <span class="okmark">ready</span>' : ''}</div>
+          <div class="fname">${esc(C.nameOf(s.index))}${s.gone ? ' <span class="okmark gone">left</span>' : s.ready ? ' <span class="okmark">ready</span>' : ''}</div>
           ${A.hpBar(p)}
           <div class="chips">${A.chips(p)}</div>
         </div>`;
@@ -138,7 +139,8 @@
     if (e.t === 'go-fight') C.pendingFight = e;
     if (e.t === 'fight') fightStarts(e);
     if (e.t === 'acting') shown(e);
-    if (e.t === 'applied' && S.screen === 'combat' && (e.n === -1 || !C.peer.waiting)) { S.busy = false; S.hidden.clear(); S.dragUid = null; }
+    // Any screen: a move that lands after the fight ended must not leave the next screens busy (the map waits on it).
+    if (e.t === 'applied' && (e.n === -1 || !C.peer.waiting)) { S.busy = false; S.hidden.clear(); S.dragUid = null; }
     if (e.t === 'over') C.peer.chain.then(() => setTimeout(() => A.afterCombat(), 0));
     if (e.t === 'mended' && e.to === C.me()) { C.toast = `${C.nameOf(e.from)} mended you.`; setTimeout(() => { C.toast = ''; A.scheduleRender(); }, 4000); }
     if (e.t === 'desync') C.warn = 'The players fell out of step in this fight.';
@@ -211,7 +213,8 @@
   function fightStarts(e) {
     const g = e.g;
     const ask = C.pendingFight;
-    if (ask) S.kind = ask.by === C.me() && C.myAsk ? C.myAsk.kind : 'event';
+    const askers = ask && (Array.isArray(ask.all) ? ask.all : [ask.by]);
+    if (ask) S.kind = askers.includes(C.me()) && C.myAsk ? C.myAsk.kind : 'event';
     C.pendingFight = null; C.myAsk = null; C.giving = false;
     S.run = e.run; S.run.feed = [];
     Object.assign(S, { g, me: g.seats[C.me()], sel: null, selPotion: null, busy: true, dragUid: null, prevEnergy: null, bannerTurn: 0, bannerEnemy: 0, handM: null, overlay: null, screen: 'combat' });

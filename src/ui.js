@@ -1239,7 +1239,7 @@
     const foe = S.mouse ? foeAt(S.mouse.x, S.mouse.y) : null;
     if (drag && drag.on) {
       if (drag.targeted) return foe ? { k: 'play', card: drag.c.uid, target: foe.uid } : null;
-      if (!drag.k.classList.contains('armed')) return null;
+      if (!drag.k.classList.contains('armed') || CARDS[drag.c.id].target === 'ally') return null; // ally cards: no preview
       const first = CARDS[drag.c.id].target === 'enemy' ? g.alive()[0] : null;
       return { k: 'play', card: drag.c.uid, target: first ? first.uid : undefined };
     }
@@ -1362,7 +1362,8 @@
   }
   const SAVE_KEY = 'hollowdeep.run';
   const readSave = () => { try { const t = localStorage.getItem(SAVE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } };
-  const clearSave = () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage unavailable */ } };
+  // Co-op runs are never saved, so ending one must leave the solo run waiting on the title screen alone.
+  const clearSave = () => { if (S.coop) return; try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage unavailable */ } };
   // Saved outside combat on every render, and once at the start of each combat (resuming restarts that fight).
   function persist(combat) {
     const r = S.run;
@@ -1450,6 +1451,7 @@
     if (S.settled === g) return;
     S.settled = g;
     S.sel = null; S.selPotion = null;
+    S.busy = false; // co-op: a move still on its way when the fight ended must not lock the map (votes wait on busy)
     if (!g.won) { r.hp = 0; S.result = 'dead'; S.screen = 'end'; S.overlay = null; clearSave(); render(); return; }
     const me = S.me || g.seat; // co-op: a player who fell comes back at 1 HP when the party wins
     r.hp = me.dead ? 1 : me.p.hp; r.maxHp = me.p.maxHp;

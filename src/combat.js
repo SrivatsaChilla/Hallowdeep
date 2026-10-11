@@ -99,9 +99,11 @@
     // ---------- multiplayer scaling (wiki): enemy HP, Block and some powers grow with the party; attacks do not ----------
     // The act factor in tenths: 1.1 in Act 1, 1.2 after that, 1.3 for the Act 3 boss.
     mpFactor() { const act = this.seats[0].run.act || 1; return act === 1 ? 11 : act >= 3 && this.kind === 'boss' ? 13 : 12; }
-    mpScale(n) { const k = this.seats.length; return k > 1 && n > 0 ? Math.floor((n * k * this.mpFactor()) / 10) : n; }
+    // Players taking part: everyone but those who left the game before the fight (net.js marks them gone).
+    present() { return this.seats.filter((s) => !s.gone).length; }
+    mpScale(n) { const k = this.present(); return k > 1 && n > 0 ? Math.floor((n * k * this.mpFactor()) / 10) : n; }
     mpPower(key, n) {
-      const k = this.seats.length;
+      const k = this.present();
       if (k <= 1 || typeof n !== 'number') return n;
       if (key === 'plate') return n * ((k - 1) * 2 + 1);
       if (key === 'ward') return n + k - 1;
@@ -123,7 +125,18 @@
       else if (a.k === 'potion') await this.usePotion(a.slot, foe);
       else if (a.k === 'end') await this.endTurn();
       else if (a.k === 'unend') this.cancelEndTurn();
-      await this.endRound(); // the last player still playing may have fallen
+      else if (a.k === 'leave') this.leave();
+      await this.endRound(); // the last player still playing may have fallen, or left
+    }
+    // The active player left the game (their connection dropped). They stop taking part, like a player who fell, so
+    // the others are not left waiting for their turn. Only the host sends this, in its numbered order.
+    leave() {
+      const s = this.seat;
+      s.gone = true;
+      if (s.dead) return;
+      s.dead = true; s.ready = false;
+      this.say(`${this.p.name} left the game.`);
+      if (this.seats.every((x) => x.dead)) { this.over = true; this.won = false; }
     }
     freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false, starsGained: 0, starsSpent: 0, created: 0, energySpent: 0 }; }
 
@@ -157,11 +170,12 @@
       const ids = this.enc.build ? this.enc.build(this.mrng) : this.enc.mons;
       for (const id of ids) this.spawn(id);
       if (this.enc.leader) this.leader = this.enemies.find((e) => e.id === this.enc.leader);
-      for (const s of this.seats) this.asSeat(s, () => this.dealDeck());
+      for (const s of this.seats) if (!s.gone) this.asSeat(s, () => this.dealDeck());
       for (const e of this.enemies) { this.chooseIntent(e); if (e.pw.plate) e.block += e.pw.plate; }
       const mark = this.seats.find((s) => s.run.marked && s.run.marked.includes(s.run.pos));
       if (mark) { for (const e of this.enemies) e.hp = 1; mark.run.marked = mark.run.marked.filter((k) => k !== mark.run.pos); this.say('The marked foes are already half dead.'); }
       for (const s of this.seats) {
+        if (s.gone) continue;
         await this.withSeat(s, async () => {
           if (this.enemies.some((e) => e.pw.backAttack)) { this.facing = this.enemies[0].uid; this.p.pw.surrounded = 1; }
           await this.rh('battleStart');

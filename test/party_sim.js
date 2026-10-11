@@ -12,6 +12,7 @@ const FLOORS = +process.argv[3] || 18;
 const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
 const RUN_MS = +(process.env.RUN_MS || 240000);
 const SPIN_MS = +(process.env.SPIN_MS || 0); // the split-vote roulette's wait (the game's is a few seconds)
+const LEAVE = !!process.env.LEAVE; // the last player drops out partway (at the map or in a fight); the rest go on
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function world() {
@@ -64,6 +65,8 @@ async function partyRun(i, st) {
   const size = 2 + (i % 3);
   const HD0 = world();
   const host = new HD0.NetHost({ seed: `party${i}`, spinMs: SPIN_MS, onEvent: (e) => { if (e.t === 'desync') st.desyncs++; } });
+  // FORCE_EVENT=LAMP_KEY (say): every room but the boss is that event, to test events that start fights.
+  if (process.env.FORCE_EVENT) { const roomFor = host.roomFor.bind(host); host.roomFor = (key) => (key === 'BOSS' ? roomFor(key) : { room: 'event', event: process.env.FORCE_EVENT }); }
   const delay = ((r) => () => r.int(2))(HD0.makeRng(7 + i));
   const players = [];
   for (let j = 0; j < size; j++) {
@@ -76,7 +79,10 @@ async function partyRun(i, st) {
     players.push(me);
   }
   host.authority = () => players[0].peer.run;
+  if (LEAVE) Object.assign(players[size - 1], { leaver: true, leaveAt: i % 3 === 2 ? 'lobby' : i % 2 ? 'fight' : 'map', leaveFloor: 2 + (i % 7) });
   while (players.some((p) => p.peer.seat === null)) await sleep(1);
+  // Someone who joins and leaves again before picking a hero.
+  if (LEAVE && players[size - 1].leaveAt === 'lobby') { const me = players.pop(); me.left = true; st.left++; me.peer.link.close(); await sleep(5); }
   players.forEach((p, j) => p.peer.pickChar(CHARS[(i + j * 2) % CHARS.length]));
   await sleep(20);
   if (!host.startRun(0)) throw new Error('run did not start');
@@ -97,12 +103,16 @@ async function partyRun(i, st) {
       await sleep(1);
     }
   };
+  // A player dropping out: their link closes, as when a phone sleeps or a tab closes.
+  const leave = (me) => { me.left = true; st.left++; me.peer.link.close(); return 'left'; };
+  const leaving = (me, where) => me.leaver && me.leaveAt === where && me.peer.run.floor >= me.leaveFloor && me.rng.next() < 0.2;
   // One player's fight: random moves on its own copy until the fight ends everywhere.
   const fight = async (me) => {
     await next(me, ['fight']);
     const g = me.peer.g;
     while (!g.over) {
       await sleep(me.rng.int(3));
+      if (leaving(me, 'fight')) return leave(me);
       if (Date.now() - t0 > RUN_MS) throw new Error('fight stalled');
       if (me.peer.waiting || g.phase !== 'player') continue;
       const s = g.seats[me.peer.seat];
@@ -140,6 +150,7 @@ async function partyRun(i, st) {
       run = me.peer.run; // each fight hands back its copy of the run
       if (run.floor >= FLOORS) return 'done';
       me.peer.atMap();
+      if (leaving(me, 'map')) return leave(me);
       const vote = () => { const ks = run.reachable(); if (ks.length) me.peer.vote(rng.pick(ks)); };
       vote();
       me.revote = vote;
@@ -151,12 +162,13 @@ async function partyRun(i, st) {
         if (me === players[0]) { st.spins++; if (m.t !== 'go' || sp.key !== m.key || !sp.options.includes(m.key) || sp.options.length < 2) { st.badSpins++; console.error(`run ${i}: roulette ${JSON.stringify(sp)} then ${m.t} ${m.key}`); } }
       }
       if (m.key === 'BOSS' && m.enc !== run.boss) { st.bossMismatch++; console.error(`run ${i}: the map showed ${run.boss}, the party fought ${m.enc}`); }
-      if (m.t === 'go-fight') { const g = await fight(me); const r = afterFight(me, g, 'event', false); if (r !== 'ok') return r; continue; }
+      if (m.t === 'go-fight') { const g = await fight(me); if (g === 'left') return g; const r = afterFight(me, g, 'event', false); if (r !== 'ok') return r; continue; }
       me.log.push(`${run.floor}:${m.key}:${m.room}:${m.enc || m.event || ''}`);
-      if (m.enc) { const g = await fight(me); const r = afterFight(me, g, m.kind, true); if (r !== 'ok') return r; continue; }
+      if (m.enc) { const g = await fight(me); if (g === 'left') return g; const r = afterFight(me, g, m.kind, true); if (r !== 'ok') return r; continue; }
       if (m.room === 'event') {
         const ev = run.startEvent(m.event);
-        for (let step = 0; ev && step < 20; step++) {
+        // Not on the last floor: the bots stop there, so a fight nobody else would join would wait forever.
+        for (let step = 0; ev && step < 20 && run.floor < FLOORS; step++) {
           const open = run.eventView(ev).options.filter((o) => !o.locked);
           if (!open.length) break;
           const res = run.eventChoose(ev, rng.pick(open).id);
@@ -164,9 +176,16 @@ async function partyRun(i, st) {
           if (run.hp <= 0) run.hp = 1; // co-op: a player who falls outside a fight comes back at 1 HP
           if (res.fight) {
             me.peer.eventFight(res.fight, res.kind || 'monster');
-            await next(me, ['go-fight']);
+            st.asks++;
+            const gf = await next(me, ['go-fight']);
+            // Several players can pick the same event's fight: each of them gets its rewards.
+            if (gf.enc === res.fight && gf.kind === (res.kind || 'monster')) {
+              if (!(gf.all || []).includes(me.peer.seat)) { st.askLost++; console.error(`run ${i}: seat ${me.peer.seat} asked for ${gf.enc} but is not among ${JSON.stringify(gf.all)}`); }
+              if (gf.all.length > 1 && gf.by === me.peer.seat) st.sharedAsks++;
+            }
             me.q.unshift({ t: 'go-fight-taken' });
             const g = await fight(me);
+            if (g === 'left') return g;
             const r = afterFight(me, g, res.kind === 'event' ? 'event' : 'monster', res.kind !== 'event');
             if (r !== 'ok') return r;
             if (HD.EVENTS[ev.id].onWin) HD.EVENTS[ev.id].onWin(run, ev, g);
@@ -201,17 +220,17 @@ async function partyRun(i, st) {
       players.forEach((p, q) => { if (q && p.states[k]) for (const [path2, v] of flat(JSON.parse(p.states[k]))) if (A[path2] !== v) console.error(`  copy ${q} ${path2}: ${A[path2]} vs ${v}`); });
     }
   }
-  const logs = players.map((p) => p.log.join(' '));
+  const logs = players.filter((p) => !p.left).map((p) => p.log.join(' '));
   if (new Set(logs).size > 1) { st.split++; console.error(`run ${i}: players went different ways\n  ${logs.join('\n  ')}`); }
   st.runs++; st.players += size; st.floors += players[0].peer.run.floor;
   for (const r of results) st.ends[r] = (st.ends[r] || 0) + 1;
 }
 
 (async () => {
-  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, spins: 0, badSpins: 0, bossMismatch: 0, desyncs: 0, split: 0, errors: [] };
+  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, spins: 0, badSpins: 0, bossMismatch: 0, desyncs: 0, split: 0, left: 0, asks: 0, sharedAsks: 0, askLost: 0, errors: [] };
   bossChecks(st);
   for (let i = process.env.ONLY ? +process.env.ONLY : 0; i < (process.env.ONLY ? +process.env.ONLY + 1 : RUNS); i++) await partyRun(i, st);
   for (const e of st.errors.slice(0, 4)) console.error(e);
-  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, roulettes: st.spins, badRoulettes: st.badSpins, bossMismatch: st.bossMismatch, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
-  if (st.errors.length || st.desyncs || st.split || st.badSpins || st.bossMismatch || !st.spins) process.exitCode = 1;
+  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, left: st.left, eventFightAsks: st.asks, sharedEventFights: st.sharedAsks, eventRewardsLost: st.askLost, roulettes: st.spins, badRoulettes: st.badSpins, bossMismatch: st.bossMismatch, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
+  if (st.errors.length || st.desyncs || st.split || st.badSpins || st.bossMismatch || st.askLost || !st.spins) process.exitCode = 1;
 })();

@@ -68,6 +68,20 @@ const clear = (g) => { for (const s of g.seats) { s.p.block = 0; s.p.pw = {}; } 
   eq('the round ends when everyone has ended', [t.round, te.hist.length, t.seats.map((s) => s.ready)], [2, seen + 1, [false, false]]);
   eq('each player keeps their own turn count', t.seats.map((s) => s.turn), [2, 2]);
 
+  // ---------- a player who leaves the game ----------
+  const lv = await party(3); const le = lv.enemies[0]; const lseen = le.hist.length;
+  await lv.act(0, { k: 'end' }); await lv.act(1, { k: 'end' });
+  eq('the round waits on a player whose connection dropped', [lv.round, le.hist.length], [1, lseen]);
+  await lv.act(2, { k: 'leave' });
+  eq('once they leave the fight, the round goes on without them', [lv.round, le.hist.length, lv.seats[2].dead, lv.seats[2].gone], [2, lseen + 1, true, true]);
+  eq('enemies no longer hit a player who left', lv.hitList().map((s) => s.index), [0, 1]);
+  const gr = [0, 1, 2].map((i) => new HD.Run(`mpc${i}`));
+  const gg = new HD.Combat(gr[0], 'RIPJAW', HD.autoUI); gg.addSeat(gr[1]); gg.addSeat(gr[2]);
+  Object.assign(gg.seats[2], { gone: true, dead: true });
+  await gg.start();
+  eq('a player gone before the fight does not count for enemy HP', gg.enemies[0].maxHp, Math.floor(base * 22 / 10));
+  eq('and is dealt no cards', gg.seats[2].hand.length + gg.seats[2].draw.length, 0);
+
   // ---------- extra turns ----------
   const x = await party(2); const xe = x.enemies[0]; const xs = xe.hist.length;
   x.seats[0].p.pw.extraTurn = 1;

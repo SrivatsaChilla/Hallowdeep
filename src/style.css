@@ -1029,3 +1029,4 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 .partystrip li.low .hpbar { box-shadow: 0 0 0 2px var(--blood); }
 .partystrip li.gone { opacity: .5; }
 .psname { font-weight: 700; }
+.okmark.gone { background: var(--line); color: var(--ink); }

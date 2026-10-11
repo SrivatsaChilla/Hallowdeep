@@ -92,7 +92,8 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   The party moves (`run.moveTo`) inside the peer, before the next fight's snapshot.
 - Fights are the lockstep fights above. After a win, a player who fell comes back at 1 HP. A lost fight ends the
   run for everyone. An event that turns into a fight (`ev-fight`) pulls the whole party in once nobody is mid-room
-  (`go-fight`); only the player whose event it was gets its rewards.
+  (`go-fight`). Everyone is in the same event, so several players may pick its fight; all of them (`go-fight.all`)
+  get its rewards, the others fight along without them.
 - Rest sites add Mend (`mend`/`mended`: heal another player for 30% of their Max HP).
 - Every player's HP outside fights: each peer sends `stat` (HP, Max HP) when it changes; the host checks it and sends
   everyone `stats`, shown in a strip under the top bar.
@@ -108,8 +109,15 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   cards and thrown potions at them), "Waiting (undo)" after End turn, Mend at rest sites. In a co-op fight the screen
   and all input read this player's seat (`mine()` in ui.js).
 - test/party_sim.js plays whole co-op runs in Node, a copy of the game per player, and checks the party stays in step.
-- Not yet: saving a co-op run, rejoining outside a fight, a timeout for a player who drops (the party waits), and a
-  shared Ancient and treasure picks (each player gets their own).
+- A player who drops out (their link closes): outside fights the party goes on without them. In a fight the host
+  waits `dropMs` (3 s) for a rejoin, then sends a numbered `leave` for their seat, so every copy marks them gone at
+  the same point and the round goes on. A fight that starts after they left keeps their seat (seat numbers never
+  change) but lists it in `fight.gone`: no cards, no relics, and enemy HP counts only the players taking part
+  (`Combat.present`). Their seat is filled with their last snapshot, or a fresh run if they left before any fight.
+  test/party_sim.js with LEAVE=1 drops a player at the map or mid-fight in every run.
+- Not yet: saving a co-op run, rejoining outside a fight (the screen has no rejoin button), a timeout for a player
+  who stays connected but stops playing (the party waits), and a shared Ancient and treasure picks (each player gets
+  their own).
 
 ## Status
 

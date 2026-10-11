@@ -7,6 +7,7 @@
   const MAX_PLAYERS = 4;
   const SPIN_MS = 3400; // a split vote's roulette: the wheel turns, then rests on the room before the party goes
   const MAX_HP = 9999;
+  const DROP_MS = 3000; // a player whose link closes mid-fight has this long to rejoin before they leave the fight
   const isInt = (x) => Number.isInteger(x);
   const optInt = (x) => x === undefined || x === null || isInt(x);
 
@@ -71,6 +72,8 @@
       this.authority = o.authority || null; // () => the host player's Run, which decides rooms and encounters
       this.spinMs = o.spinMs != null ? o.spinMs : SPIN_MS;
       this.recentBosses = o.recentBosses || []; // bosses this host has met lately, oldest first
+      this.dropMs = o.dropMs != null ? o.dropMs : DROP_MS;
+      this.lastSnaps = []; // each player's run at the last fight's start, for a player who has since left
       this.run = null; // the party's run: { seed, at, votes, asks, stats, spin }
     }
     connect(link) {
@@ -79,8 +82,16 @@
         const s = this.seats.find((x) => x.link === link);
         if (!s) return;
         s.live = false;
-        this.onEvent({ t: 'left', seat: this.seats.indexOf(s) });
-        if (!this.run) this.broadcast(this.lobby()); else { this.mapState(); this.resolve(); this.tryEventFight(); }
+        const seat = this.seats.indexOf(s);
+        this.onEvent({ t: 'left', seat });
+        if (!this.run) return this.broadcast(this.lobby());
+        this.mapState(); this.resolve(); this.tryEventFight(); this.trySnaps();
+        // In a fight, a player who does not come back soon leaves it, so the others are not left waiting on their turn.
+        const F = this.fight;
+        if (F && F.snaps) {
+          clearTimeout(s.drop);
+          s.drop = setTimeout(() => { if (!s.live && this.fight === F) this.sequence({ s: seat, a: { k: 'leave' } }); }, this.dropMs);
+        }
       });
     }
     send(link, m) { link.send(JSON.stringify(m)); }
@@ -104,7 +115,7 @@
     hello(link, m) {
       if (m.build !== this.build) return this.send(link, { t: 'reject', reason: 'version', build: this.build });
       let seat;
-      if (isInt(m.rejoin) && this.seats[m.rejoin] && !this.seats[m.rejoin].live) { seat = m.rejoin; this.seats[seat].link = link; this.seats[seat].live = true; }
+      if (isInt(m.rejoin) && this.seats[m.rejoin] && !this.seats[m.rejoin].live) { seat = m.rejoin; clearTimeout(this.seats[seat].drop); this.seats[seat].link = link; this.seats[seat].live = true; }
       else if (this.fight || this.run) return this.send(link, { t: 'reject', reason: 'already playing' });
       else if (this.seats.length >= this.max) return this.send(link, { t: 'reject', reason: 'full' });
       else { seat = this.seats.length; this.seats.push({ link, name: HD.cleanName(m.name) || `Player ${seat + 1}`, live: true }); }
@@ -112,8 +123,8 @@
       this.onEvent({ t: 'joined', seat });
       if (!this.run) this.broadcast(this.lobby());
       if (this.fight && this.fight.snaps) {
-        const { f, enc, kind, snaps, uidBase, log } = this.fight;
-        this.send(link, { t: 'fight', f, enc, kind, snaps, uidBase });
+        const { f, enc, kind, snaps, uidBase, gone, log } = this.fight;
+        this.send(link, { t: 'fight', f, enc, kind, snaps, uidBase, gone });
         this.send(link, { t: 'catchup', f, log });
       }
     }
@@ -127,12 +138,24 @@
       const F = this.fight;
       if (!F || m.f !== F.f || F.snaps || !m.run || typeof m.run !== 'object' || !isInt(m.uid)) return;
       F.got[seat] = m;
-      if (this.seats.some((s, i) => s.live && !F.got[i])) return;
-      F.snaps = this.seats.map((s, i) => F.got[i].run);
+      this.trySnaps();
+    }
+    // Once every player still here has sent their run, everyone gets the same start. A player who left keeps their seat
+    // (so seat numbers stay the same everywhere) but is gone from the fight: their last run, or a fresh one, fills it.
+    trySnaps() {
+      const F = this.fight;
+      if (!F || F.snaps || this.seats.some((s, i) => s.live && !F.got[i])) return;
+      F.gone = this.seats.map((s, i) => i).filter((i) => !F.got[i]);
+      F.snaps = this.seats.map((s, i) => (F.got[i] ? F.got[i].run : this.lastSnaps[i] || this.freshSnap(i)));
       // Every copy starts numbering the fight's cards above any number a player has used.
-      F.uidBase = Math.max(...F.got.map((x) => x.uid)) + 10000;
+      F.uidBase = Math.max(0, ...F.got.filter(Boolean).map((x) => x.uid)) + 10000;
+      this.lastSnaps = F.snaps;
       delete F.got;
-      this.broadcast({ t: 'fight', f: F.f, enc: F.enc, kind: F.kind, snaps: F.snaps, uidBase: F.uidBase });
+      this.broadcast({ t: 'fight', f: F.f, enc: F.enc, kind: F.kind, snaps: F.snaps, uidBase: F.uidBase, gone: F.gone });
+    }
+    freshSnap(i) {
+      const { seed, asc, chars, bosses } = this.runInfo;
+      return new HD.Run(`${seed}:${i}`, chars[i], asc, { party: chars.length, mapSeed: seed, bosses }).toSave();
     }
     // ---------- the party outside fights ----------
     lobby() { return { t: 'lobby', players: this.seats.map((s) => ({ name: s.name, char: s.char || null, live: s.live })) }; }
@@ -143,7 +166,8 @@
       const seed = this.seed || Math.random().toString(36).slice(2, 8);
       this.run = { seed, at: [], votes: [], asks: [], stats: [], spin: false };
       this.rng = HD.makeRng(HD.hashSeed(`${seed}:party`));
-      this.broadcast({ t: 'run', seed, asc, chars: this.seats.map((s) => s.char), bosses: this.pickBosses() });
+      this.runInfo = { seed, asc, chars: this.seats.map((s) => s.char), bosses: this.pickBosses() };
+      this.broadcast(Object.assign({ t: 'run' }, this.runInfo));
       return true;
     }
     // One boss per act for the whole party, at random. Bosses this host met lately sit out until the others in their
@@ -217,9 +241,11 @@
     tryEventFight() {
       const R = this.run;
       if (!R || !R.asks.length || !this.live().every((i) => R.at[i] || R.asks.some((a) => a.seat === i))) return;
-      const ask = R.asks.shift();
+      // Everyone is in the same event, so several players may pick its fight: they all get the fight's rewards.
+      const ask = R.asks[0];
+      const all = R.asks.filter((a) => a.enc === ask.enc && a.kind === ask.kind).map((a) => a.seat);
       R.asks = []; R.at = []; R.votes = [];
-      this.broadcast({ t: 'go-fight', by: ask.seat, enc: ask.enc, kind: ask.kind });
+      this.broadcast({ t: 'go-fight', by: ask.seat, all, enc: ask.enc, kind: ask.kind });
       this.startFight(ask.enc, ask.kind === 'event' ? 'monster' : ask.kind);
     }
     sequence(x) {
@@ -300,6 +326,8 @@
       HD.setUid(m.uidBase);
       const g = new HD.Combat(runs[0], m.enc, this.netUI(), m.kind);
       for (const r of runs.slice(1)) g.addSeat(r);
+      // Players who left before the fight keep their seat but take no part (and do not count for enemy HP).
+      for (const i of Array.isArray(m.gone) ? m.gone : []) if (g.seats[i] && i !== this.seat) Object.assign(g.seats[i], { gone: true, dead: true });
       Object.assign(this, { g, f: m.f, applied: 0, nextN: 0, early: {}, lastRound: -1, endSent: false, picks: g.seats.map(() => ({ next: 0, got: {}, wait: {} })), waiting: false });
       this.chain = Promise.resolve().then(() => g.start()).then(() => { this.report(-1); this.onEvent({ t: 'applied', n: -1 }); });
       this.onEvent({ t: 'fight', g, run: this.run });
