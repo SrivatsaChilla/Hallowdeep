@@ -68,7 +68,8 @@
   const CARD_PRICE = { Common: 50, Uncommon: 75, Rare: 150 };
 
   class Run {
-    // o (co-op): party is the number of players; mapSeed gives every player the same maps.
+    // o (co-op): party is the number of players; mapSeed gives every player the same maps; bosses ({ act: encounter })
+    // gives them the same boss in each act.
     constructor(seedStr, charId = 'OATHBURNER', asc = 0, o = {}) {
       this.seed = seedStr;
       this.charId = charId;
@@ -96,10 +97,13 @@
       this.pos = null;
       this.path = [];
       this.boss = this.rng.enc.pick(HD.encPool('boss', 1));
+      if (o.bosses) { this.bosses = o.bosses; this.boss = this.partyBoss(1); }
     }
+    // The party's boss for an act, when the host picked one.
+    partyBoss(n) { const id = this.bosses && this.bosses[n]; return id && HD.ENC[id] && HD.ENC[id].pool === 'boss' ? id : this.boss; }
 
     // ---------- basics ----------
-    newCard(id, up) { return { uid: HD.uid(), id, up: !!up }; }
+    newCard(id, up) { return { uid: this.uidSrc ? this.uidSrc() : HD.uid(), id, up: !!up }; }
     // The cards this run can offer or create: the character's, or another color's, plus co-op cards in a party.
     pool(color = this.color) { return HD.POOL(color, this.party > 1); }
     hasRelic(id) { return this.relics.some((r) => r.id === id); }
@@ -136,6 +140,7 @@
       this.pos = null; this.path = [];
       this.fights = 0; this.encHist = []; this.eliteHist = [];
       this.boss = this.rng.enc.pick(HD.encPool('boss', n));
+      if (this.bosses) this.boss = this.partyBoss(n);
       this.unknownOdds = null;
       this.floor++;
     }

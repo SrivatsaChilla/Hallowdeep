@@ -11,6 +11,7 @@ const RUNS = +process.argv[2] || 6;
 const FLOORS = +process.argv[3] || 18;
 const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
 const RUN_MS = +(process.env.RUN_MS || 240000);
+const SPIN_MS = +(process.env.SPIN_MS || 0); // the split-vote roulette's wait (the game's is a few seconds)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function world() {
@@ -44,10 +45,25 @@ function move(HD, g, rng) {
   return { k: 'end' };
 }
 
+// Bosses the host met lately sit out until the rest of their act's bosses have come up.
+function bossChecks(st) {
+  const HD = world();
+  const all = HD.encPool('boss', 1);
+  for (let n = 0; n < 50; n++) {
+    const h = new HD.NetHost({ recentBosses: all.slice(0, all.length - 1) });
+    h.rng = HD.makeRng(n);
+    const b = h.pickBosses();
+    if (b[1] !== all[all.length - 1] || !HD.encPool('boss', 2).includes(b[2])) { st.bossMismatch++; console.error(`boss pick ignored the recent bosses: ${JSON.stringify(b)}`); return; }
+  }
+  const seen = new Set();
+  for (let n = 0; n < 60; n++) { const h = new HD.NetHost(); h.rng = HD.makeRng(n); seen.add(h.pickBosses()[1]); }
+  if (seen.size !== all.length) { st.bossMismatch++; console.error(`with no history, only these bosses came up: ${[...seen]}`); }
+}
+
 async function partyRun(i, st) {
   const size = 2 + (i % 3);
   const HD0 = world();
-  const host = new HD0.NetHost({ seed: `party${i}`, onEvent: (e) => { if (e.t === 'desync') st.desyncs++; } });
+  const host = new HD0.NetHost({ seed: `party${i}`, spinMs: SPIN_MS, onEvent: (e) => { if (e.t === 'desync') st.desyncs++; } });
   const delay = ((r) => () => r.int(2))(HD0.makeRng(7 + i));
   const players = [];
   for (let j = 0; j < size; j++) {
@@ -64,6 +80,9 @@ async function partyRun(i, st) {
   players.forEach((p, j) => p.peer.pickChar(CHARS[(i + j * 2) % CHARS.length]));
   await sleep(20);
   if (!host.startRun(0)) throw new Error('run did not start');
+  while (players.some((p) => !p.peer.run)) await sleep(1);
+  // One boss per act for the whole party.
+  if (new Set(players.map((p) => p.peer.run.boss)).size > 1) { st.bossMismatch++; console.error(`run ${i}: players see different bosses`); }
   const t0 = Date.now();
   const next = async (me, types) => {
     for (;;) {
@@ -126,7 +145,12 @@ async function partyRun(i, st) {
       me.revote = vote;
       const m = await next(me, ['go', 'go-fight']);
       me.revote = null;
-      if (me === players[0] && m.split) splits.push(m.split.seat);
+      // A split vote's roulette must land where the party then goes, on one of the rooms someone voted for.
+      for (let k = me.q.findIndex((e) => e.t === 'spin'); k >= 0; k = me.q.findIndex((e) => e.t === 'spin')) {
+        const sp = me.q.splice(k, 1)[0];
+        if (me === players[0]) { st.spins++; if (m.t !== 'go' || sp.key !== m.key || !sp.options.includes(m.key) || sp.options.length < 2) { st.badSpins++; console.error(`run ${i}: roulette ${JSON.stringify(sp)} then ${m.t} ${m.key}`); } }
+      }
+      if (m.key === 'BOSS' && m.enc !== run.boss) { st.bossMismatch++; console.error(`run ${i}: the map showed ${run.boss}, the party fought ${m.enc}`); }
       if (m.t === 'go-fight') { const g = await fight(me); const r = afterFight(me, g, 'event', false); if (r !== 'ok') return r; continue; }
       me.log.push(`${run.floor}:${m.key}:${m.room}:${m.enc || m.event || ''}`);
       if (m.enc) { const g = await fight(me); const r = afterFight(me, g, m.kind, true); if (r !== 'ok') return r; continue; }
@@ -165,7 +189,6 @@ async function partyRun(i, st) {
       if (m.room === 'treasure') { const t = run.treasure(); run.gainGold(t.gold); if (t.relic) run.addRelic(t.relic); drain(HD, run, rng); continue; }
     }
   };
-  const splits = []; // which seat won each split vote, in order
   const results = await Promise.all(players.map((me) => bot(me).catch((e) => { st.errors.push(`${i}: ${e.stack.split('\n').slice(0, 4).join(' | ')}`); return 'error'; })));
   // The party moved together: every player saw the same rooms on the same floors.
   if (process.env.NETDBG) {
@@ -180,17 +203,15 @@ async function partyRun(i, st) {
   }
   const logs = players.map((p) => p.log.join(' '));
   if (new Set(logs).size > 1) { st.split++; console.error(`run ${i}: players went different ways\n  ${logs.join('\n  ')}`); }
-  // Split votes take turns: with two players they must alternate.
-  st.splits += splits.length;
-  if (size === 2 && splits.some((x, k) => k && x === splits[k - 1])) { st.unfair++; console.error(`run ${i}: split votes did not alternate: ${splits}`); }
   st.runs++; st.players += size; st.floors += players[0].peer.run.floor;
   for (const r of results) st.ends[r] = (st.ends[r] || 0) + 1;
 }
 
 (async () => {
-  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, splits: 0, unfair: 0, desyncs: 0, split: 0, errors: [] };
+  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, spins: 0, badSpins: 0, bossMismatch: 0, desyncs: 0, split: 0, errors: [] };
+  bossChecks(st);
   for (let i = process.env.ONLY ? +process.env.ONLY : 0; i < (process.env.ONLY ? +process.env.ONLY + 1 : RUNS); i++) await partyRun(i, st);
   for (const e of st.errors.slice(0, 4)) console.error(e);
-  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, splitVotes: st.splits, unfairSplits: st.unfair, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
-  if (st.errors.length || st.desyncs || st.split || st.unfair) process.exitCode = 1;
+  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, roulettes: st.spins, badRoulettes: st.badSpins, bossMismatch: st.bossMismatch, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
+  if (st.errors.length || st.desyncs || st.split || st.badSpins || st.bossMismatch || !st.spins) process.exitCode = 1;
 })();

@@ -267,11 +267,22 @@
       <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}</span>
       <span class="runtime" data-key="runtime" title="Run time" aria-label="Run time ${fmtTime(r.playMs)}">${CLOCK}<span class="t">${fmtTime(r.playMs)}</span></span>
       <span class="inv">${belt()}<span class="relics">${relics}</span></span>
-    </header>`;
+    </header>${S.coop && S.screen !== 'combat' ? S.coop.partyStrip() : ''}`;
   }
+  // While a card or potion is aimed, the HP it would take shows as a pale stretch of the bar (preview.js).
+  const previewOf = (t) => {
+    const out = S.preview && !S.busy && S.screen === 'combat' ? S.preview.out : null;
+    const k = !out ? null : t.isPlayer ? (t.seat ? `p${t.seat.index}` : null) : t.uid;
+    return k != null ? out[k] || null : null;
+  };
   const hpBar = (t) => {
-    const pct = Math.max(0, (t.hp / t.maxHp) * 100).toFixed(1);
-    return `<div class="hpbar"><span class="lag" style="width:${pct}%"></span><span class="fill" style="width:${pct}%"></span><span class="hptxt">${t.hp}/${t.maxHp}</span>${t.block ? `<span class="gbadge" data-key="gb">${t.block}</span>` : ''}</div>`;
+    const pct = (n) => Math.max(0, (n / t.maxHp) * 100).toFixed(1);
+    const now = pct(t.hp), pv = previewOf(t);
+    const lost = !!pv && pv.hp < t.hp;
+    const left = lost ? pct(pv.hp) : now;
+    const guard = pv && pv.block !== t.block ? pv.block : null;
+    const shown = guard != null ? guard : t.block;
+    return `<div class="hpbar${lost ? ' pv' : ''}${lost && pv.hp <= 0 ? ' lethal' : ''}"><span class="lag" style="width:${now}%"></span><span class="fill" style="width:${left}%"></span>${lost ? `<span class="loss" style="left:${left}%;width:${(now - left).toFixed(1)}%"></span>` : ''}<span class="hptxt">${t.hp}/${t.maxHp}</span>${t.block || guard ? `<span class="gbadge${guard != null ? ' pv' : ''}" data-key="gb">${shown}</span>` : ''}</div>`;
   };
 
   // Reward lists are shared by the spoils screen and bonus pickups.
@@ -419,11 +430,12 @@
       const cls = ['node', `n-${n.type}`, reach.has(n.key) ? 'reach' : '', leap ? 'leap' : '', visited.has(n.key) ? 'visited' : '', r.pos === n.key ? 'here' : '', r.marked && r.marked.includes(n.key) ? 'marked' : ''].join(' ');
       const act = reach.has(n.key) ? `data-act="node" data-arg="${n.key}" role="button" tabindex="0"` : '';
       const votes = S.coop && interactive ? S.coop.votesFor(n.key) : 0;
-      return `<g class="${cls}${votes ? ' voted' : ''}" transform="translate(${X(n)} ${Y(n)})" ${act} aria-label="${NODE_LABEL[n.type]}, row ${n.r + 1}${votes ? `, ${votes} vote${votes > 1 ? 's' : ''}` : ''}"><circle r="17"/>${NODE_ICON[n.type]}${votes ? `<text class="votes" x="15" y="-13">${votes}</text>` : ''}</g>`;
+      const spin = S.coop && interactive ? S.coop.spinClass(n.key) : '';
+      return `<g class="${cls}${votes ? ' voted' : ''}${spin}" transform="translate(${X(n)} ${Y(n)})" ${act} aria-label="${NODE_LABEL[n.type]}, row ${n.r + 1}${votes ? `, ${votes} vote${votes > 1 ? 's' : ''}` : ''}"><circle r="17"/>${NODE_ICON[n.type]}${votes ? `<text class="votes" x="15" y="-13">${votes}</text>` : ''}</g>`;
     }).join('');
     const bossReach = reach.has('BOSS');
     const bossName = HD.ENC[r.boss].name;
-    const bossNode = `<g class="node n-boss ${bossReach ? 'reach' : ''}" transform="translate(${boss.x} ${boss.y})" ${bossReach ? 'data-act="node" data-arg="BOSS" role="button" tabindex="0"' : ''} aria-label="Boss: ${esc(bossName)}"><circle r="28"/>${NODE_ICON.boss}</g>
+    const bossNode = `<g class="node n-boss ${bossReach ? 'reach' : ''}${S.coop && interactive ? S.coop.spinClass('BOSS') : ''}" transform="translate(${boss.x} ${boss.y})" ${bossReach ? 'data-act="node" data-arg="BOSS" role="button" tabindex="0"' : ''} aria-label="Boss: ${esc(bossName)}"><circle r="28"/>${NODE_ICON.boss}</g>
       <text class="bosslbl" x="${boss.x}" y="${boss.y - 42}" text-anchor="middle">${esc(bossName)}</text>`;
     const startNode = `<g class="node n-start ${!r.pos ? 'here' : 'visited'}" transform="translate(${start.x} ${start.y})" aria-label="Start: ${esc(T('The Rootmother'))}"><circle r="24"/>${NODE_ICON.start}</g>
       <text class="startlbl" x="${start.x}" y="${start.y + 44}" text-anchor="middle">${r.act === 1 || !HD.ANCIENTS[r.ancient] ? T('The Rootmother') : T(HD.ANCIENTS[r.ancient].name)}</text>`;
@@ -496,7 +508,7 @@
       : CARDS[c.id].target === 'enemy' && g.alive().length > 1 ? 'Drag it onto an enemy to play it. Tap elsewhere to put it back.' : 'Drag it up to play it. Tap elsewhere to put it back.');
     const hint = S.sel && dragOnly() ? liftHint(S.sel)
       : S.sel ? `Choose ${CARDS[S.sel.id].target === 'ally' ? 'a player' : 'a target'} for ${esc(CARDS[S.sel.id].name)}, or press Esc.`
-      : S.selPotion != null ? `Choose a target for ${esc(HD.POTIONS[S.run.potions[S.selPotion]].name)}, or press Esc.`
+      : S.selPotion != null && S.run.potions[S.selPotion] ? `Choose a target for ${esc(HD.POTIONS[S.run.potions[S.selPotion]].name)}, or press Esc.`
       : g.phase === 'enemy' ? 'Enemies are acting.' : S.coop ? S.coop.combatNote(g) : '';
     const stuck = g.phase === 'player' && !S.busy && !g.hand.some((c) => g.canPlay(c));
     const log = S.showLog ? `<div class="log" data-key="log" aria-live="polite">${g.log.slice(-14).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : '';
@@ -687,7 +699,14 @@
     let body = '';
     let closable = true;
     if (o.kind === 'map') body = `<p class="hint">You are in the ringed room. The boss waits at the top.</p><div class="mapview">${mapSvg(false)}</div>`;
-    if (o.kind === 'pile') body = o.cards.length ? `<div class="grid">${o.cards.map((c) => cardHTML(c, { g: S.screen === 'combat' ? S.g : null })).join('')}</div>` : '<p>Empty.</p>';
+    if (o.kind === 'pile') {
+      // Show upgrades: every card that can still be upgraded is drawn as its upgraded version.
+      const canUp = (c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type);
+      const ups = o.cards.some(canUp);
+      const cards = ups && S.showUps ? o.cards.map((c) => (canUp(c) ? Object.assign({}, c, { up: true }) : c)) : o.cards;
+      const toggle = ups ? `<div class="upview"><button class="seg ${S.showUps ? 'on' : ''}" data-act="pile-ups" aria-pressed="${!!S.showUps}">Show upgrades</button></div>` : '';
+      body = o.cards.length ? `${toggle}<div class="grid">${cards.map((c) => cardHTML(c, { g: S.screen === 'combat' ? S.g : null })).join('')}</div>` : '<p>Empty.</p>';
+    }
     if (o.kind === 'choose') {
       closable = false;
       const min = o.min != null ? o.min : o.n;
@@ -720,8 +739,8 @@
       const usable = inCombat ? S.g.canUsePotion(o.i) && !S.busy : !!d.outside;
       body = `<p>${esc(d.text)}</p>${d.passive ? '<p class="fine">This works on its own. Keep it in your belt.</p>' : ''}
         <div class="choices">
-          ${d.passive ? '' : `<button class="primary" data-act="drink" ${usable ? '' : 'disabled'}>${d.target === 'enemy' ? 'Throw' : 'Drink'}</button>`}
-          ${S.coop && inCombat && !d.passive && d.target !== 'enemy' && S.g.allies().length ? `<button class="ghost" data-act="coop-give" data-arg="${o.i}" ${usable ? '' : 'disabled'}>Throw to another player</button>` : ''}
+          ${d.passive ? '' : `<button class="primary" data-act="drink" ${usable ? '' : 'disabled'}>${d.target === 'self' ? 'Drink' : d.target === 'all' ? 'Throw at all enemies' : inCombat && S.g.alive().length > 1 ? 'Throw at an enemy' : 'Throw'}</button>`}
+          ${S.coop && inCombat && !d.passive && d.target === 'self' && S.g.allies().length ? `<button class="ghost" data-act="coop-give" data-arg="${o.i}" ${usable ? '' : 'disabled'}>Throw to another player</button>` : ''}
           <button class="ghost" data-act="toss">Discard</button>
           ${id === 'RANK_FLASK' && S.screen === 'shop' ? '<button class="ghost" data-act="throwAtMerchant">Throw at the merchant (+100 Gold)</button>' : ''}
         </div>${!usable && !d.passive ? `<p class="fine">${inCombat ? 'Wait for your turn.' : 'This one only works in combat.'}</p>` : ''}`;
@@ -990,6 +1009,7 @@
   }
   function afterRender() {
     flushFx();
+    if (S.screen === 'combat') updatePreview(); else S.preview = null;
     showcase();
     if (tipAnchor) {
       const key = tipAnchor.dataset.key;
@@ -1209,6 +1229,41 @@
     if (foe) { const f = $(`[data-key="e${foe.uid}"]`); if (f) f.classList.add('aimed'); }
     svg.classList.toggle('lock', !!foe);
     svg.classList.add('on');
+  }
+
+  // ---------- damage preview ----------
+  // The move aimed right now: a card or potion over an enemy, or a card lifted above the play line.
+  function aimedMove() {
+    const g = S.g;
+    if (S.screen !== 'combat' || !g || S.busy || S.overlay || g.over || g.phase !== 'player' || (S.me && (S.me.dead || S.me.ready))) return null;
+    const foe = S.mouse ? foeAt(S.mouse.x, S.mouse.y) : null;
+    if (drag && drag.on) {
+      if (drag.targeted) return foe ? { k: 'play', card: drag.c.uid, target: foe.uid } : null;
+      if (!drag.k.classList.contains('armed')) return null;
+      const first = CARDS[drag.c.id].target === 'enemy' ? g.alive()[0] : null;
+      return { k: 'play', card: drag.c.uid, target: first ? first.uid : undefined };
+    }
+    if (S.sel && CARDS[S.sel.id].target === 'enemy') return foe ? { k: 'play', card: S.sel.uid, target: foe.uid } : null;
+    if (S.selPotion != null && !(S.coop && S.coop.giving)) return foe ? { k: 'potion', slot: S.selPotion, target: foe.uid } : null;
+    // With a mouse, a card in hand that needs no choice of enemy shows what it would do as soon as it is pointed at.
+    if (S.sel || S.selPotion != null || dragOnly() || !S.mouse) return null;
+    const el = document.elementFromPoint(S.mouse.x, S.mouse.y);
+    const h = el && el.closest('.hand .card');
+    const c = h && g.hand.find((x) => `h${x.uid}` === h.dataset.key);
+    if (!c || !g.canPlay(c) || CARDS[c.id].target === 'ally') return null;
+    if (CARDS[c.id].target !== 'enemy') return { k: 'play', card: c.uid };
+    return g.alive().length === 1 ? { k: 'play', card: c.uid, target: g.alive()[0].uid } : null;
+  }
+  // Played on a copy of the fight; worked out again whenever the move or the fight changes.
+  let pvSig = null;
+  function updatePreview() {
+    const a = mine(aimedMove);
+    if (!a) { pvSig = null; if (S.preview) { S.preview = null; scheduleRender(); } return; }
+    const g = S.g, seat = S.me ? S.me.index : 0;
+    const sig = `${JSON.stringify(a)}|${HD.fightHash(g)}`;
+    if (sig === pvSig) return;
+    pvSig = sig;
+    HD.preview(g, seat, a).then((out) => { if (pvSig !== sig) return; S.preview = out ? { sig, out } : null; scheduleRender(); });
   }
 
   // ---------- dragging cards ----------
@@ -1625,6 +1680,7 @@
         return render();
       }
       case 'toss': r.potions[o.i] = null; S.overlay = null; return render();
+      case 'pile-ups': S.showUps = !S.showUps; return render();
       case 'take': { const [l, i] = arg.split(':'); takeItem(l, +i); return render(); }
       case 'open-cards': S.pickCards = +arg; return render();
       case 'close-cards': S.pickCards = null; return render();
@@ -1721,6 +1777,7 @@
     }
     if (drag && drag.on) moveDrag(ev.clientX, ev.clientY);
     updateAim();
+    updatePreview();
   });
   document.addEventListener('pointerup', (ev) => {
     if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
@@ -1822,7 +1879,7 @@
   };
   HD.state = S; // exposed for debugging in the console
   // The pieces src/coopui.js builds on.
-  HD.uiApi = { S, render, scheduleRender, toMap, enterRoom, afterCombat, play, drink, checkPending, esc, T, playerSigil, hpBar, chips, bar, reduced, mine, remoteCard, label };
+  HD.uiApi = { S, render, scheduleRender, toMap, enterRoom, afterCombat, play, drink, checkPending, esc, T, playerSigil, hpBar, chips, bar, reduced, mine, remoteCard, label, NODE_LABEL };
   HD.render = render;
   HD.UI = UI;
 })();

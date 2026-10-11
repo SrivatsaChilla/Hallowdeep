@@ -150,9 +150,15 @@ Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.m
 - Co-op runs: Ascension is 0; each player gets their own Ancient and their own chest (the original shows everyone the
   same Ancient and puts one relic per player in a shared chest); the host's relics decide what a ? room holds; a player
   who drops to 0 HP outside a fight stays at 1 HP; co-op runs are not saved.
-- Map votes: the room with the most votes wins, and a split vote goes to whoever has waited longest for a split to
-  go their way (the original picks at random, weighted by votes; players found that felt unfair). Moth Boots cannot
-  leave the path in co-op, since the party moves together.
+- Map votes: as in the original, a split vote is picked at random with one slot per vote, shown as a roulette that
+  hops between the voted rooms before it lands. Moth Boots cannot leave the path in co-op, since the party moves
+  together.
+- Co-op bosses: the host picks one boss per act for the whole party, at random, but a boss the host met in recent
+  co-op runs sits out until the other bosses of its act have come up.
+- Damage preview (not in the original): while a card or potion is aimed, or a card that needs no target is pointed
+  at, each HP bar shows the HP it would take as a pale stretch, and Guard shows what it would become. It is worked out
+  by playing the move on a copy of the fight (src/preview.js), so it is exact.
+- Deck view: Show upgrades draws every card that can still be upgraded as its upgraded version.
 - Royal Gift (Largesse) picks from the solo colorless cards. Relay Stone (The Ball) passes to a random other standing
   player after it is played, keeping its extra damage for the rest of the fight.
 

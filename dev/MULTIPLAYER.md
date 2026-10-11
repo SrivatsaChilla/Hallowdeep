@@ -7,7 +7,8 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 
 - 1 to 4 players, any characters, duplicates allowed. Ascension is shared (the lowest level everyone has unlocked) and
   tracked apart from solo, not per character.
-- Map: the party moves together. Each player votes; if they disagree, the room is picked at random, weighted by votes.
+- Map: the party moves together. Each player votes; if they disagree, the room is picked at random, weighted by votes
+  (each vote is one slot on a roulette everyone watches).
   Every act is 1 floor shorter (Act 1 boss on floor 16, Act 2 on 31, Act 3 on 45).
 - Combat is real time. The player turn ends only when every player has ended theirs.
 - Enemies attack and debuff every player at once; each player blocks on their own. Enemy attacks are not scaled.
@@ -78,22 +79,31 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
 ### The party run (src/net.js, src/coopui.js, src/rtc.js)
 
 - Lobby: the host gets a room code; players join with it and each picks a hero (`char`). The host starts the run
-  (`run`: one seed): each player makes their own Run (`party`, `mapSeed`), so every map is the same and every act is
-  one floor shorter. Ascension is 0 in co-op for now.
+  (`run`: one seed and one boss per act): each player makes their own Run (`party`, `mapSeed`, `bosses`), so every
+  map and boss is the same and every act is one floor shorter. Ascension is 0 in co-op for now. The host's
+  `pickBosses` skips bosses it met in recent co-op runs (`recentBosses`, kept in localStorage by coopui.js) until the
+  rest of their act's bosses have come up.
 - Each player does their own room (rewards, shop, rest, events, chests, Ancients) and then goes back to the map
   (`at-map`). Clicking a room there is a vote (`vote`); once everyone standing is at the map and has voted, the host
-  checks the votes against its own run (only then, since that run can lag a step behind), takes the room with the most
-  votes, settles a split by turns (`turnOrder`, announced in `go.split`) and decides what is in it, using its own run: `go` with the encounter, event or room.
+  checks the votes against its own run (only then, since that run can lag a step behind). If everyone agrees it decides
+  what is in the room, using its own run: `go` with the encounter, event or room. A split vote first sends `spin`
+  (the voted rooms, the one its RNG picked with one slot per vote, and the wait) and sends `go` after the wait
+  (`spinMs`, 3.4 s), during which votes are locked; every screen animates the same hops and lands on the pick.
   The party moves (`run.moveTo`) inside the peer, before the next fight's snapshot.
 - Fights are the lockstep fights above. After a win, a player who fell comes back at 1 HP. A lost fight ends the
   run for everyone. An event that turns into a fight (`ev-fight`) pulls the whole party in once nobody is mid-room
   (`go-fight`); only the player whose event it was gets its rewards.
 - Rest sites add Mend (`mend`/`mended`: heal another player for 30% of their Max HP).
+- Every player's HP outside fights: each peer sends `stat` (HP, Max HP) when it changes; the host checks it and sends
+  everyone `stats`, shown in a strip under the top bar.
 - Internet play: WebRTC data channels, introduced through the free public PeerJS server (0.peerjs.com). It drops
   messages that lack the fields its own client sends, so rtc.js sends them all. No TURN server: some strict networks
   cannot connect.
 - Other players' moves: just before applying one, the peer emits `acting`; the screen flies a copy of their card from
   their panel to where it lands and floats its name (or their potion's).
+- Damage preview (src/preview.js): the move is played on a deep copy of the fight with a silent UI. The copy numbers
+  its new cards and enemies below zero (`Combat.newUid`, `Run.uidSrc`) so the real fight's numbers, which every player
+  must agree on, never move. test/preview.js checks thousands of previews against the real results.
 - The screen: the lobby, vote counts and who is still in a room on the map, the other players in a fight (aim ally
   cards and thrown potions at them), "Waiting (undo)" after End turn, Mend at rest sites. In a co-op fight the screen
   and all input read this player's seat (`mine()` in ui.js).

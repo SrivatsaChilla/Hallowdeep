@@ -9,8 +9,19 @@
   const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.' };
   const render = () => A.render();
   const NAME_KEY = 'hollowdeep.name';
+  const BOSS_KEY = 'hollowdeep.coopBosses'; // bosses this device met lately as host, so the next runs mix them up
+  const BOSS_MEMORY = 8;
+  const STAT_MS = 800; // how often this player's HP is checked and, if it changed, shared
+  const SPIN_STEPS = 14; // highlights the roulette shows before it rests (at least)
+  const SPIN_REST = 0.35; // the share of the spin spent resting on the room it landed on
   const savedName = () => { try { return HD.cleanName(localStorage.getItem(NAME_KEY)); } catch (e) { return ''; } };
   const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* storage unavailable */ } };
+  const recentBosses = () => { try { const a = JSON.parse(localStorage.getItem(BOSS_KEY)); return Array.isArray(a) ? a.filter((b) => HD.ENC[b]) : []; } catch (e) { return []; } };
+  const rememberBosses = (bosses) => {
+    if (!bosses || typeof bosses !== 'object') return;
+    const met = Object.values(bosses).filter((b) => HD.ENC[b]);
+    try { localStorage.setItem(BOSS_KEY, JSON.stringify(recentBosses().filter((b) => !met.includes(b)).concat(met).slice(-BOSS_MEMORY))); } catch (e) { /* storage unavailable */ }
+  };
   // The nickname box on the lobby screen, saved for next time.
   const nameFromBox = () => { const box = document.getElementById('coopname'); const n = HD.cleanName(box ? box.value : C.name); C.name = n; saveName(n); return n; };
   // Keep the screen on during co-op: a phone that sleeps stops answering the other players.
@@ -18,25 +29,26 @@
   const wake = () => { if (navigator.wakeLock && !lock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { lock = l; l.addEventListener('release', () => { lock = null; }); }, () => {}); };
   const sleep = () => { if (lock) lock.release().catch(() => {}); lock = null; };
   document.addEventListener('visibilitychange', () => { if (C.peer) wake(); });
+  setInterval(() => C.syncStat(), STAT_MS);
 
   // One co-op session per tab. S.coop points here once the run starts.
   const C = {
     name: savedName(),
     stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '',
-    pendingFight: null, myAsk: null, giving: false,
+    pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '',
     nameOf(i) { const p = C.players[i]; return (p && p.name) || `Player ${i + 1}`; },
     me() { return C.peer ? C.peer.seat : null; },
     reset() {
       if (C.room) C.room.close();
       if (C.peer) C.peer.link.close();
-      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false });
+      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '' });
       sleep();
     },
     leave() { C.reset(); S.coop = null; S.g = null; S.me = null; S.run = null; },
 
     // ---------- the map ----------
     atMap() { if (C.peer) C.peer.atMap(); },
-    vote(key) { if (!C.peer) return; C.votes[C.me()] = key; C.peer.vote(key); },
+    vote(key) { if (!C.peer || C.spin) return; C.votes[C.me()] = key; C.peer.vote(key); },
     votesFor(key) { return C.votes.filter((k) => k === key).length; },
     mapNote() {
       if (C.pendingFight || C.myAsk) return '<p class="mapnote">A fight is starting. Waiting for everyone to finish their room.</p>';
@@ -45,12 +57,39 @@
         const state = !C.at[i] ? 'still in a room' : C.votes[i] ? 'has voted' : 'is choosing';
         return `<li${i === C.me() ? ' class="mine"' : ''}>${esc(C.nameOf(i))}${i === C.me() ? ' (you)' : ''}: ${state}</li>`;
       }).join('');
-      return `<div class="mapnote"><p>Vote for the next room by clicking it. The party goes where most players vote; when the vote is split, players take turns getting their way.</p><ul class="partylist">${rows}</ul></div>`;
+      const spin = C.spin ? `<p class="spinnote" aria-live="polite">${C.spin.done ? esc(C.spin.done) : 'Split vote. The roulette is spinning...'}</p>` : '';
+      return `<div class="mapnote"><p>Vote for the next room by clicking it. If the votes split, a roulette picks one of them; each vote is one slot on the wheel.</p>${spin}<ul class="partylist">${rows}</ul></div>`;
+    },
+    // The roulette over the voted rooms: the room lit up now, the others in the running, and where it landed.
+    spinClass(key) {
+      const sp = C.spin;
+      if (!sp || !sp.options.includes(key)) return '';
+      return sp.at === key ? (sp.done ? ' spin-win' : ' spin-on') : ' spin-opt';
+    },
+    // Every player's HP outside fights, so a hurt teammate shows at a glance.
+    partyStrip() {
+      const rows = C.players.map((p, i) => {
+        const st = i === C.me() && S.run ? { hp: S.run.hp, maxHp: S.run.maxHp } : C.stats[i];
+        const low = st && st.hp <= st.maxHp * 0.3;
+        const hp = st ? `${A.hpBar(st)}` : '<span class="fine">HP not known yet</span>';
+        return `<li class="${p.live ? '' : 'gone'} ${low ? 'low' : ''}" data-key="ps-${i}" aria-label="${esc(C.nameOf(i))}${st ? `: ${st.hp} of ${st.maxHp} HP` : ''}${p.live ? '' : ', left the game'}">${p.char ? A.playerSigil(26, p.char) : ''}<span class="psname">${esc(C.nameOf(i))}${i === C.me() ? ' (you)' : ''}</span>${hp}</li>`;
+      }).join('');
+      return `<ul class="partystrip" data-key="partystrip" aria-label="The party">${rows}</ul>`;
+    },
+    // Share this player's HP when it changes (rest sites, events, fights, Max HP gains).
+    syncStat() {
+      const r = S.run;
+      if (!C.peer || S.coop !== C || !r) return;
+      const now = `${r.hp}/${r.maxHp}`;
+      if (now === C.sent) return;
+      C.sent = now;
+      C.peer.stat(r.hp, r.maxHp);
     },
     barNote() { const msg = C.warn || C.toast; return `<span class="coopnote${C.warn ? ' warn' : ''}" title="Co-op">${esc(msg || `Co-op, ${C.players.filter((p) => p.live).length} players`)}</span>`; },
 
     // ---------- fights ----------
-    act(a) { S.busy = true; C.peer.act(a); render(); },
+    // A move leaves aiming, as in solo: the card or potion is on its way, and its slot may be empty when it lands.
+    act(a) { S.busy = true; S.sel = null; S.selPotion = null; C.peer.act(a); render(); },
     play(c, t) { C.act({ k: 'play', card: c.uid, target: t && !t.isPlayer ? t.uid : undefined, ally: t && t.isPlayer ? t.seat.index : undefined }); },
     potion(i, t) { C.giving = false; C.act({ k: 'potion', slot: i, target: t && !t.isPlayer ? t.uid : undefined, ally: t && t.isPlayer ? t.seat.index : undefined }); },
     endTurn() { C.act({ k: S.me.ready ? 'unend' : 'end' }); },
@@ -91,8 +130,10 @@
     if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; }
     if (e.t === 'reject') { const msg = REJECTED[e.reason] || 'The host turned the connection down.'; C.reset(); C.error = msg; }
     if (e.t === 'lobby') C.players = e.players;
-    if (e.t === 'run') runStarts();
+    if (e.t === 'run') { rememberBosses(e.bosses); runStarts(); }
     if (e.t === 'mapstate') { C.at = e.at; C.votes = e.votes; }
+    if (e.t === 'stats' && Array.isArray(e.stats)) C.stats = e.stats;
+    if (e.t === 'spin') spin(e);
     if (e.t === 'go') go(e);
     if (e.t === 'go-fight') C.pendingFight = e;
     if (e.t === 'fight') fightStarts(e);
@@ -120,6 +161,33 @@
     }
     if (e.a.k === 'potion') { const id = seat.run.potions[e.a.slot]; if (id) A.label(`a${e.s}`, HD.POTIONS[id].name); }
   }
+  // A split vote: the light hops between the voted rooms, slowing down, and stops on the one the host's roulette picked.
+  // The host waits as long before the party moves, so every player sees the same spin.
+  function spin(e) {
+    const options = Array.isArray(e.options) ? e.options.filter((k) => typeof k === 'string') : [];
+    if (options.length < 2 || !options.includes(e.key)) return;
+    const n = options.length, land = options.indexOf(e.key);
+    const steps = SPIN_STEPS + ((land - SPIN_STEPS) % n + n) % n; // the last step lands on the picked room
+    const turn = Math.max(0, (+e.ms || 0) * (1 - SPIN_REST));
+    // Each hop waits longer than the one before; together they fill the turning time.
+    const weights = Array.from({ length: steps + 1 }, (x, i) => 1 + (i / steps) ** 2 * 6);
+    const unit = turn / weights.reduce((a, b) => a + b, 0);
+    C.spin = { options, key: e.key, at: options[0], done: '' };
+    let i = 0;
+    const hop = () => {
+      if (!C.spin || C.spin.key !== e.key) return;
+      C.spin.at = options[i % n];
+      if (i >= steps) { C.spin.done = landed(e.key); A.scheduleRender(); return; }
+      A.scheduleRender();
+      setTimeout(hop, unit * weights[i++]);
+    };
+    hop();
+  }
+  function landed(key) {
+    const voters = C.players.map((p, k) => k).filter((k) => C.votes[k] === key).map((k) => C.nameOf(k));
+    const node = key === 'BOSS' ? 'Boss' : S.run && S.run.map.nodes[key] ? A.NODE_LABEL[S.run.map.nodes[key].type] : 'a room';
+    return `The roulette landed on ${voters.length ? `${voters.join(' and ')}'s pick` : 'a pick'}: ${node}.`;
+  }
   function hostEvent(e) {
     if (e.t === 'left') { C.toast = `${C.nameOf(e.seat)} left the game.`; A.scheduleRender(); }
   }
@@ -132,7 +200,8 @@
   }
   // The party moved (the run already did). Fights wait for the 'fight' message; other rooms open here.
   function go(e) {
-    if (e.split) note(`Split vote: ${C.nameOf(e.split.seat)}'s pick this time. ${e.split.next === e.split.seat ? '' : `Next split goes to ${C.nameOf(e.split.next)}.`}`);
+    if (C.spin) note(C.spin.done || landed(C.spin.key));
+    C.spin = null;
     C.at = []; C.votes = [];
     S.overlay = null;
     if (e.enc) { S.kind = e.kind; return; }
@@ -159,7 +228,7 @@
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
     nameFromBox();
     C.reset(); C.stage = 'connecting'; render();
-    C.host = new HD.NetHost({ authority: () => C.peer && C.peer.run, onEvent: hostEvent });
+    C.host = new HD.NetHost({ authority: () => C.peer && C.peer.run, onEvent: hostEvent, recentBosses: recentBosses() });
     const [a, b] = HD.loopPair();
     C.host.connect(a);
     join(b);

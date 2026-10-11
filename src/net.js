@@ -5,6 +5,8 @@
   const HD = globalThis.HD;
   const ACTS = ['play', 'potion', 'end', 'unend'];
   const MAX_PLAYERS = 4;
+  const SPIN_MS = 3400; // a split vote's roulette: the wheel turns, then rests on the room before the party goes
+  const MAX_HP = 9999;
   const isInt = (x) => Number.isInteger(x);
   const optInt = (x) => x === undefined || x === null || isInt(x);
 
@@ -67,7 +69,9 @@
       this.onEvent = o.onEvent || (() => {});
       this.seed = o.seed; // the run's seed (random when not given)
       this.authority = o.authority || null; // () => the host player's Run, which decides rooms and encounters
-      this.run = null; // the party's run: { seed, at, votes, asks }
+      this.spinMs = o.spinMs != null ? o.spinMs : SPIN_MS;
+      this.recentBosses = o.recentBosses || []; // bosses this host has met lately, oldest first
+      this.run = null; // the party's run: { seed, at, votes, asks, stats, spin }
     }
     connect(link) {
       link.onMessage((text) => this.receive(link, text));
@@ -91,7 +95,7 @@
       if (m.t === 'snap') return this.snap(seat, m);
       if (m.t === 'char' && !this.run && HD.CHARS[m.id]) { this.seats[seat].char = m.id; return this.broadcast(this.lobby()); }
       if (m.t === 'name' && !this.run) { this.seats[seat].name = HD.cleanName(m.name) || `Player ${seat + 1}`; return this.broadcast(this.lobby()); }
-      if (this.run && ['at-map', 'vote', 'ev-fight', 'mend'].includes(m.t)) return this.party(seat, m);
+      if (this.run && ['at-map', 'vote', 'ev-fight', 'mend', 'stat'].includes(m.t)) return this.party(seat, m);
       if (!this.fight || m.f !== this.fight.f) return;
       if (m.t === 'act' && validAct(m.a)) return this.sequence({ s: seat, a: m.a });
       if (m.t === 'pick' && validPick(m)) return this.sequence({ s: seat, pick: { pi: m.pi, uids: m.uids } });
@@ -137,49 +141,64 @@
     startRun(asc = 0) {
       if (this.run || !this.seats.length || this.seats.some((s) => s.live && !s.char)) return false;
       const seed = this.seed || Math.random().toString(36).slice(2, 8);
-      this.run = { seed, at: [], votes: [], asks: [] };
+      this.run = { seed, at: [], votes: [], asks: [], stats: [], spin: false };
       this.rng = HD.makeRng(HD.hashSeed(`${seed}:party`));
-      // Whose turn it is to win a split vote; a random order, so the host is not first.
-      this.turnOrder = this.rng.shuffle(this.seats.map((s, i) => i));
-      this.broadcast({ t: 'run', seed, asc, chars: this.seats.map((s) => s.char) });
+      this.broadcast({ t: 'run', seed, asc, chars: this.seats.map((s) => s.char), bosses: this.pickBosses() });
       return true;
+    }
+    // One boss per act for the whole party, at random. Bosses this host met lately sit out until the others in their
+    // act have come up, so the same one does not keep returning.
+    pickBosses() {
+      const out = {};
+      for (let n = 1; HD.encPool('boss', n).length; n++) {
+        const pool = HD.encPool('boss', n);
+        const seen = pool.length > 1 ? this.recentBosses.filter((b) => pool.includes(b)).slice(1 - pool.length) : [];
+        const fresh = pool.filter((b) => !seen.includes(b));
+        out[n] = this.rng.pick(fresh.length ? fresh : pool);
+      }
+      return out;
     }
     party(seat, m) {
       const R = this.run;
       if (m.t === 'at-map') { R.at[seat] = true; R.votes[seat] = null; this.mapState(); return this.tryEventFight(); }
       // Votes are checked when the room is picked, not now: the host player's own run may still be a step behind.
       if (m.t === 'vote') {
-        if (!R.at[seat] || typeof m.key !== 'string' || m.key.length > 12) return;
+        if (R.spin || !R.at[seat] || typeof m.key !== 'string' || m.key.length > 12) return;
         R.votes[seat] = m.key; this.mapState(); return this.resolve();
       }
       if (m.t === 'ev-fight' && HD.ENC[m.enc] && ['monster', 'elite', 'event'].includes(m.kind)) { R.asks.push({ seat, enc: m.enc, kind: m.kind }); return this.tryEventFight(); }
       if (m.t === 'mend' && isInt(m.to) && m.to !== seat && this.seats[m.to]) return this.broadcast({ t: 'mended', from: seat, to: m.to });
+      // A player's HP outside fights, so the others can see who is hurt.
+      if (m.t === 'stat' && isInt(m.hp) && isInt(m.maxHp) && m.maxHp > 0 && m.maxHp <= MAX_HP) {
+        R.stats[seat] = { hp: Math.max(0, Math.min(m.hp, m.maxHp)), maxHp: m.maxHp };
+        return this.broadcast({ t: 'stats', stats: this.seats.map((s, i) => R.stats[i] || null) });
+      }
     }
     mapState() { const R = this.run; this.broadcast({ t: 'mapstate', at: this.seats.map((s, i) => !!R.at[i]), votes: this.seats.map((s, i) => R.votes[i] || null) }); }
-    // Everyone standing is at the map and has voted. The room with the most votes wins; a split vote goes to whoever has
-    // waited longest for a split to go their way, so the players take turns and nobody is favored.
+    // Everyone standing is at the map and has voted. If they agree, the party goes. A split vote spins a roulette with
+    // one slot per vote, as in the original: a room more players picked is likelier, and everyone watches it land.
     resolve() {
       const R = this.run, live = this.live();
-      if (!live.length || !live.every((i) => R.at[i] && R.votes[i]) || R.asks.length) return;
+      if (R.spin || !live.length || !live.every((i) => R.at[i] && R.votes[i]) || R.asks.length) return;
       // Everyone (the host player too) is at the map now, so the host's run is up to date. A vote for a room the party
       // cannot reach is dropped and that player picks again.
       const reach = this.authority().reachable();
       const bad = live.filter((i) => !reach.includes(R.votes[i]));
       if (bad.length) { for (const i of bad) R.votes[i] = null; return this.mapState(); }
-      const count = {};
-      for (const i of live) count[R.votes[i]] = (count[R.votes[i]] || 0) + 1;
-      const most = Math.max(...Object.values(count));
-      const tied = Object.keys(count).filter((k) => count[k] === most);
-      let key = tied[0], split = null;
-      if (tied.length > 1) {
-        const seat = this.turnOrder.find((i) => live.includes(i) && tied.includes(R.votes[i]));
-        key = R.votes[seat];
-        this.turnOrder = this.turnOrder.filter((i) => i !== seat).concat(seat);
-        split = { seat, next: this.turnOrder.find((i) => live.includes(i)) };
-      }
+      const picks = live.map((i) => R.votes[i]);
+      const options = [...new Set(picks)];
+      if (options.length === 1) return this.go(options[0]);
+      const key = picks[this.rng.int(picks.length)];
+      R.spin = true;
+      this.broadcast({ t: 'spin', options, key, ms: this.spinMs });
+      setTimeout(() => { R.spin = false; if (this.run === R) this.go(key); }, this.spinMs);
+    }
+    go(key) {
+      const R = this.run;
+      if (!this.authority()) return; // the host left while the wheel turned
       const room = this.roomFor(key);
       R.at = []; R.votes = [];
-      this.broadcast(Object.assign({ t: 'go', key, split }, room));
+      this.broadcast(Object.assign({ t: 'go', key }, room));
       if (room.enc) this.startFight(room.enc, room.kind);
     }
     roomFor(key) {
@@ -243,6 +262,7 @@
     rename(name) { this.send({ t: 'name', name }); }
     atMap() { this.send({ t: 'at-map' }); }
     vote(key) { this.send({ t: 'vote', key }); }
+    stat(hp, maxHp) { this.send({ t: 'stat', hp, maxHp }); }
     eventFight(enc, kind) { this.send({ t: 'ev-fight', enc, kind }); }
     mend(to) { this.send({ t: 'mend', to }); }
     // This player's moves. They take effect when the host's numbered copy comes back.
@@ -256,9 +276,10 @@
       if (m.t === 'fight') return this.begin(m);
       // The party moves before anything else can happen, so the next fight's snapshot already has the new room.
       if (m.t === 'go' && this.run && typeof m.key === 'string') this.run.moveTo(m.key);
-      if (m.t === 'lobby' || m.t === 'mapstate' || m.t === 'go' || m.t === 'go-fight') return this.onEvent(m);
+      if (['lobby', 'mapstate', 'go', 'go-fight', 'spin', 'stats'].includes(m.t)) return this.onEvent(m);
       if (m.t === 'run') {
-        this.run = new HD.Run(`${m.seed}:${this.seat}`, m.chars[this.seat], m.asc || 0, { party: m.chars.length, mapSeed: m.seed });
+        const bosses = m.bosses && typeof m.bosses === 'object' ? m.bosses : null;
+        this.run = new HD.Run(`${m.seed}:${this.seat}`, m.chars[this.seat], m.asc || 0, { party: m.chars.length, mapSeed: m.seed, bosses });
         this.chars = m.chars;
         return this.onEvent(m);
       }

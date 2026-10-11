@@ -1003,3 +1003,29 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 .crash { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 9999; max-width: min(92vw, 520px); padding: .9rem 1.1rem; border-radius: 12px; border: 2px solid var(--wax2); background: var(--panel); color: var(--ink); box-shadow: 0 8px 30px rgba(0,0,0,.5); text-align: center; }
 .crash p { margin: .4rem 0; word-break: break-word; }
 .float.f-say { font-family: var(--text); font-size: .95rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .05em .45em; white-space: nowrap; }
+/* Damage preview: the HP an aimed card or potion would take shows as a pale, striped stretch of the bar. */
+.hpbar .loss { position: absolute; top: 0; bottom: 0; border-radius: 0 7px 7px 0; background: repeating-linear-gradient(-45deg, rgba(0,0,0,.5) 0 3px, transparent 3px 6px), var(--blood); opacity: .45; pointer-events: none; }
+.hpbar.pv .lag { opacity: 0; }
+.hpbar.lethal { box-shadow: 0 0 0 2px var(--blood); }
+.gbadge.pv { outline: 2px dashed var(--ink); outline-offset: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .hpbar .loss { animation: losspulse .9s ease-in-out infinite alternate; }
+  @keyframes losspulse { to { opacity: .8; } }
+  .node.spin-win circle { animation: spinwin .45s ease-in-out 3; }
+  @keyframes spinwin { 50% { stroke-width: 7; } }
+}
+/* Deck view: Show upgrades */
+.upview { display: flex; justify-content: flex-end; margin: 0 0 .6rem; }
+/* A split vote's roulette on the map: the voted rooms, the one lit now, the one it landed on. */
+.node.spin-opt circle { stroke: var(--brass); stroke-width: 3; stroke-dasharray: 4 3; animation: none; }
+.node.spin-on circle { fill: var(--brass); stroke: var(--ink); stroke-width: 4; stroke-dasharray: none; animation: none; filter: drop-shadow(0 0 6px var(--brass)); }
+.node.spin-on, .node.spin-win { color: #fff8e6; }
+.node.spin-win circle { fill: var(--brass); stroke: var(--ink); stroke-width: 4; stroke-dasharray: none; filter: drop-shadow(0 0 10px var(--brass)); }
+.spinnote { font-weight: 700; color: var(--brass); margin: .3rem 0; }
+/* Every player's HP outside fights. */
+.partystrip { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem 1rem; margin: .4rem auto 0; padding: 0 16px; font-size: .85rem; }
+.partystrip li { display: flex; align-items: center; gap: .35rem; }
+.partystrip .hpbar { width: 84px; }
+.partystrip li.low .hpbar { box-shadow: 0 0 0 2px var(--blood); }
+.partystrip li.gone { opacity: .5; }
+.psname { font-weight: 700; }

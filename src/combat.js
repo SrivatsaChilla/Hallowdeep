@@ -128,7 +128,10 @@
     freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false, starsGained: 0, starsSpent: 0, created: 0, energySpent: 0 }; }
 
     // ---------- setup ----------
-    makeCard(id, up) { return { uid: HD.uid(), id, up: !!up, bonus: 0 }; }
+    // New card and creature numbers. A preview copy of the fight (preview.js) numbers its own, so the real fight's
+    // numbers (which every co-op player must agree on) never move.
+    newUid() { return this.uidSrc ? this.uidSrc() : HD.uid(); }
+    makeCard(id, up) { return { uid: this.newUid(), id, up: !!up, bonus: 0 }; }
     spawn(id, o = {}) {
       let d = HD.MON[id];
       const asc = (this.run && this.run.asc) || 0;
@@ -138,7 +141,7 @@
       // Ascension 8 (Tough Enemies): more HP.
       const hpr = A && A.hp ? A.hp : d.hp;
       const hp = this.mpScale(this.mrng.range(hpr[0], hpr[1]));
-      const e = { uid: HD.uid(), id, def: d, name: d.name, hp, maxHp: hp, block: 0, pw: this.mpPowers(d.init),
+      const e = { uid: this.newUid(), id, def: d, name: d.name, hp, maxHp: hp, block: 0, pw: this.mpPowers(d.init),
         fresh: {}, hist: [], last: null, alive: true, intent: null, spawned: !!o.spawned };
       if (o.at != null) this.enemies.splice(o.at, 0, e); else this.enemies.push(e);
       return e;
@@ -838,7 +841,7 @@
         this.say(`You throw ${d.name} to ${tg.name}.`);
         await this.withSeat(tg.seat, () => d.use(this, null));
       } else {
-        this.say(`You drink ${d.name}.`);
+        this.say(d.target === 'self' ? `You drink ${d.name}.` : `You throw ${d.name}${tg && d.target === 'enemy' ? ` at ${tg.name}` : ''}.`);
         await d.use(this, tg);
       }
       if (!this.over) await this.rh('onPotion', d);

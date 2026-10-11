@@ -47,7 +47,7 @@
     if (this.orbSlots <= 0) { if (this.hadOrbSlots) return; this.addOrbSlots(1); }
     if (this.orbs.length >= this.orbSlots) await this.evokeRight(1);
     if (this.over) return;
-    this.orbs.push({ uid: HD.uid(), id, val: HD.ORBS[id].start || 0 });
+    this.orbs.push({ uid: this.newUid(), id, val: HD.ORBS[id].start || 0 });
     this.rs.channeled = (this.rs.channeled || 0) + 1;
     this.rs['channeled' + id] = (this.rs['channeled' + id] || 0) + 1;
     await this.hook('channeled', id);
