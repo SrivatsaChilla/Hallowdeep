@@ -267,7 +267,7 @@
         <span class="stat gold"><span class="lbl">Gold</span> ${r.gold}</span>
         <span class="stat"><span class="lbl">${T('Depth')}</span> ${r.floor}</span>
       </span>
-      <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}${HD.audio ? HD.audio.button() : ''}</span>
+      <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}${S.coop ? S.coop.chatButton() : ''}${HD.audio ? HD.audio.button() : ''}</span>
       <span class="runtime" data-key="runtime" title="Run time" aria-label="Run time ${fmtTime(r.playMs)}">${CLOCK}<span class="t">${fmtTime(r.playMs)}</span></span>
       <span class="inv">${belt()}<span class="relics">${relics}</span></span>
     </header>${S.coop && S.screen !== 'combat' ? S.coop.partyStrip() : ''}`;

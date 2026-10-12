@@ -16,6 +16,8 @@
   const SPIN_REST = 0.35; // the share of the spin spent resting on the room it landed on
   const AIM_SEND_MS = 90; // how often this player's pointer goes out in a fight
   const AIM_FADE_MS = 3000; // a teammate's pointer that has not moved for this long fades out
+  const CHAT_KEEP = 80; // chat messages kept on screen
+  const CHAT_PEEK_MS = 5000; // a new message shows this long under the top bar while the chat is closed
   const savedName = () => { try { return HD.cleanName(localStorage.getItem(NAME_KEY)); } catch (e) { return ''; } };
   const saveName = (n) => { try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* storage unavailable */ } };
   const recentBosses = () => { try { const a = JSON.parse(localStorage.getItem(BOSS_KEY)); return Array.isArray(a) ? a.filter((b) => HD.ENC[b]) : []; } catch (e) { return []; } };
@@ -37,13 +39,14 @@
   const C = {
     name: savedName(),
     stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '',
-    pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '',
+    pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', chat: { log: [], open: false, unread: 0 },
     nameOf(i) { const p = C.players[i]; return (p && p.name) || `Player ${i + 1}`; },
     me() { return C.peer ? C.peer.seat : null; },
     reset() {
       if (C.room) C.room.close();
       if (C.peer) C.peer.link.close();
-      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', aims: {} });
+      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', aims: {}, chat: { log: [], open: false, unread: 0 } });
+      drawChat();
       sleep();
     },
     leave() { C.reset(); S.coop = null; S.g = null; S.me = null; S.run = null; },
@@ -112,6 +115,12 @@
       }).join('');
       return `<div class="allies" aria-label="The other players">${cards}</div>`;
     },
+    // ---------- chat ----------
+    // The speech-bubble button (top bar and lobby), with how many messages came in while the chat was closed.
+    chatButton() {
+      const n = C.chat.unread;
+      return `<button class="ghost chatbtn" data-act="coop-chat" title="Chat (T)" aria-expanded="${C.chat.open}" aria-label="Chat${n ? `, ${n} new` : ''}">${CHAT_ICON}${n ? `<span class="unread">${n > 9 ? '9+' : n}</span>` : ''}</button>`;
+    },
     // ---------- pointers: every player sees where the others point, and what they aim at ----------
     aims: {},
     // This player's pointer: a fraction of the fight area, the enemy under it, and the card or potion being aimed.
@@ -148,6 +157,7 @@
   function onPeer(e) {
     // Pointers come many times a second: they move the pointer layer only, never redraw the screen.
     if (e.t === 'aim') { if (Number.isInteger(e.s)) { C.aims[e.s] = Object.assign({ at: Date.now() }, e); drawAims(); } return; }
+    if (e.t === 'chat') return gotChat(e);
     if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; }
     if (e.t === 'reject') { const msg = REJECTED[e.reason] || 'The host turned the connection down.'; C.reset(); C.error = msg; }
     if (e.t === 'lobby') C.players = e.players;
@@ -168,6 +178,86 @@
     if (e.t === 'closed') C.warn = 'The connection to the host was lost.';
     A.scheduleRender();
   }
+  // ---------- chat ----------
+  // The panel lives outside the game screen, so redrawing the screen never touches what is being typed.
+  const CHAT_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4.5h14v9H8l-4 3v-3H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  function chatPanel() {
+    let el = document.getElementById('coopchat');
+    if (el) return el;
+    el = document.createElement('section');
+    el.id = 'coopchat';
+    el.className = 'chat';
+    el.setAttribute('aria-label', 'Party chat');
+    el.innerHTML = `<div class="chathead"><h2>Party chat</h2><button class="ghost small" data-chat="close" aria-label="Close the chat">Close</button></div>
+      <ol class="chatlog" aria-live="polite"></ol>
+      <form class="chatform"><input id="chatbox" maxlength="200" placeholder="Message the party" autocomplete="off" enterkeyhint="send" aria-label="Chat message"><button class="primary small" type="submit">Send</button></form>`;
+    el.querySelector('form').addEventListener('submit', (ev) => { ev.preventDefault(); sendChat(); });
+    el.querySelector('[data-chat="close"]').addEventListener('click', () => openChat(false));
+    el.querySelector('input').addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); openChat(false); } });
+    document.body.appendChild(el);
+    const peek = document.createElement('div');
+    peek.id = 'chatpeek';
+    peek.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(peek);
+    return el;
+  }
+  const chatLine = (m) => `<li class="pc${m.s % 4}"><b>${esc(C.nameOf(m.s))}${m.s === C.me() ? ' (you)' : ''}</b> ${esc(m.text)}</li>`;
+  function drawChat() {
+    const el = document.getElementById('coopchat');
+    const on = !!C.peer && S.screen !== 'title';
+    if (!el) { if (on && C.chat.open) chatPanel(); else return; }
+    const panel = chatPanel();
+    panel.classList.toggle('open', on && C.chat.open);
+    // Just under the top bar, which wraps to more lines on a phone (the lobby has none).
+    const bar = document.querySelector('.bar');
+    const top = `${Math.round(bar ? bar.getBoundingClientRect().bottom + 8 : 16)}px`;
+    panel.style.top = top; document.getElementById('chatpeek').style.top = top;
+    const log = panel.querySelector('.chatlog');
+    log.innerHTML = C.chat.log.length ? C.chat.log.map(chatLine).join('') : '<li class="fine">Say hello. Messages go to everyone in the party.</li>';
+    log.scrollTop = log.scrollHeight;
+    if (!on) document.getElementById('chatpeek').classList.remove('on');
+  }
+  function openChat(open) {
+    if (!C.peer) return;
+    C.chat.open = open;
+    if (open) C.chat.unread = 0;
+    drawChat();
+    const box = document.getElementById('chatbox');
+    if (open && box) box.focus(); else if (box) box.blur();
+    A.scheduleRender(); // the button's unread count
+  }
+  function sendChat() {
+    const box = document.getElementById('chatbox');
+    const text = HD.cleanChat(box ? box.value : '');
+    if (!text || !C.peer) return;
+    C.peer.chat(text);
+    box.value = '';
+  }
+  function gotChat(e) {
+    if (!Number.isInteger(e.s) || typeof e.text !== 'string') return;
+    C.chat.log.push({ s: e.s, text: HD.cleanChat(e.text) });
+    if (C.chat.log.length > CHAT_KEEP) C.chat.log.shift();
+    const mine = e.s === C.me();
+    if (!mine && HD.audio) HD.audio.sfx('chat');
+    if (!C.chat.open && !mine) {
+      C.chat.unread++;
+      chatPanel();
+      const peek = document.getElementById('chatpeek');
+      peek.innerHTML = chatLine(C.chat.log[C.chat.log.length - 1]).replace(/^<li/, '<p').replace(/li>$/, 'p>');
+      peek.classList.add('on');
+      clearTimeout(gotChat.t);
+      gotChat.t = setTimeout(() => peek.classList.remove('on'), CHAT_PEEK_MS);
+    }
+    drawChat();
+    A.scheduleRender();
+  }
+  // T opens the chat (when not already typing somewhere).
+  document.addEventListener('keydown', (ev) => {
+    const el = document.activeElement;
+    if (!C.peer || S.screen === 'title' || ev.metaKey || ev.ctrlKey || ev.altKey || (el && ['INPUT', 'TEXTAREA'].includes(el.tagName))) return;
+    if (ev.key === 't' || ev.key === 'T') { ev.preventDefault(); openChat(true); }
+  });
+  setInterval(drawChat, 1000); // follow the screen (hidden on the title screen and after leaving)
   // At most one pointer message every AIM_SEND_MS; the latest one always goes out.
   let aimNext = null, aimLast = 0, aimTimer = null, aimSent = '';
   function sendAim(o) {
@@ -352,7 +442,7 @@
     const ready = live.length >= MIN_PLAYERS && live.every((p) => p.char);
     return `<main class="panel lobby" data-key="scr-lobby">
       <h1>Play together</h1>
-      ${C.code ? `<p class="roomcode">Room code <b>${esc(C.code)}</b> <button class="ghost small" data-act="coop-copy">Copy</button></p>${me === 0 ? '<p class="fine">Keep this screen open until everyone has joined.</p>' : ''}` : ''}
+      ${C.code ? `<p class="roomcode">Room code <b>${esc(C.code)}</b> <button class="ghost small" data-act="coop-copy">Copy</button> ${C.chatButton()}</p>${me === 0 ? '<p class="fine">Keep this screen open until everyone has joined.</p>' : ''}` : ''}
       <ul class="partylist">${party}</ul>
       <div class="lobbyrow"><label class="namerow">Your name <input id="coopname" data-key="coopname-room" maxlength="16" placeholder="Nickname" autocomplete="nickname" value="${esc(C.name)}"></label><button class="ghost" data-act="coop-rename">Change</button></div>
       <h3>Pick your hero</h3>
@@ -374,12 +464,13 @@
     'coop-host': hostGame,
     'coop-join': joinGame,
     'coop-enter': () => {
-      if (S.screen !== 'lobby') return;
+      if (S.screen !== 'lobby' || (document.activeElement && document.activeElement.id === 'chatbox')) return;
       const id = document.activeElement && document.activeElement.id;
       if (id === 'coopname') return C.stage === 'room' ? HD.UI_ACTS['coop-rename']() : nameFromBox();
       if (C.stage === 'choose') joinGame();
     },
     'coop-char': (id) => { if (C.peer && HD.CHARS[id]) C.peer.pickChar(id); },
+    'coop-chat': () => openChat(!C.chat.open),
     'coop-rename': () => { if (C.peer) C.peer.rename(nameFromBox()); },
     'coop-start': () => { if (C.host) C.host.startRun(0); },
     'coop-copy': () => { try { navigator.clipboard.writeText(C.code).catch(() => {}); C.toast = 'Code copied.'; } catch (e) { /* clipboard blocked */ } render(); },

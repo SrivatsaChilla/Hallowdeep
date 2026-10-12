@@ -102,6 +102,11 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   cannot connect.
 - Other players' moves: just before applying one, the peer emits `acting`; the screen flies a copy of their card from
   their panel to where it lands and floats its name (or their potion's).
+- Party chat: `chat` goes to the host, which cleans it (printable, single spaces, at most 200 characters; at most one
+  per player every 400 ms) and sends it to everyone, the sender too, so all players see the same messages in the same
+  order. It works in the lobby, on the map and in fights, and is not part of any fight. The screen shows messages as
+  text only. The chat button (top bar, lobby) counts unread messages; T opens the chat, Esc closes it, and a new
+  message peeks in under the top bar while the chat is closed.
 - Pointers (as in the original): each peer sends `aim` (its pointer as a fraction of the fight area, the enemy under
   it, and the card or potion it is aiming) at most every 90 ms; the host checks it, drops it if it comes sooner than
   50 ms after the last, and passes it on to the others. It is not part of the fight (not numbered, no effect on the

@@ -135,6 +135,16 @@ async function protocolChecks(st) {
   const ok = (name, c) => { st.checks++; if (!c) { st.failed++; console.error('FAIL', name); } else console.log('ok  ', name); };
   ok('a different build is turned away', odd.ev.some((e) => e.t === 'reject' && e.reason === 'version'));
   ok('players get seats in join order', one.p.seat === 0 && two.p.seat === 1);
+  // Chat: to everyone, the sender too, cleaned and cut to 200 characters; at most one per player every 400 ms.
+  const chats = (x) => x.ev.filter((e) => e.t === 'chat');
+  two.p.chat(`  hi\u0007  <b>there</b> ${'x'.repeat(300)}`);
+  two.p.chat('too soon');
+  await sleep(450);
+  two.b.send(JSON.stringify({ t: 'chat', text: '   ' }));
+  two.b.send(JSON.stringify({ t: 'chat', text: { evil: 1 } }));
+  await sleep(20);
+  const got = chats(one)[0];
+  ok('chat reaches everyone, cleaned; too-fast, empty and bad ones are dropped', chats(one).length === 1 && chats(two).length === 1 && got.s === 1 && got.text.startsWith('hi <b>there</b> x') && got.text.length === 200);
   host.startFight('RIPJAW', 'monster');
   await sleep(30);
   ok('both players start the same fight', one.p.g && two.p.g && HD.fightHash(one.p.g) === HD.fightHash(two.p.g));

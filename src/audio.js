@@ -127,6 +127,7 @@
     lose: () => notes([440, 349, 294, 220], { gap: 0.28, dur: 0.8, vol: 0.08, echo: 0.6 }),
     tick: (n) => tone({ f: 900 + n * 35, dur: 0.04, vol: 0.05, type: 'triangle' }),
     land: () => notes([659, 784, 1047], { gap: 0.08, dur: 0.5, vol: 0.07, type: 'triangle', echo: 0.5 }),
+    chat: () => notes([988, 1319], { gap: 0.06, dur: 0.16, vol: 0.05, type: 'triangle' }),
     stars: () => notes([1568, 2349], { gap: 0.05, dur: 0.25, vol: 0.05, echo: 0.4 }),
     forge: () => { tone({ f: 620, type: 'square', dur: 0.08, vol: 0.05 }); tone({ f: 1240, dur: 0.3, vol: 0.06, echo: 0.4 }); tone({ f: 1860, dur: 0.2, vol: 0.03 }); hiss({ filter: 'highpass', f: 2500, dur: 0.08, vol: 0.12 }); },
   };

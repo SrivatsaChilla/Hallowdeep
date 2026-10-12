@@ -1054,3 +1054,20 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 .vol { display: grid; grid-template-columns: 5.5em 1fr 2.5em; align-items: center; gap: .6rem; margin: .7rem 0; }
 .vol input { width: 100%; accent-color: var(--wax2); }
 .vol b { text-align: right; font-variant-numeric: tabular-nums; }
+/* Party chat: the button (top bar and lobby), the panel, and a peek at new messages while it is closed. */
+.chatbtn { position: relative; display: inline-grid; place-items: center; padding: .3em .5em; }
+.chatbtn svg { width: 1.15em; height: 1.15em; }
+.chatbtn .unread { position: absolute; top: -.35em; right: -.35em; min-width: 1.25em; height: 1.25em; padding: 0 .25em; border-radius: .7em; background: var(--blood); color: #fff6ea; font-size: .7rem; font-weight: 700; display: grid; place-items: center; }
+.chat { position: fixed; z-index: 80; right: 16px; top: 64px; width: min(340px, calc(100vw - 32px)); max-height: min(60vh, 460px); display: none; flex-direction: column; background: var(--panel); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.chat.open { display: flex; }
+.chathead { display: flex; align-items: center; justify-content: space-between; padding: .5rem .75rem; border-bottom: 1px solid var(--line); }
+.chathead h2 { font-size: 1rem; margin: 0; }
+.chatlog { list-style: none; margin: 0; padding: .5rem .75rem; overflow-y: auto; flex: 1; min-height: 4rem; font-size: .9rem; line-height: 1.35; overflow-wrap: anywhere; }
+.chatlog li { margin: .2rem 0; }
+.chatlog li b, #chatpeek b { color: var(--pc, var(--ink)); }
+.chatform { display: flex; gap: .4rem; padding: .5rem .75rem .65rem; border-top: 1px solid var(--line); }
+.chatform input { flex: 1; min-width: 0; font: inherit; padding: .35em .55em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+#chatpeek { position: fixed; z-index: 79; right: 16px; top: 64px; max-width: min(340px, calc(100vw - 32px)); pointer-events: none; opacity: 0; transform: translateY(-6px); transition: opacity .25s, transform .25s; }
+#chatpeek.on { opacity: 1; transform: none; }
+#chatpeek p { margin: 0; padding: .4rem .7rem; border-radius: 10px; background: var(--panel); border: 1.5px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.35); font-size: .9rem; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { #chatpeek { transition: none; } }

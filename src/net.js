@@ -9,6 +9,8 @@
   const MAX_HP = 9999;
   const DROP_MS = 3000; // a player whose link closes mid-fight has this long to rejoin before they leave the fight
   const AIM_MS = 50; // the most often the host passes on one player's pointer
+  const CHAT_MAX = 200; // characters in one chat message
+  const CHAT_MS = 400; // the most often one player can send a chat message
   const isInt = (x) => Number.isInteger(x);
   const optInt = (x) => x === undefined || x === null || isInt(x);
 
@@ -55,6 +57,8 @@
   // The default chooser for this player's own prompts. It must not touch the fight's RNG: only this machine runs it.
   const FIRST = { choose: (g, o) => o.from.slice(0, o.min != null ? o.min : o.n) };
   // A player's nickname: printable, single spaces, at most 16 characters.
+  // A chat message: printable, single spaces, at most CHAT_MAX characters. The screen shows it as text, never as HTML.
+  HD.cleanChat = (s) => String(s || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX);
   HD.cleanName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
   const parse = (text) => { try { const m = JSON.parse(text); return m && typeof m.t === 'string' ? m : null; } catch (e) { return null; } };
 
@@ -105,6 +109,7 @@
       const seat = this.seatOf(link);
       if (seat === null) return;
       if (m.t === 'snap') return this.snap(seat, m);
+      if (m.t === 'chat') return this.chat(seat, m);
       if (m.t === 'char' && !this.run && HD.CHARS[m.id]) { this.seats[seat].char = m.id; return this.broadcast(this.lobby()); }
       if (m.t === 'name' && !this.run) { this.seats[seat].name = HD.cleanName(m.name) || `Player ${seat + 1}`; return this.broadcast(this.lobby()); }
       if (this.run && ['at-map', 'vote', 'ev-fight', 'mend', 'stat'].includes(m.t)) return this.party(seat, m);
@@ -113,6 +118,15 @@
       if (m.t === 'pick' && validPick(m)) return this.sequence({ s: seat, pick: { pi: m.pi, uids: m.uids } });
       if (m.t === 'hash' && isInt(m.n) && isInt(m.h)) return this.hash(seat, m.n, m.h);
       if (m.t === 'aim') return this.aim(seat, m);
+    }
+    // Chat, from anyone at the table at any time. The host cleans it and sends it to everyone, the sender too, so every
+    // player sees the same messages in the same order. Not part of any fight.
+    chat(seat, m) {
+      const s = this.seats[seat], now = Date.now();
+      const text = typeof m.text === 'string' ? HD.cleanChat(m.text) : '';
+      if (!text || now - (s.chatAt || 0) < CHAT_MS) return;
+      s.chatAt = now;
+      this.broadcast({ t: 'chat', s: seat, text });
     }
     // A player's pointer in a fight, passed on for the others to draw. It is not part of the fight, so it is not
     // numbered. x and y are fractions of the fight area; on is the enemy under it; card is what they are aiming.
@@ -304,6 +318,7 @@
     atMap() { this.send({ t: 'at-map' }); }
     vote(key) { this.send({ t: 'vote', key }); }
     stat(hp, maxHp) { this.send({ t: 'stat', hp, maxHp }); }
+    chat(text) { this.send({ t: 'chat', text }); }
     eventFight(enc, kind) { this.send({ t: 'ev-fight', enc, kind }); }
     mend(to) { this.send({ t: 'mend', to }); }
     // This player's pointer in the fight, for the others to see (o: { x, y, on, card } or { off: true }).
@@ -319,7 +334,7 @@
       if (m.t === 'fight') return this.begin(m);
       // The party moves before anything else can happen, so the next fight's snapshot already has the new room.
       if (m.t === 'go' && this.run && typeof m.key === 'string') this.run.moveTo(m.key);
-      if (['lobby', 'mapstate', 'go', 'go-fight', 'spin', 'stats'].includes(m.t)) return this.onEvent(m);
+      if (['lobby', 'mapstate', 'go', 'go-fight', 'spin', 'stats', 'chat'].includes(m.t)) return this.onEvent(m);
       if (m.t === 'run') {
         const bosses = m.bosses && typeof m.bosses === 'object' ? m.bosses : null;
         this.run = new HD.Run(`${m.seed}:${this.seat}`, m.chars[this.seat], m.asc || 0, { party: m.chars.length, mapSeed: m.seed, bosses });
