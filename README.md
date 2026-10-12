@@ -25,9 +25,25 @@ HallowDeep is a clone of Slay the Spire 2: every rule and number follows the gam
 names, card art and interface. Pick one of five heroes, build a deck as you go, and fight your way up three acts.
 It runs on desktops, tablets and phones, and saves as you play.
 
-**Coming soon:** co-op for 2 to 4 players.
+## Play together
+
+Two to four players, each on their own device. One player hosts and shares a five-letter room code; the others
+join with it. No account needed.
+
+- **One shared map.** Everyone votes on the next room; a split vote spins a roulette over the picks.
+- **Fights side by side.** See your teammates' HP, Energy and cards in hand, where they are pointing, what they
+  are aiming at, and every card they play.
+- **Party chat** (press T), Mend at rest sites, potions thrown to a teammate, and 37 co-op only cards.
+- Enemies get more HP the bigger the party.
+
+## Also
+
+- **Damage preview:** aim a card or potion and every health bar shows exactly what it would take.
+- **Sound:** effects and ambient music, made in the browser. Volume and mute are under the speaker button.
 
 ## Run it locally
+
+From the HallowDeep folder:
 
 ```bash
 python3 build.py
