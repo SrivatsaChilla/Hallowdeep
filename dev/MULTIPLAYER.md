@@ -102,6 +102,14 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   cannot connect.
 - Other players' moves: just before applying one, the peer emits `acting`; the screen flies a copy of their card from
   their panel to where it lands and floats its name (or their potion's).
+- Pointers (as in the original): each peer sends `aim` (its pointer as a fraction of the fight area, the enemy under
+  it, and the card or potion it is aiming) at most every 90 ms; the host checks it, drops it if it comes sooner than
+  50 ms after the last, and passes it on to the others. It is not part of the fight (not numbered, no effect on the
+  hash). The screen draws each teammate's arrow and name in their color, and while they aim at an enemy, a beam from
+  their panel with the card's name. Pointers fade after 3 s without moving.
+- Other players' cards come to the middle of the fight, big enough to read, before they go on to their target;
+  cards played close together queue up behind one another. Each teammate's panel shows their Energy left and cards
+  in hand, and End turn shows the turn number.
 - Damage preview (src/preview.js): the move is played on a deep copy of the fight with a silent UI. The copy numbers
   its new cards and enemies below zero (`Combat.newUid`, `Run.uidSrc`) so the real fight's numbers, which every player
   must agree on, never move. test/preview.js checks thousands of previews against the real results.

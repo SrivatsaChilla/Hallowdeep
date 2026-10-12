@@ -8,6 +8,7 @@
   const SPIN_MS = 3400; // a split vote's roulette: the wheel turns, then rests on the room before the party goes
   const MAX_HP = 9999;
   const DROP_MS = 3000; // a player whose link closes mid-fight has this long to rejoin before they leave the fight
+  const AIM_MS = 50; // the most often the host passes on one player's pointer
   const isInt = (x) => Number.isInteger(x);
   const optInt = (x) => x === undefined || x === null || isInt(x);
 
@@ -111,6 +112,20 @@
       if (m.t === 'act' && validAct(m.a)) return this.sequence({ s: seat, a: m.a });
       if (m.t === 'pick' && validPick(m)) return this.sequence({ s: seat, pick: { pi: m.pi, uids: m.uids } });
       if (m.t === 'hash' && isInt(m.n) && isInt(m.h)) return this.hash(seat, m.n, m.h);
+      if (m.t === 'aim') return this.aim(seat, m);
+    }
+    // A player's pointer in a fight, passed on for the others to draw. It is not part of the fight, so it is not
+    // numbered. x and y are fractions of the fight area; on is the enemy under it; card is what they are aiming.
+    aim(seat, m) {
+      const s = this.seats[seat], now = Date.now();
+      if (now - (s.aimAt || 0) < AIM_MS) return;
+      const frac = (v) => typeof v === 'number' && v >= 0 && v <= 1;
+      const off = m.off === true;
+      if (!off && (!frac(m.x) || !frac(m.y) || !optInt(m.on))) return;
+      if (m.card != null && !(typeof m.card === 'string' && (HD.CARDS[m.card] || HD.POTIONS[m.card]))) return;
+      s.aimAt = now;
+      const out = JSON.stringify(off ? { t: 'aim', f: m.f, s: seat, off: true } : { t: 'aim', f: m.f, s: seat, x: m.x, y: m.y, on: m.on == null ? null : m.on, card: m.card || null });
+      this.seats.forEach((x, i) => { if (x.live && i !== seat) x.link.send(out); });
     }
     hello(link, m) {
       if (m.build !== this.build) return this.send(link, { t: 'reject', reason: 'version', build: this.build });
@@ -291,6 +306,8 @@
     stat(hp, maxHp) { this.send({ t: 'stat', hp, maxHp }); }
     eventFight(enc, kind) { this.send({ t: 'ev-fight', enc, kind }); }
     mend(to) { this.send({ t: 'mend', to }); }
+    // This player's pointer in the fight, for the others to see (o: { x, y, on, card } or { off: true }).
+    aim(o) { if (this.g && !this.g.over) this.send(Object.assign({ t: 'aim', f: this.f }, o)); }
     // This player's moves. They take effect when the host's numbered copy comes back.
     act(a) { if (this.g && !this.g.over) { this.waiting = true; this.send({ t: 'act', f: this.f, a }); } }
     receive(text) {
@@ -312,6 +329,7 @@
       // Mend: another player healed you for 30% of your Max HP at a rest site.
       if (m.t === 'mended') { if (m.to === this.seat && this.run && this.run.hp > 0) this.run.heal(Math.floor(this.run.maxHp * 0.3)); return this.onEvent(m); }
       if (m.f !== this.f) return;
+      if (m.t === 'aim') return this.onEvent(m);
       if (m.t === 'catchup') { for (const x of m.log) this.seq(x); return; }
       if (m.t === 'seq') return this.seq(m);
       if (m.t === 'desync') return this.onEvent(m);

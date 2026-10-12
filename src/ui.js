@@ -532,7 +532,7 @@
         </div>
         <div class="hand" style="--m:${S.handM != null ? S.handM : 3}px" role="group" aria-label="Your hand">${hand || '<p class="empty">Your hand is empty.</p>'}</div>
         <div class="right">
-          <button class="primary ${stuck && !(S.coop && g.seat.ready) ? 'nudge' : ''}" data-act="end" ${g.phase !== 'player' || S.busy || g.seat.dead ? 'disabled' : ''}>${S.coop && g.seat.ready ? 'Waiting (undo)' : 'End turn'}</button>
+          <button class="primary ${stuck && !(S.coop && g.seat.ready) ? 'nudge' : ''}" data-act="end" ${g.phase !== 'player' || S.busy || g.seat.dead ? 'disabled' : ''}>${S.coop && g.seat.ready ? 'Waiting (undo)' : `End turn <span class="turnno" aria-label="(turn ${g.turn})">${g.turn}</span>`}</button>
           <button class="ghost" data-act="pile" data-arg="discard">Discard ${g.discard.length}</button>
           <button class="ghost" data-act="pile" data-arg="ash">${T('Ash')} ${g.ash.length}</button>
           <button class="ghost small" data-act="log">${S.showLog ? 'Hide log' : 'Show log'}</button>
@@ -1010,6 +1010,7 @@
   function afterRender() {
     flushFx();
     if (S.screen === 'combat') updatePreview(); else S.preview = null;
+    if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
     showcase();
     if (tipAnchor) {
       const key = tipAnchor.dataset.key;
@@ -1254,6 +1255,13 @@
     if (CARDS[c.id].target !== 'enemy') return { k: 'play', card: c.uid };
     return g.alive().length === 1 ? { k: 'play', card: c.uid, target: g.alive()[0].uid } : null;
   }
+  // The card or potion this player is aiming at an enemy right now (co-op shows it to the others).
+  function aimCard() {
+    if (drag && drag.on) return drag.targeted ? drag.c.id : null;
+    if (S.sel && CARDS[S.sel.id].target === 'enemy') return S.sel.id;
+    if (S.selPotion != null && !(S.coop && S.coop.giving)) return S.run.potions[S.selPotion] || null;
+    return null;
+  }
   // Played on a copy of the fight; worked out again whenever the move or the fight changes.
   let pvSig = null;
   function updatePreview() {
@@ -1479,22 +1487,35 @@
     if (d.type === 'Power') { const p = $('[data-key="p"] .sigil'); if (p) return rectOf(p); }
     const a = $('.arena'); return a ? rectOf(a) : { x: innerWidth / 2, y: innerHeight / 2 };
   }
-  // Co-op: another player's card flies from their panel to where it lands (an enemy, a player, or their own panel).
+  // Co-op: another player's card comes to the middle of the fight, big enough to read, then goes on to where it lands.
+  // Cards played close together queue up behind the one in front, as in the original.
+  const STAGE_MS = 1100;
+  let staged = 0;
   function remoteCard(seat, c, t) {
     if (reduced()) return;
-    const from = $(`[data-key="a${seat}"]`);
-    if (!from) return;
+    const from = $(`[data-key="a${seat}"]`), arena = $('.arena');
+    if (!from || !arena) return;
     const box = document.createElement('div');
     box.innerHTML = cardHTML(c, {});
     const k = box.firstElementChild;
     if (!k) return;
-    const r = rectOf(from);
+    const r = rectOf(from), a = rectOf(arena);
+    const slot = Math.min(staged++, 4);
     k.classList.add('flying', 'remote');
-    k.style.cssText = `position:fixed;left:${r.x - 60}px;top:${r.y - 84}px;width:120px;height:168px;margin:0;transform:scale(.55);`;
+    k.style.cssText = `position:fixed;left:${r.x - 60}px;top:${r.y - 84}px;width:120px;height:168px;margin:0;z-index:${60 - slot};`;
     fxLayer().appendChild(k);
     const panel = (p) => $(`[data-key="${p.seat === S.me ? 'p' : `a${p.seat.index}`}"]`);
     const to = t && !t.isPlayer ? destFor(c, t) : t ? rectOf(panel(t) || from) : CARDS[c.id].type === 'Power' ? r : destFor(c, null);
-    fly(k, to, { end: 0.25, mid: 0.6, ms: 520 });
+    const mid = { x: a.x - slot * 34 - r.x, y: a.top + a.h * 0.38 - slot * 12 - r.y };
+    const end = { x: to.x - r.x, y: to.y - r.y };
+    const hold = `translate(${mid.x.toFixed(1)}px, ${mid.y.toFixed(1)}px) scale(${(1.15 - slot * 0.08).toFixed(2)})`; // further back, smaller
+    const an = k.animate([
+      { transform: 'scale(.5)', opacity: 0.6 },
+      { transform: hold, opacity: 1, offset: 0.22 },
+      { transform: hold, opacity: 1, offset: 0.68 },
+      { transform: `translate(${end.x.toFixed(1)}px, ${end.y.toFixed(1)}px) scale(.3)`, opacity: 0 },
+    ], { duration: STAGE_MS, easing: 'ease-in-out', fill: 'both' });
+    an.onfinish = an.oncancel = () => { k.remove(); staged = Math.max(0, staged - 1); };
   }
   // A short label floating over someone (another player's card or potion name).
   const label = (id, text) => { fxq.push({ type: 'say', id, n: text }); scheduleRender(); };
@@ -1780,7 +1801,9 @@
     if (drag && drag.on) moveDrag(ev.clientX, ev.clientY);
     updateAim();
     updatePreview();
+    if (S.coop) S.coop.pointer(ev.clientX, ev.clientY, aimCard());
   });
+  document.documentElement.addEventListener('pointerleave', () => { if (S.coop) S.coop.pointerOff(); });
   document.addEventListener('pointerup', (ev) => {
     if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
     drag = null;

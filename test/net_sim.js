@@ -145,6 +145,15 @@ async function protocolChecks(st) {
   two.b.send(JSON.stringify({ t: 'pick', f: host.fight.f, pi: -1, uids: [1] }));
   await sleep(20);
   ok('a player cannot act for someone else; junk is ignored', host.fight.log.length === n0 + 1 && host.fight.log[n0].s === 1);
+  // Pointers: passed on to the other players (not numbered, not sent back), at most one per player every 50 ms.
+  const aims = (x) => x.ev.filter((e) => e.t === 'aim');
+  one.p.aim({ x: 0.5, y: 0.25, on: null, card: Object.keys(HD.CARDS)[0] });
+  one.p.aim({ x: 0.6, y: 0.25, on: null });
+  await sleep(80);
+  one.b.send(JSON.stringify({ t: 'aim', f: host.fight.f, x: 5, y: 0 }));
+  one.b.send(JSON.stringify({ t: 'aim', f: host.fight.f, x: 0.1, y: 0.1, card: 'NOT_A_CARD' }));
+  await sleep(20);
+  ok('a pointer reaches the others but not its owner; too-fast and bad ones are dropped', aims(two).length === 1 && aims(two)[0].s === 0 && aims(two)[0].x === 0.5 && !aims(one).length && host.fight.log.length === n0 + 1);
   const late = mk();
   await sleep(10);
   ok('nobody joins in the middle of a fight', late.ev.some((e) => e.t === 'reject'));
