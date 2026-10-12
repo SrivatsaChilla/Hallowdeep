@@ -958,19 +958,23 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 /* ---------- co-op ---------- */
 .coopbtn { margin: 0 auto 1rem; display: block; }
 .lobby { text-align: center; }
-.lobby .fine { margin-left: auto; margin-right: auto; text-align: center; }
-.lobbyrow { display: flex; gap: .6rem; justify-content: center; margin: .8rem 0; }
-.lobbyrow input { font: inherit; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 1.2rem; letter-spacing: .25em; text-transform: uppercase; width: 9ch; text-align: center; padding: .35em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
+/* Every line of the lobby is centered on the page: paragraphs have a width cap, so they need auto margins. */
+.lobby p, .lobby .fine, .lobby .err { margin-left: auto; margin-right: auto; text-align: center; }
+.lobbyrow { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; justify-content: center; margin: .8rem 0; }
+.lobbyrow #coopcode { font: inherit; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 1.2rem; letter-spacing: .25em; text-transform: uppercase; width: 9ch; text-align: center; padding: .35em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); }
 .lobby .err { color: var(--wax2); font-weight: 700; }
-.roomcode { font-size: 1.1rem; }
+.roomcode { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .4rem .6rem; font-size: 1.1rem; }
+.roomcode button { height: 2.3rem; padding: 0 .8em; font-size: .9rem; display: inline-grid; place-items: center; }
+.roomcode .chatbtn svg { width: 1.1rem; height: 1.1rem; }
 /* The room code is read out loud and typed in: a plain monospace face, no lookalike letters. */
-.roomcode b { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-weight: 700; font-size: 2rem; letter-spacing: .2em; margin: 0 .3em; }
+.roomcode b { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-weight: 700; font-size: 2rem; letter-spacing: .2em; margin: 0 -.05em 0 .15em; }
 .partylist { list-style: none; padding: 0; margin: .8rem auto; display: flex; flex-direction: column; gap: .35rem; align-items: center; }
 .partylist li { display: flex; align-items: center; gap: .5rem; }
 .partylist li.gone, .partylist li.mine { opacity: .85; }
 .partylist li.mine { font-weight: 700; }
 .nochar { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px dashed var(--line); }
-.roster.minis { margin: .6rem 0 1rem; }
+/* The lobby's hero picker: one centered row that wraps, never the title screen's wide grid. */
+.roster.minis { display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem; width: auto; max-width: 640px; margin: .6rem auto 1rem; }
 .hero.mini { width: 112px; min-height: 0; padding: .6rem .4rem; }
 .hero.mini .hname { font-size: 1.05rem; }
 .hero.mini.picked { border-color: var(--wax); box-shadow: 0 0 0 2px var(--wax) inset; }
@@ -998,7 +1002,20 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
   .ally .chips { display: none; }
 }
 .namerow { display: flex; gap: .5rem; align-items: center; }
-.namerow input { font: inherit; padding: .3em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); width: 12em; }
+.namerow input { font: inherit; padding: .3em .5em; border-radius: 8px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); width: 12em; max-width: 52vw; }
+.lobbyrow .namerow + button { height: 2.3rem; padding: 0 1em; }
+.namerow input, .lobbyrow #coopcode { height: 2.3rem; box-sizing: border-box; }
+.lobbyrow #coopcode::placeholder { font-family: var(--text); font-size: 1rem; letter-spacing: normal; text-transform: none; }
+@media (max-width: 760px) {
+  .lobby h1 { font-size: 2.3rem; }
+  .roomcode b { font-size: 1.6rem; }
+  .roster.minis { gap: .5rem; }
+  .hero.mini { width: 96px; padding: .5rem .25rem; }
+  .hero.mini .hname { font-size: .95rem; }
+  .hero.mini .sigil { width: 44px; height: 44px; }
+  .partylist li { text-align: left; }
+  .namerow input { width: 9em; }
+}
 /* Shown when something breaks, so nobody is left looking at a blank screen. */
 .crash { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 9999; max-width: min(92vw, 520px); padding: .9rem 1.1rem; border-radius: 12px; border: 2px solid var(--wax2); background: var(--panel); color: var(--ink); box-shadow: 0 8px 30px rgba(0,0,0,.5); text-align: center; }
 .crash p { margin: .4rem 0; word-break: break-word; }
