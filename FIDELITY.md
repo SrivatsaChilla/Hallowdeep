@@ -159,6 +159,9 @@ Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.m
   at, each HP bar shows the HP it would take as a pale stretch, and Guard shows what it would become. It is worked out
   by playing the move on a copy of the fight (src/preview.js), so it is exact.
 - Deck view: Show upgrades draws every card that can still be upgraded as its upgraded version.
+- Sound: none of the original's sounds or music are used. Effects (cards, hits, Guard, potions, gold, rewards) and
+  ambient music (calm, fight and boss moods) are made in the browser as the game plays (src/audio.js), with volume
+  sliders and mute in the Sound sheet.
 - Royal Gift (Largesse) picks from the solo colorless cards. Relay Stone (The Ball) passes to a random other standing
   player after it is played, keeping its extra damage for the rest of the fight.
 

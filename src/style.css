@@ -1048,3 +1048,9 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 .ccur span { margin-top: 14px; font-family: var(--text); font-size: .75rem; font-weight: 700; white-space: nowrap; color: #1a1410; background: var(--pc); border-radius: 4px; padding: 0 .35em; }
 .turnno { display: inline-grid; place-items: center; min-width: 1.3em; height: 1.3em; margin-left: .35em; border-radius: 50%; font-size: .8em; background: rgba(0,0,0,.25); }
 @media (prefers-reduced-motion: reduce) { .ccur { transition: none; } }
+/* Sound: the speaker button and the volume sheet. */
+.soundbtn { display: inline-grid; place-items: center; padding: .3em .5em; }
+.soundbtn svg { width: 1.15em; height: 1.15em; }
+.vol { display: grid; grid-template-columns: 5.5em 1fr 2.5em; align-items: center; gap: .6rem; margin: .7rem 0; }
+.vol input { width: 100%; accent-color: var(--wax2); }
+.vol b { text-align: right; font-variant-numeric: tabular-nums; }

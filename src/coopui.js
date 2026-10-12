@@ -257,7 +257,8 @@
     const hop = () => {
       if (!C.spin || C.spin.key !== e.key) return;
       C.spin.at = options[i % n];
-      if (i >= steps) { C.spin.done = landed(e.key); A.scheduleRender(); return; }
+      if (i >= steps) { C.spin.done = landed(e.key); if (HD.audio) HD.audio.sfx('land'); A.scheduleRender(); return; }
+      if (HD.audio) HD.audio.sfx('tick', i);
       A.scheduleRender();
       setTimeout(hop, unit * weights[i++]);
     };

@@ -19,6 +19,9 @@
   HD.UI_ACTS = HD.UI_ACTS || {};
   HD.UI_OVERLAYS = HD.UI_OVERLAYS || {};
   const mine = (fn) => (S.coop && S.g && S.me ? S.g.asSeat(S.me, fn) : fn());
+  // Sound effects (audio.js); quiet when it is not loaded.
+  const sfx = (name, n, scale) => { if (HD.audio) HD.audio.sfx(name, n, scale); };
+  const cardSound = (c) => ({ Attack: 'attack', Power: 'power' }[CARDS[c.id].type] || 'skill');
   // Keyword highlighting follows the active name set.
   let kwCache = null;
   function kw() {
@@ -264,7 +267,7 @@
         <span class="stat gold"><span class="lbl">Gold</span> ${r.gold}</span>
         <span class="stat"><span class="lbl">${T('Depth')}</span> ${r.floor}</span>
       </span>
-      <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}</span>
+      <span class="barbtns"><button class="ghost deckbtn" data-act="pile" data-arg="deck">Deck ${r.deck.length}</button>${S.screen !== 'map' ? `<button class="ghost mapbtn" data-act="peek-map" title="View the map (M)" aria-label="View the map">${MAP_ICON}</button>` : ''}${HD.audio ? HD.audio.button() : ''}</span>
       <span class="runtime" data-key="runtime" title="Run time" aria-label="Run time ${fmtTime(r.playMs)}">${CLOCK}<span class="t">${fmtTime(r.playMs)}</span></span>
       <span class="inv">${belt()}<span class="relics">${relics}</span></span>
     </header>${S.coop && S.screen !== 'combat' ? S.coop.partyStrip() : ''}`;
@@ -396,7 +399,7 @@
         ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}
       </div>
       ${HD.UI_ACTS['coop-open'] ? '<button class="ghost coopbtn" data-act="coop-open">Play together (2 to 4 players)</button>' : ''}
-      <div class="toggles">${namesToggle()}</div>
+      <div class="toggles">${namesToggle()}${HD.audio ? HD.audio.button() : ''}</div>
       <p class="fine">Three acts. Drag a card up to play it, or drag it onto an enemy. Keys: 1 to 0 pick a card, then 1 to 5 pick a target. E ends the turn, M shows the map, Esc cancels.</p>
     </main>`;
   }
@@ -851,6 +854,9 @@
     while (S.run.feed.length) {
       // Show up to six things at once; cards line up together the way multiple rewards do.
       const batch = S.run.feed.splice(0, 6);
+      const SOUND = { relic: 'relic', upgraded: 'upgrade', maxhp: 'maxhp', card: 'card', enchanted: 'upgrade', potion: 'potion', gold: 'coin', removed: 'remove' };
+      const loud = Object.keys(SOUND).find((k) => batch.some((x) => x.kind === k && (k !== 'maxhp' || x.n > 0)));
+      if (loud) sfx(SOUND[loud]);
       const box = document.createElement('div');
       box.className = 'showcase';
       const rowItems = document.createElement('div'), rowCards = document.createElement('div');
@@ -1024,6 +1030,7 @@
     fitHandText();
     liftCard();
     BG.set(S.screen === 'combat' ? 'fight' : 'calm');
+    if (HD.audio) HD.audio.mood(S.screen === 'combat' ? (S.kind === 'boss' ? 'boss' : 'fight') : ['title', 'lobby', 'end'].includes(S.screen) ? 'title' : 'calm');
     if (S.screen === 'map' && S.scrollMap) {
       S.scrollMap = false;
       scrollToRoom(document.getElementById('mapScroll'), $('.map .node.here') || $('.map .node.reach'));
@@ -1187,13 +1194,19 @@
     }
     fxq = [];
   }
+  // What a fight event sounds like; what happens to other players is quieter.
+  function fxSound(type, t, n) {
+    const far = t.isPlayer && S.me && t.seat !== S.me ? 0.5 : 1;
+    if (type === 'hit') return sfx(n <= 0 ? 'zero' : t.isPlayer ? 'hurt' : t.hp <= 0 ? 'kill' : 'hit', n, far);
+    if (['block', 'guard', 'heal', 'stars', 'forge'].includes(type)) sfx(type, n, far);
+  }
   const UI = {
     choose: (g, o) => new Promise((res) => {
       if (!o.from.length) return res([]);
       S.overlay = { kind: 'choose', title: o.prompt, from: o.from, n: Math.min(o.n, o.from.length), min: o.min, picked: [], res };
       render();
     }),
-    fx: (type, t, n) => { fxq.push({ type, id: t.isPlayer ? (S.me && t.seat !== S.me ? `a${t.seat.index}` : 'p') : t.uid, n }); scheduleRender(); },
+    fx: (type, t, n) => { fxq.push({ type, id: t.isPlayer ? (S.me && t.seat !== S.me ? `a${t.seat.index}` : 'p') : t.uid, n }); scheduleRender(); fxSound(type, t, n); },
     pace: async (g, e) => { S.acting = e.uid; render(); await HD.sleep(reduced() ? 150 : 480); S.acting = null; },
   };
 
@@ -1410,6 +1423,7 @@
   async function enterNode(key) {
     const r = S.run;
     if (S.busy || !r.reachable().includes(key)) return;
+    sfx('node');
     if (S.coop) { S.coop.vote(key); return render(); }
     r.moveTo(key);
     if (key === 'BOSS') return startCombat(r.boss, 'boss');
@@ -1460,6 +1474,7 @@
     S.settled = g;
     S.sel = null; S.selPotion = null;
     S.busy = false; // co-op: a move still on its way when the fight ended must not lock the map (votes wait on busy)
+    sfx(g.won ? 'win' : 'lose');
     if (!g.won) { r.hp = 0; S.result = 'dead'; S.screen = 'end'; S.overlay = null; clearSave(); render(); return; }
     const me = S.me || g.seat; // co-op: a player who fell comes back at 1 HP when the party wins
     r.hp = me.dead ? 1 : me.p.hp; r.maxHp = me.p.maxHp;
@@ -1499,6 +1514,7 @@
     box.innerHTML = cardHTML(c, {});
     const k = box.firstElementChild;
     if (!k) return;
+    sfx(cardSound(c), 0, 0.6);
     const r = rectOf(from), a = rectOf(arena);
     const slot = Math.min(staged++, 4);
     k.classList.add('flying', 'remote');
@@ -1521,6 +1537,7 @@
   const label = (id, text) => { fxq.push({ type: 'say', id, n: text }); scheduleRender(); };
   // Plays a card: the card (or its dragged copy) flies to where it lands while the engine resolves.
   function play(c, t, k) {
+    sfx(cardSound(c));
     if (!reduced()) {
       const el = k || $(`[data-key="h${c.uid}"]`);
       if (el) fly(k || cloneAt(el), destFor(c, t), { end: CARDS[c.id].type === 'Power' ? 0.15 : 0.35 });
@@ -1533,11 +1550,12 @@
   function endTurn() {
     const g = S.g;
     if (g.phase !== 'player' || S.busy) return;
+    if (!(S.coop && g.seat.ready)) sfx('end');
     S.sel = null;
     if (S.coop) return S.coop.endTurn();
     engine(() => g.endTurn());
   }
-  const drink = (i, t) => (S.coop ? S.coop.potion(i, t) : engine(() => S.g.usePotion(i, t)));
+  const drink = (i, t) => { sfx('potion'); return S.coop ? S.coop.potion(i, t) : engine(() => S.g.usePotion(i, t)); };
   // End of turn: only the cards that are leaving fly to the discard pile (or the Exhaust pile); retained cards stay put.
   UI.handLeaving = (list) => {
     if (reduced() || (S.me && S.g && S.g.seat !== S.me)) return;
@@ -1595,7 +1613,7 @@
     const r = S.run;
     const mark = () => { S.restUsed = (S.restUsed || []).concat(o); };
     if (o === 'mend' && S.coop) return S.coop.pickMend(mark);
-    if (o === 'rest') { r.heal(r.restHeal()); r.hook('onRest'); mark(); }
+    if (o === 'rest') { r.heal(r.restHeal()); r.hook('onRest'); mark(); sfx('heal'); }
     if (o === 'lift') { const kb = r.relic('KETTLEBELL'); kb.lifts = (kb.lifts || 0) + 1; mark(); }
     if (o === 'dig') { r.addRelic(r.rollRelic()); mark(); }
     if (o === 'clone') { for (const c of r.deck.filter((x) => x.ench && x.ench.id === 'CLONE')) r.addCard(c.id, c.up); mark(); }
@@ -1610,7 +1628,9 @@
     checkPending();
   }
 
+  const OWN_SOUND = new Set(['card', 'foe', 'ally', 'node', 'end', 'drink', 'take', 'takecard', 'buy', 'rest', 'sound-mute', 'coop-mend']);
   function onAct(act, arg) {
+    if (!OWN_SOUND.has(act)) sfx('click');
     const r = S.run, g = S.g, o = S.overlay;
     switch (act) {
       case 'start': return startRun(arg);
