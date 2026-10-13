@@ -95,7 +95,8 @@ node test/mp_sim.js 300          # random 2 to 4 player fights, each replayed fr
 node test/coop_cards.js          # the 37 co-op cards, co-op card pools, potions thrown to an ally
 node test/net_sim.js 24          # networked fights, a copy of the game per player: rejoins, tampering, bad messages
 node test/party_sim.js 6 30      # whole co-op runs over the network: votes, rooms, Mend, events, bosses
-                                 # LEAVE=1 drops a player; FORCE_EVENT=LAMP_KEY makes every room that event
+                                 # LEAVE=1 drops a player; REJOIN=1 drops one and brings them back; HOSTCRASH=1
+                                 # reloads the host partway; FORCE_EVENT=LAMP_KEY makes every room that event
 node test/preview.js 60          # damage previews checked against the real result of each move
 ```
 

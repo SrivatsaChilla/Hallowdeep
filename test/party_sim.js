@@ -13,6 +13,9 @@ const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
 const RUN_MS = +(process.env.RUN_MS || 240000);
 const SPIN_MS = +(process.env.SPIN_MS || 0); // the split-vote roulette's wait (the game's is a few seconds)
 const LEAVE = !!process.env.LEAVE; // the last player drops out partway (at the map or in a fight); the rest go on
+const REJOIN = !!process.env.REJOIN; // the last player drops out and comes back in a fresh copy of the game, with its ticket
+const HOSTCRASH = !!process.env.HOSTCRASH; // the host's page reloads partway; it picks the game back up and everyone returns
+class Gone extends Error {} // this player's link went down: come back (see comeBack)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function world() {
@@ -63,23 +66,32 @@ function bossChecks(st) {
 
 async function partyRun(i, st) {
   const size = 2 + (i % 3);
-  const HD0 = world();
-  const host = new HD0.NetHost({ seed: `party${i}`, spinMs: SPIN_MS, onEvent: (e) => { if (e.t === 'desync') st.desyncs++; } });
+  const world0 = world();
+  let HD0 = world0;
+  const hostOpts = { seed: `party${i}`, spinMs: SPIN_MS, onEvent: (e) => { if (e.t === 'desync') st.desyncs++; } };
+  let host = new HD0.NetHost(hostOpts);
   // FORCE_EVENT=LAMP_KEY (say): every room but the boss is that event, to test events that start fights.
   if (process.env.FORCE_EVENT) { const roomFor = host.roomFor.bind(host); host.roomFor = (key) => (key === 'BOSS' ? roomFor(key) : { room: 'event', event: process.env.FORCE_EVENT }); }
   const delay = ((r) => () => r.int(2))(HD0.makeRng(7 + i));
   const players = [];
-  for (let j = 0; j < size; j++) {
-    const HD = j ? world() : HD0;
-    const me = { HD, rng: HD.makeRng(HD.hashSeed(`pbot${i}:${j}`)), q: [], log: [], states: {} };
+  // A player's link to the host (seat and token to take a seat back).
+  const connect = (me, seat, token) => {
+    const { HD } = me;
     const [a, b] = HD0.loopPair(delay);
     host.connect(a);
-    me.peer = new HD.NetPeer({ link: b, name: `P${j}`, ui: botUI(me.rng), onEvent: (e) => { if (process.env.NETDBG && e.t === 'applied') me.states[`${me.peer.f}:${e.n}`] = JSON.stringify(HD.fightState(me.peer.g)); me.q.push(e); if (e.t === 'error') st.errors.push(`${i}: ${e.error && e.error.stack}`); } });
-    me.peer.hello();
+    me.peer = new HD.NetPeer({ link: b, name: `P${me.j}`, ui: botUI(me.rng), onEvent: (e) => { if (process.env.NETDBG && e.t === 'applied') me.states[`${me.peer.f}:${e.n}`] = JSON.stringify(HD.fightState(me.peer.g)); me.q.push(e); if (e.t === 'error') st.errors.push(`${i}: ${e.error && e.error.stack}`); } });
+    me.peer.hello(seat, token);
+  };
+  for (let j = 0; j < size; j++) {
+    const HD = j ? world() : HD0;
+    const me = { HD, j, rng: HD.makeRng(HD.hashSeed(`pbot${i}:${j}`)), q: [], log: [], states: {} };
+    connect(me);
     players.push(me);
   }
   host.authority = () => players[0].peer.run;
   if (LEAVE) Object.assign(players[size - 1], { leaver: true, leaveAt: i % 3 === 2 ? 'lobby' : i % 2 ? 'fight' : 'map', leaveFloor: 2 + (i % 7) });
+  if (REJOIN) Object.assign(players[size - 1], { leaver: true, leaveAt: i % 2 ? 'fight' : 'map', leaveFloor: 2 + (i % 7) });
+  const crashAt = HOSTCRASH ? { where: i % 2 ? 'fight' : 'map', floor: 3 + (i % 6) } : null;
   while (players.some((p) => p.peer.seat === null)) await sleep(1);
   // Someone who joins and leaves again before picking a hero.
   if (LEAVE && players[size - 1].leaveAt === 'lobby') { const me = players.pop(); me.left = true; st.left++; me.peer.link.close(); await sleep(5); }
@@ -92,6 +104,7 @@ async function partyRun(i, st) {
   const t0 = Date.now();
   const next = async (me, types) => {
     for (;;) {
+      if (me.gone) throw new Gone();
       // A vote the host dropped (the party could not reach that room): vote again, as a player would.
       for (let j = me.q.findIndex((e) => e.t === 'mapstate'); j >= 0; j = me.q.findIndex((e) => e.t === 'mapstate')) {
         const e = me.q.splice(j, 1)[0];
@@ -104,7 +117,42 @@ async function partyRun(i, st) {
     }
   };
   // A player dropping out: their link closes, as when a phone sleeps or a tab closes.
-  const leave = (me) => { me.left = true; st.left++; me.peer.link.close(); return 'left'; };
+  const leave = (me) => {
+    st.left++;
+    if (REJOIN) { me.gone = true; me.peer.link.close(); throw new Gone(); }
+    me.left = true; me.peer.link.close(); return 'left';
+  };
+  // The host's page reloads: its links all drop, then a new host picks the game up from what it saved.
+  let restoring = null;
+  const crash = () => {
+    if (restoring) return;
+    st.crashes++;
+    const data = JSON.parse(JSON.stringify(host.toSave())); // as kept in the browser
+    for (const p of players) p.gone = true;
+    for (const s of host.seats) if (s.link && s.live) s.link.close();
+    restoring = (async () => {
+      await sleep(200);
+      HD0 = world();
+      host = HD0.NetHost.fromSave(data, Object.assign({ restoreMs: 2500 }, hostOpts));
+      host.authority = () => players[0].peer.run;
+    })();
+    throw new Gone();
+  };
+  const crashing = (me, where) => crashAt && !restoring && me === players[0] && crashAt.where === where && me.peer.run.floor >= crashAt.floor && me.rng.next() < 0.3;
+  // Coming back, as a reloaded page does: a fresh copy of the game, the seat's secret, and the run as last saved.
+  const comeBack = async (old) => {
+    if (restoring) await restoring; else await sleep(300 + old.rng.int(5000));
+    const HD = old.j === 0 && restoring ? HD0 : world();
+    const me = { HD, j: old.j, rng: HD.makeRng(HD.hashSeed(`pbot${i}:${old.j}:back${st.rejoins}`)), q: [], log: old.log, states: {}, left: true, saved: old.saved };
+    players[old.j] = me;
+    st.rejoins++;
+    connect(me, old.peer.seat, old.peer.token);
+    const w = await next(me, ['welcome', 'reject']);
+    if (w.t === 'reject') throw new Error(`seat ${old.peer.seat} could not come back: ${w.reason}`);
+    if (!w.rejoined) throw new Error('the host did not treat it as a rejoin');
+    if (w.fight !== 'in') { const run = HD.Run.fromSave(me.saved); run.follow(w.pos); me.peer.run = run; me.peer.chars = w.run.chars; }
+    return { me, w };
+  };
   const leaving = (me, where) => me.leaver && me.leaveAt === where && me.peer.run.floor >= me.leaveFloor && me.rng.next() < 0.2;
   // One player's fight: random moves on its own copy until the fight ends everywhere.
   const fight = async (me) => {
@@ -112,7 +160,9 @@ async function partyRun(i, st) {
     const g = me.peer.g;
     while (!g.over) {
       await sleep(me.rng.int(3));
+      if (me.gone) throw new Gone();
       if (leaving(me, 'fight')) return leave(me);
+      if (crashing(me, 'fight')) crash();
       if (Date.now() - t0 > RUN_MS) throw new Error('fight stalled');
       if (me.peer.waiting || g.phase !== 'player') continue;
       const s = g.seats[me.peer.seat];
@@ -139,23 +189,35 @@ async function partyRun(i, st) {
     }
     return 'ok';
   };
-  const bot = async (me) => {
+  const bot = async (me, back) => {
     const { HD, rng } = me;
-    await next(me, ['run']);
-    let run = me.peer.run;
-    run.addRelic(rng.pick(run.neowOffer())); drain(HD, run, rng);
-    // Random bots lose a lot; extra HP keeps runs going so later floors, bosses and acts get tested too.
-    run.maxHp += 250; run.hp = run.maxHp;
+    let run;
+    if (back && back.over) return 'lost'; // the party fell while this player was away
+    if (!back) {
+      await next(me, ['run']);
+      run = me.peer.run;
+      run.addRelic(rng.pick(run.neowOffer())); drain(HD, run, rng);
+      // Random bots lose a lot; extra HP keeps runs going so later floors, bosses and acts get tested too.
+      run.maxHp += 250; run.hp = run.maxHp;
+    } else if (back.fight === 'in') {
+      const g = await fight(me);
+      const r = afterFight(me, g, g.kind, true);
+      if (r !== 'ok') return r;
+    }
     for (;;) {
       run = me.peer.run; // each fight hands back its copy of the run
+      me.saved = run.toSave(); // what the browser keeps for coming back
       if (run.floor >= FLOORS) return 'done';
       me.peer.atMap();
       if (leaving(me, 'map')) return leave(me);
+      if (crashing(me, 'map')) crash();
       const vote = () => { const ks = run.reachable(); if (ks.length) me.peer.vote(rng.pick(ks)); };
       vote();
       me.revote = vote;
-      const m = await next(me, ['go', 'go-fight']);
+      const m = await next(me, ['go', 'go-fight', 'lost']);
       me.revote = null;
+      if (m.t === 'lost') return 'lost'; // the party fell in a fight this player waited out
+      me.saved = me.peer.run.toSave(); // the party moved
       // A split vote's roulette must land where the party then goes, on one of the rooms someone voted for.
       for (let k = me.q.findIndex((e) => e.t === 'spin'); k >= 0; k = me.q.findIndex((e) => e.t === 'spin')) {
         const sp = me.q.splice(k, 1)[0];
@@ -208,7 +270,14 @@ async function partyRun(i, st) {
       if (m.room === 'treasure') { const t = run.treasure(); run.gainGold(t.gold); if (t.relic) run.addRelic(t.relic); drain(HD, run, rng); continue; }
     }
   };
-  const results = await Promise.all(players.map((me) => bot(me).catch((e) => { st.errors.push(`${i}: ${e.stack.split('\n').slice(0, 4).join(' | ')}`); return 'error'; })));
+  // Each player plays on; a dropped link brings them back with their ticket.
+  const play = async (me) => {
+    let back = null;
+    for (;;) {
+      try { return await bot(me, back); } catch (e) { if (!(e instanceof Gone)) throw e; ({ me, w: back } = await comeBack(me)); }
+    }
+  };
+  const results = await Promise.all(players.map((me) => play(me).catch((e) => { st.errors.push(`${i}: ${e.stack.split('\n').slice(0, 4).join(' | ')}`); return 'error'; })));
   // The party moved together: every player saw the same rooms on the same floors.
   if (process.env.NETDBG) {
     const keys = Object.keys(players[0].states).sort((a, b) => { const [fa, na] = a.split(':').map(Number), [fb, nb] = b.split(':').map(Number); return fa - fb || na - nb; });
@@ -227,10 +296,10 @@ async function partyRun(i, st) {
 }
 
 (async () => {
-  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, spins: 0, badSpins: 0, bossMismatch: 0, desyncs: 0, split: 0, left: 0, asks: 0, sharedAsks: 0, askLost: 0, errors: [] };
+  const st = { runs: 0, players: 0, floors: 0, ends: {}, mends: 0, revived: 0, spins: 0, badSpins: 0, bossMismatch: 0, desyncs: 0, split: 0, left: 0, asks: 0, sharedAsks: 0, askLost: 0, rejoins: 0, crashes: 0, errors: [] };
   bossChecks(st);
   for (let i = process.env.ONLY ? +process.env.ONLY : 0; i < (process.env.ONLY ? +process.env.ONLY + 1 : RUNS); i++) await partyRun(i, st);
   for (const e of st.errors.slice(0, 4)) console.error(e);
-  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, left: st.left, eventFightAsks: st.asks, sharedEventFights: st.sharedAsks, eventRewardsLost: st.askLost, roulettes: st.spins, badRoulettes: st.badSpins, bossMismatch: st.bossMismatch, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
+  console.log(JSON.stringify({ runs: st.runs, players: st.players, avgFloor: +(st.floors / Math.max(1, st.runs)).toFixed(1), ends: st.ends, mends: st.mends, revived: st.revived, left: st.left, rejoins: st.rejoins, hostReloads: st.crashes, eventFightAsks: st.asks, sharedEventFights: st.sharedAsks, eventRewardsLost: st.askLost, roulettes: st.spins, badRoulettes: st.badSpins, bossMismatch: st.bossMismatch, desyncs: st.desyncs, wentDifferentWays: st.split, errors: st.errors.length }));
   if (st.errors.length || st.desyncs || st.split || st.badSpins || st.bossMismatch || st.askLost || !st.spins) process.exitCode = 1;
 })();

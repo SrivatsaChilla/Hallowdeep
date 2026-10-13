@@ -6,7 +6,7 @@
   const { S, esc } = A;
   const MIN_PLAYERS = 2;
   const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
-  const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.' };
+  const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.', rejoin: 'Your seat could not be taken back: the game has ended, or you are already in it on another screen.' };
   const render = () => A.render();
   const NAME_KEY = 'hollowdeep.name';
   const BOSS_KEY = 'hollowdeep.coopBosses'; // bosses this device met lately as host, so the next runs mix them up
@@ -45,11 +45,12 @@
     reset() {
       if (C.room) C.room.close();
       if (C.peer) C.peer.link.close();
-      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', aims: {}, chat: { log: [], open: false, unread: 0 } });
+      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', aims: {}, chat: { log: [], open: false, unread: 0 }, back: null });
       drawChat();
       sleep();
     },
-    leave() { C.reset(); S.coop = null; S.g = null; S.me = null; S.run = null; },
+    // Leaving a game you are in ends your seat; backing out of the lobby after a failed rejoin keeps the ticket.
+    leave() { if (C.peer) forget(); C.reset(); S.coop = null; S.g = null; S.me = null; S.run = null; },
 
     // ---------- the map ----------
     atMap() { if (C.peer) C.peer.atMap(); },
@@ -90,7 +91,7 @@
       C.sent = now;
       C.peer.stat(r.hp, r.maxHp);
     },
-    barNote() { const msg = C.warn || C.toast; return `<span class="coopnote${C.warn ? ' warn' : ''}" title="Co-op">${esc(msg || `Co-op, ${C.players.filter((p) => p.live).length} players`)}</span>`; },
+    barNote() { const msg = C.warn || C.toast; return `<span class="coopnote${C.warn ? ' warn' : ''}" title="Co-op">${esc(msg || `Co-op, ${C.players.filter((p) => p.live).length} players`)}</span>${C.warn && ticket() ? '<button class="ghost small reconnect" data-act="coop-rejoin">Reconnect</button>' : ''}`; },
 
     // ---------- fights ----------
     // A move leaves aiming, as in solo: the card or potion is on its way, and its slot may be empty when it lands.
@@ -158,9 +159,12 @@
     // Pointers come many times a second: they move the pointer layer only, never redraw the screen.
     if (e.t === 'aim') { if (Number.isInteger(e.s)) { C.aims[e.s] = Object.assign({ at: Date.now() }, e); drawAims(); } return; }
     if (e.t === 'chat') return gotChat(e);
-    if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; }
-    if (e.t === 'reject') { const msg = REJECTED[e.reason] || 'The host turned the connection down.'; C.reset(); C.error = msg; }
-    if (e.t === 'lobby') C.players = e.players;
+    if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; if (e.rejoined) restore(e); C.back = null; }
+    if (e.t === 'reject') { const msg = REJECTED[e.reason] || 'The host turned the connection down.'; if (e.reason === 'rejoin' || e.reason === 'version') forget(); C.reset(); C.error = msg; }
+    if (e.t === 'lobby') {
+      if (S.coop === C) e.players.forEach((p, i) => { const was = C.players[i]; if (was && was.live !== p.live) note(`${p.name || C.nameOf(i)} ${p.live ? 'is back' : 'left the game'}.`); });
+      C.players = e.players;
+    }
     if (e.t === 'run') { rememberBosses(e.bosses); runStarts(); }
     if (e.t === 'mapstate') { C.at = e.at; C.votes = e.votes; }
     if (e.t === 'stats' && Array.isArray(e.stats)) C.stats = e.stats;
@@ -172,7 +176,9 @@
     if (e.t === 'fight' || e.t === 'over') { C.aims = {}; aimSent = ''; drawAims(); }
     // Any screen: a move that lands after the fight ended must not leave the next screens busy (the map waits on it).
     if (e.t === 'applied' && (e.n === -1 || !C.peer.waiting)) { S.busy = false; S.hidden.clear(); S.dragUid = null; }
-    if (e.t === 'over') C.peer.chain.then(() => setTimeout(() => A.afterCombat(), 0));
+    if (e.t === 'over') { if (!e.g.won) forget(); C.peer.chain.then(() => setTimeout(() => A.afterCombat(), 0)); }
+    // The party fell in a fight this player was waiting out (they came back during it): the run is over for them too.
+    if (e.t === 'lost' && S.coop === C && S.screen !== 'combat' && S.screen !== 'end') { forget(); Object.assign(S, { result: 'dead', screen: 'end', overlay: null }); if (S.run) S.run.hp = 0; }
     if (e.t === 'mended' && e.to === C.me()) { C.toast = `${C.nameOf(e.from)} mended you.`; setTimeout(() => { C.toast = ''; A.scheduleRender(); }, 4000); }
     if (e.t === 'desync') C.warn = 'The players fell out of step in this fight.';
     if (e.t === 'closed') C.warn = 'The connection to the host was lost.';
@@ -360,7 +366,7 @@
     return `The roulette landed on ${voters.length ? `${voters.join(' and ')}'s pick` : 'a pick'}: ${node}.`;
   }
   function hostEvent(e) {
-    if (e.t === 'left') { C.toast = `${C.nameOf(e.seat)} left the game.`; A.scheduleRender(); }
+    if (e.t === 'left') A.scheduleRender(); // everyone hears it from the party list (see 'lobby')
   }
   // The run starts: this player's own run (its map shared with the party), then the Rootmother's gift.
   function runStarts() {
@@ -384,6 +390,7 @@
     const ask = C.pendingFight;
     const askers = ask && (Array.isArray(ask.all) ? ask.all : [ask.by]);
     if (ask) S.kind = askers.includes(C.me()) && C.myAsk ? C.myAsk.kind : 'event';
+    else if (S.kind == null) S.kind = g.kind; // back in a fight after a drop: it says what kind of fight it is
     C.pendingFight = null; C.myAsk = null; C.giving = false;
     S.run = e.run; S.run.feed = [];
     Object.assign(S, { g, me: g.seats[C.me()], sel: null, selPotion: null, busy: true, dragUid: null, prevEnergy: null, bannerTurn: 0, bannerEnemy: 0, handM: null, overlay: null, screen: 'combat' });
@@ -391,15 +398,16 @@
   }
 
   // ---------- hosting and joining ----------
-  function join(link) {
+  // t: a ticket, to take this player's seat back.
+  function join(link, t) {
     C.peer = new HD.NetPeer({ link, ui: HD.UI, name: C.name, onEvent: onPeer });
-    C.peer.hello();
+    C.peer.hello(t ? t.seat : undefined, t ? t.token : undefined);
     wake();
   }
   async function hostGame() {
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
     nameFromBox();
-    C.reset(); C.stage = 'connecting'; render();
+    C.reset(); forget(); C.stage = 'connecting'; render();
     C.host = new HD.NetHost({ authority: () => C.peer && C.peer.run, onEvent: hostEvent, recentBosses: recentBosses() });
     const [a, b] = HD.loopPair();
     C.host.connect(a);
@@ -414,11 +422,88 @@
     if (code.length !== 5) { C.error = 'Enter the 5-letter room code.'; return render(); }
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
     nameFromBox();
-    C.reset(); C.stage = 'connecting'; render();
+    C.reset(); forget(); C.stage = 'connecting'; render();
     try { const link = await HD.joinRoom(code); C.code = code; join(link); }
     catch (err) { C.reset(); C.error = err.message; }
     render();
   }
+
+  // ---------- coming back after a drop ----------
+  // A ticket in the browser: the room, this player's seat and its secret, and their run as of the last time they were
+  // outside a fight. The host also keeps the whole game (NetHost.toSave), so a reloaded host can open the room again.
+  const TICKET_KEY = 'hollowdeep.coopTicket', HOST_KEY = 'hollowdeep.coopHost';
+  const TICKET_MS = 12 * 3600 * 1000; // older tickets are forgotten
+  const KEEP_MS = 1000;
+  const REHOST_TRIES = 10; // the meeting server can hold a reloaded host's room code for a few seconds
+  // The ticket is kept for this tab (a reload finds its own seat, even with two players in one browser) and for the
+  // browser (to come back after closing the tab).
+  const readJSON = (k, store = localStorage) => { try { return JSON.parse(store.getItem(k)); } catch (e) { return null; } };
+  const writeJSON = (k, v, store = localStorage) => { try { store.setItem(k, JSON.stringify(v)); } catch (e) { /* storage full or unavailable */ } };
+  const tab = () => { try { return window.sessionStorage; } catch (e) { return null; } };
+  const valid = (t) => t && typeof t.code === 'string' && Number.isInteger(t.seat) && typeof t.token === 'string' && Date.now() - (t.at || 0) < TICKET_MS;
+  function ticket() {
+    const mine = tab() && readJSON(TICKET_KEY, tab());
+    if (valid(mine)) return mine;
+    const any = readJSON(TICKET_KEY);
+    return valid(any) ? any : null;
+  }
+  function forget() { for (const st of [tab(), localStorage]) { try { if (st) { st.removeItem(TICKET_KEY); st.removeItem(HOST_KEY); } } catch (e) { /* storage unavailable */ } } }
+  // Kept current while playing; a finished run forgets it.
+  function keep() {
+    if (!C.peer || !C.code || C.peer.seat == null || !C.peer.token || C.back) return;
+    if (S.coop === C && S.screen === 'end') return forget();
+    const old = ticket() || {};
+    const run = S.coop === C && S.run && S.screen !== 'combat' ? S.run.toSave() : old.code === C.code && old.seat === C.peer.seat ? old.run : null;
+    const t = { code: C.code, seat: C.peer.seat, token: C.peer.token, host: !!C.host, name: C.name, at: Date.now(), run };
+    writeJSON(TICKET_KEY, t);
+    if (tab()) writeJSON(TICKET_KEY, t, tab());
+    if (C.host) writeJSON(HOST_KEY, C.host.toSave());
+  }
+  setInterval(keep, KEEP_MS);
+  window.addEventListener('pagehide', keep);
+  async function rejoin() {
+    const t = ticket();
+    if (!t) return render();
+    if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
+    C.reset(); C.name = t.name || C.name; C.back = t; C.stage = 'connecting'; S.screen = 'lobby'; render();
+    try {
+      if (t.host) {
+        const data = readJSON(HOST_KEY);
+        if (!data || data.build !== HD.BUILD) throw new Error('This game cannot be picked back up: the page was updated since it started.');
+        C.host = HD.NetHost.fromSave(data, { authority: () => C.peer && C.peer.run, onEvent: hostEvent, recentBosses: recentBosses() });
+        const [a, b] = HD.loopPair();
+        C.host.connect(a);
+        join(b, t);
+        C.code = t.code;
+        C.room = await HD.hostRoom((link) => C.host.connect(link), t.code, REHOST_TRIES);
+      } else {
+        const link = await HD.joinRoom(t.code);
+        C.code = t.code;
+        join(link, t);
+      }
+    } catch (err) { C.reset(); C.error = err.message; }
+    render();
+  }
+  // Back in the game: this player's run as saved, caught up with the party on the map, or the fight they left.
+  function restore(e) {
+    const t = C.back, info = e.run, seat = C.me();
+    C.players = e.players || C.players; C.stats = e.stats || []; C.warn = '';
+    S.coop = C;
+    if (e.fight === 'in' && !e.over) { S.kind = null; return note('Welcome back. You are rejoining the fight.'); } // the fight comes next
+    const r = t && t.run ? HD.Run.fromSave(t.run) : new HD.Run(`${info.seed}:${seat}`, info.chars[seat], info.asc || 0, { party: info.chars.length, mapSeed: info.seed, bosses: info.bosses });
+    r.follow(e.pos);
+    r.feed = [];
+    if (e.over) { forget(); r.hp = 0; Object.assign(S, { run: r, g: null, result: 'dead', screen: 'end', overlay: null }); return; } // the party fell while away
+    C.peer.run = r; C.peer.chars = info.chars;
+    Object.assign(S, { run: r, g: null, me: null, overlay: null, ev: null });
+    A.toMap();
+    note(e.fight === 'wait' ? 'Welcome back. The party is in a fight; you join them after it.' : 'Welcome back.');
+  }
+  // The title screen's and the lobby's way back in.
+  HD.coopRejoinHTML = () => {
+    const t = !C.peer && ticket();
+    return t ? `<div class="rejoin"><button class="primary continue" data-act="coop-rejoin">Rejoin your co-op game (room ${esc(t.code)})</button><button class="ghost small" data-act="coop-forget">Forget it</button></div>` : '';
+  };
 
   // ---------- the lobby ----------
   HD.UI_SCREENS.lobby = () => {
@@ -427,6 +512,7 @@
     if (C.stage === 'choose') return `<main class="panel lobby" data-key="scr-lobby">
       <h1>Play together</h1>
       <p>Two to four players, each on their own device. One player hosts and shares a room code; the others join with it.</p>
+      ${HD.coopRejoinHTML()}
       <div class="lobbyrow"><label class="namerow">Your name <input id="coopname" data-key="coopname" maxlength="16" placeholder="Nickname" autocomplete="nickname" value="${esc(C.name)}"></label></div>
       <div class="lobbyrow"><button class="primary" data-act="coop-host">Host a game</button></div>
       <div class="lobbyrow"><input id="coopcode" data-key="coopcode" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" aria-label="Room code"><button class="primary" data-act="coop-join">Join</button></div>
@@ -471,6 +557,8 @@
     },
     'coop-char': (id) => { if (C.peer && HD.CHARS[id]) C.peer.pickChar(id); },
     'coop-chat': () => openChat(!C.chat.open),
+    'coop-rejoin': rejoin,
+    'coop-forget': () => { forget(); render(); },
     'coop-rename': () => { if (C.peer) C.peer.rename(nameFromBox()); },
     'coop-start': () => { if (C.host) C.host.startRun(0); },
     'coop-copy': () => { try { navigator.clipboard.writeText(C.code).catch(() => {}); C.toast = 'Code copied.'; } catch (e) { /* clipboard blocked */ } render(); },

@@ -53,7 +53,7 @@ async function trial(i, st) {
   const drive = host0.makeRng(host0.hashSeed('netdrive' + i));
   const delay = () => drive.int(3);
   const players = [];
-  const join = (HD, run, rejoin) => {
+  const join = (HD, run, rejoin, token) => {
     const [a, b] = host0.loopPair(delay);
     host.connect(a);
     const me = { HD, rng: HD.makeRng(HD.hashSeed(`bot${i}:${players.length}:${rejoin}`)), events: [] };
@@ -64,7 +64,7 @@ async function trial(i, st) {
       if (e.t === 'error') st.errorsSeen.push(`${i}: ${e.error && e.error.stack}`);
       if (e.t === 'applied' && process.env.NETDBG) me.states[e.n] = JSON.stringify(HD.fightState(me.peer.g));
     } });
-    me.peer.hello(rejoin);
+    me.peer.hello(rejoin, token);
     return me;
   };
   for (let j = 0; j < size; j++) { const HD = j ? world() : host0; players.push(join(HD, makeRun(HD, i, j, size, pick))); }
@@ -90,10 +90,10 @@ async function trial(i, st) {
     if (!rejoined && rejoinAt >= 0 && logLen >= rejoinAt) {
       rejoined = true;
       const j = 1 + (i % (size - 1));
-      const seat = players[j].peer.seat;
+      const seat = players[j].peer.seat, token = players[j].peer.token;
       players[j].peer.link.close();
       await sleep(5);
-      players[j] = join(world(), null, seat);
+      players[j] = join(world(), null, seat, token);
       st.rejoins++;
     }
     if (!tampered && tamperAt >= 0 && logLen >= tamperAt && players[1].peer.g) { tampered = true; players[1].peer.g.enemies[0].hp += 1; st.tampers.push(i); }
@@ -167,6 +167,15 @@ async function protocolChecks(st) {
   const late = mk();
   await sleep(10);
   ok('nobody joins in the middle of a fight', late.ev.some((e) => e.t === 'reject'));
+  // Taking a seat back needs that seat's secret.
+  two.b.close();
+  await sleep(10);
+  const thief = mk(), owner = mk();
+  thief.p.hello(1, 'not-the-secret');
+  await sleep(10);
+  owner.p.hello(1, two.p.token);
+  await sleep(20);
+  ok('a dropped seat can be taken back only with its secret', thief.ev.some((e) => e.t === 'reject' && e.reason === 'rejoin') && owner.p.seat === 1 && !!owner.p.g);
 }
 
 (async () => {

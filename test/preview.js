@@ -1,5 +1,6 @@
-// The damage preview (src/preview.js). Playing a move on a copy of the fight must predict the real result exactly,
-// and must never change the real fight or move the card numbers that co-op players have to agree on.
+// The damage preview (src/preview.js). What it shows must be exactly what then happens; it may leave out only what
+// hangs on the order of a draw pile or on chance (and must say so); and it must never change the real fight or move
+// the card numbers that co-op players have to agree on.
 // Random fights (solo and co-op, every hero, extra cards and potions): every move a player could make is previewed,
 // then one is really made and compared with its preview.
 // Usage: node test/preview.js [fights]
@@ -18,7 +19,7 @@ const POTIONS = ['FLAME_FLASK', 'BLASTING_VIAL', 'TOXIN_FLASK', 'EXPOSING_VIAL',
 // The real fight answers prompts the way the preview's copy does, so the two can be compared exactly.
 const FIRST = { choose: async (g, o) => o.from.slice(0, o.min != null ? o.min : o.n) };
 
-const st = { fights: 0, previews: 0, checked: 0, wrong: 0, touched: 0, none: 0, errors: 0 };
+const st = { fights: 0, previews: 0, checked: 0, wrong: 0, touched: 0, none: 0, hidden: 0, errors: 0 };
 const read = (g) => {
   const out = {};
   for (const e of g.enemies) out[e.uid] = e.alive ? { hp: Math.max(0, e.hp), block: e.block } : { hp: 0, block: 0 };
@@ -75,7 +76,12 @@ async function fight(i) {
     const got = changes(before, read(g));
     if (!pv[j]) { st.none++; continue; }
     st.checked++;
-    if (JSON.stringify(got) !== JSON.stringify(pv[j])) {
+    const { out, hidden } = pv[j];
+    if (hidden) st.hidden++;
+    // Everything shown happens exactly; anything not shown was hidden on purpose.
+    const shownRight = Object.keys(out).every((k) => JSON.stringify(got[k]) === JSON.stringify(out[k]));
+    const missing = Object.keys(got).filter((k) => !out[k]);
+    if (!shownRight || (missing.length && !hidden)) {
       st.wrong++;
       if (st.wrong <= 8) console.error(`fight ${i} (${g.encId}, ${k} players): ${name} ${JSON.stringify(moves[j])}\n  preview ${JSON.stringify(pv[j])}\n  real    ${JSON.stringify(got)}`);
     }

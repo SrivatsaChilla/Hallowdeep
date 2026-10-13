@@ -239,7 +239,7 @@
     play: async (g, c, t, v) => { await g.selfLoseHp(v.hp); await g.burnChosen(1); g.addPw(g.p, 'might', v.str); } });
   card('AVALANCHE', { name: 'Avalanche', type: 'Skill', rarity: 'Rare', cost: 'X',
     text: (v, f, c) => `Play the top ${c && c.up ? 'X+1' : 'X'} cards of your draw pile.`,
-    play: async (g, c, t, v, x) => { const n = x + (c.up ? 1 : 0); for (let i = 0; i < n; i++) { const y = await g.takeTopOfDraw(); if (!y) break; await g.autoPlay(y, {}); if (g.over) break; } } });
+    play: async (g, c, t, v, x) => { const n = x + (c.up ? 1 : 0); if (g.ui.queueBacks) g.ui.queueBacks(g, n); for (let i = 0; i < n; i++) { const y = await g.takeTopOfDraw(); if (!y) break; await g.autoPlay(y, {}); if (g.over) break; } } });
   card('FIRESTORM', { name: 'Firestorm', type: 'Attack', rarity: 'Rare', cost: 1, target: 'all', v: { dmg: 2, hits: 4 }, up: { hits: 1 },
     text: (v, f) => `Deal ${f.d(v.dmg)} damage to ALL enemies ${v.hits} times.`,
     play: async (g, c, t, v) => g.attackAll(v.dmg, v.hits, c) });

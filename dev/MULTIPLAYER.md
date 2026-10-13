@@ -128,9 +128,21 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   change) but lists it in `fight.gone`: no cards, no relics, and enemy HP counts only the players taking part
   (`Combat.present`). Their seat is filled with their last snapshot, or a fresh run if they left before any fight.
   test/party_sim.js with LEAVE=1 drops a player at the map or mid-fight in every run.
-- Not yet: saving a co-op run, rejoining outside a fight (the screen has no rejoin button), a timeout for a player
-  who stays connected but stops playing (the party waits), and a shared Ancient and treasure picks (each player gets
-  their own).
+- Coming back after a drop: `welcome` gives each seat a secret `token`; `hello` with `rejoin` (the seat) and that
+  token takes the seat back. Each browser keeps a ticket (room code, seat, token, and its run as of the last time it
+  was outside a fight) for the tab and for the browser. The host answers a rejoin with the party's state (`partyNow`:
+  the run's setup, players, HP, where the party is, and whether a fight is on). Outside a fight the run is restored
+  and catches up with the party (`Run.follow`, only ever forward; `mapstate` carries the party's position so a player
+  who waited out a boss fight moves to the next act too). Back in a fight they were in, they get the fight's start
+  and move log, and the host numbers a `back` so every copy brings them in again. A fight that started without them,
+  or that was gathering runs when they returned, they wait out at the map. If the party fell meanwhile (every player
+  in the fight reported the loss with matching fingerprints: `lost`), they see the end of the run.
+- The host coming back: the host keeps its whole game in the browser (`NetHost.toSave`: seats and tokens, the run's
+  setup, the current fight's start and move log). Rejoining as host builds `NetHost.fromSave`, opens the same room
+  code again (retrying while the meeting server still holds it), and everyone reconnects with their tickets. Players
+  get 30 s to return before a fight goes on without them; a fight that was starting begins once they are back.
+- Not yet: saving a co-op run for a later day (tickets last 12 hours), a timeout for a player who stays connected but
+  stops playing (the party waits), and a shared Ancient and treasure picks (each player gets their own).
 
 ## Status
 

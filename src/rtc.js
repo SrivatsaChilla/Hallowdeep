@@ -86,9 +86,10 @@
   }
   const safe = (p) => p.catch(() => {});
 
-  // Host a room. onLink(link) runs for every player whose connection opens. Resolves with { code, close }.
+  // Host a room. onLink(link) runs for every player whose connection opens. Resolves with { code, close }. tries: how
+  // often to try a code the meeting server still holds (a host coming back after a reload reopens its old code).
   // If the meeting server connection drops, the host registers the same code again so later players can still join.
-  HD.hostRoom = async (onLink, code = HD.roomCode()) => {
+  HD.hostRoom = async (onLink, code = HD.roomCode(), tries = 1) => {
     const ice = await iceServers();
     const guests = new Map(); // their broker id -> { pc, early candidates (before the offer was applied) }
     let b = null, done = false;
@@ -123,7 +124,7 @@
         }
       }
     };
-    await register(1);
+    await register(tries);
     return { code, close: () => { done = true; if (b) b.close(); for (const x of guests.values()) x.pc.close(); } };
   };
 

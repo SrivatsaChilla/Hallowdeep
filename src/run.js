@@ -99,6 +99,14 @@
       this.boss = this.rng.enc.pick(HD.encPool('boss', 1));
       if (o.bosses) { this.bosses = o.bosses; this.boss = this.partyBoss(1); }
     }
+    // Co-op: a player coming back after a drop catches up with the party on the map. Acts they missed get the same
+    // maps as everyone (the map stream is only used for maps). Only ever forward. p: { act, pos, path, floor }.
+    follow(p) {
+      if (!p || !Number.isInteger(p.act) || !Number.isInteger(p.floor) || !Array.isArray(p.path)) return;
+      if (p.act < this.act || (p.act === this.act && p.floor <= this.floor)) return;
+      while (this.act < p.act) this.startAct(this.act + 1);
+      this.pos = p.pos; this.path = p.path.slice(); this.floor = p.floor;
+    }
     // The party's boss for an act, when the host picked one.
     partyBoss(n) { const id = this.bosses && this.bosses[n]; return id && HD.ENC[id] && HD.ENC[id].pool === 'boss' ? id : this.boss; }
 
@@ -225,7 +233,9 @@
     // Moves to a room; leaving the drawn paths spends a Moth Boots charge.
     moveTo(key) {
       const cur = this.pos && this.pos !== 'BOSS' ? this.map.nodes[this.pos] : null;
-      if (cur && key !== 'BOSS' && !cur.next.includes(key)) this.relic('MOTH_BOOTS').charges--;
+      // A room off the path costs a Moth Boots charge (co-op: the party's move is final even if this run was behind).
+      const boots = this.relic('MOTH_BOOTS');
+      if (cur && key !== 'BOSS' && !cur.next.includes(key) && boots && boots.charges > 0) boots.charges--;
       this.pos = key; this.path.push(key); this.floor++;
     }
     pickEncounter(kind) {

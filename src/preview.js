@@ -1,6 +1,7 @@
-// Damage preview: what a card or potion would do right now, found by playing it on a throwaway copy of the fight.
-// The copy has the same cards, powers and RNG positions, so Vulnerable, Guard, multi-hits, all-enemy cards and
-// side effects come out exactly as they would. The real fight is never touched.
+// Damage preview: what a card or potion would do right now, found by playing it on throwaway copies of the fight.
+// The copies have the same cards and powers, so Vulnerable, Guard, multi-hits, all-enemy cards and side effects come
+// out exactly as they would; anything that hangs on the order of a draw pile or on chance is left out (see HD.preview).
+// The real fight is never touched.
 (function () {
   const HD = globalThis.HD;
   const SHARED = new Set(['def', 'enc', 'map', 'ui']); // fixed data and screen hooks: the copy uses the same ones
@@ -43,30 +44,57 @@
     for (const s of g.seats) out[`p${s.index}`] = s.dead ? { hp: 0, block: 0 } : hpOf(s.p);
     return out;
   };
+  // The things a player cannot know: the order of every draw pile and how random picks will fall. A mixed copy has its
+  // draw piles shuffled and every random stream reseeded.
+  function unknown(x) {
+    const seed = () => Math.floor(Math.random() * 4294967296);
+    for (const s of x.seats) {
+      const d = s.draw;
+      for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+      for (const r of Object.values(s.run.rng)) r.setState(seed());
+    }
+    x.rng.setState(seed()); x.mrng.setState(seed());
+  }
+  // One play of the move on a copy of the fight (mixed: with the unknowns shuffled).
+  async function trial(g, seat, a, mixed) {
+    const x = HD.copyFight(g);
+    const s = x.seats[seat];
+    if (!s || x.over) return null;
+    if (mixed) unknown(x);
+    const before = read(x);
+    const tg = x.enemies.find((e) => e.uid === a.target) || null;
+    const run = () => x.withSeat(s, () => {
+      if (a.k === 'potion') return x.usePotion(a.slot, tg);
+      const c = x.hand.find((h) => h.uid === a.card);
+      return c ? x.playCard(c, tg) : false;
+    });
+    let timer;
+    const late = new Promise((res) => { timer = setTimeout(() => res('late'), WAIT_MS); });
+    const done = await Promise.race([run(), late]);
+    clearTimeout(timer);
+    return done === 'late' || done === false ? null : { before, after: read(x) };
+  }
   // seat: the player acting (an index); a: { k: 'play', card: uid, target } or { k: 'potion', slot, target }, where
-  // target is an enemy's uid. Resolves with { [enemy uid or 'p' + seat]: { hp, block } } for everything that changes,
-  // or null when the move cannot be previewed.
+  // target is an enemy's uid. The move is played on the real copy and on MIXES copies with the unknowns shuffled; only
+  // what comes out the same every time is shown, so a preview never gives away the top of the draw pile (Cascade) or
+  // where a random hit lands. Resolves with { out: { [enemy uid or 'p' + seat]: { hp, block } }, hidden } (hidden: some
+  // change depends on the unknowns and is left out), or null when the move cannot be previewed.
+  const MIXES = 5;
   HD.preview = async (g, seat, a) => {
     try {
-      const x = HD.copyFight(g);
-      const s = x.seats[seat];
-      if (!s || x.over) return null;
-      const before = read(x);
-      const tg = x.enemies.find((e) => e.uid === a.target) || null;
-      const run = () => x.withSeat(s, () => {
-        if (a.k === 'potion') return x.usePotion(a.slot, tg);
-        const c = x.hand.find((h) => h.uid === a.card);
-        return c ? x.playCard(c, tg) : false;
-      });
-      let timer;
-      const late = new Promise((res) => { timer = setTimeout(() => res('late'), WAIT_MS); });
-      const done = await Promise.race([run(), late]);
-      clearTimeout(timer);
-      if (done === 'late' || done === false) return null;
-      const after = read(x);
+      const real = await trial(g, seat, a, false);
+      if (!real) return null;
+      const all = [real];
+      for (let i = 0; i < MIXES; i++) { const t = await trial(g, seat, a, true); if (!t) return null; all.push(t); }
       const out = {};
-      for (const k of Object.keys(before)) if (after[k] && (after[k].hp !== before[k].hp || after[k].block !== before[k].block)) out[k] = after[k];
-      return out;
+      let hidden = false;
+      for (const k of Object.keys(real.before)) {
+        const was = real.before[k];
+        if (!all.some((t) => t.after[k].hp !== was.hp || t.after[k].block !== was.block)) continue; // untouched
+        if (all.every((t) => t.after[k].hp === real.after[k].hp && t.after[k].block === real.after[k].block)) out[k] = real.after[k];
+        else hidden = true;
+      }
+      return { out, hidden };
     } catch (e) {
       return null; // a preview must never break the real fight
     }

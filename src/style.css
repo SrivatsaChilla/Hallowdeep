@@ -301,7 +301,8 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .hand .card:hover, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
 .hand .card.sel { transform: translateY(-46px) rotate(0) scale(1.12); z-index: 6; }
 .hand .card.playable:hover { box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 0 0 2px var(--frame, var(--sts)); }
-.hand .card.ghost { opacity: .22; filter: grayscale(1); }
+/* The card being dragged leaves an empty slot (no faded copy), so a cancelled drag still flies back to its place. */
+.hand .card.ghost { visibility: hidden; }
 .hand .card.gone { visibility: hidden; }
 .card.flying { pointer-events: none; z-index: 70; box-shadow: 0 14px 30px rgba(0,0,0,.35); }
 .card.flying .tips, .card.flying .key { display: none; }
@@ -417,7 +418,6 @@ button.choice.gift { flex-direction: row; align-items: center; gap: .9rem; width
 button.choice.gift:hover, button.choice.gift:focus-visible { transform: translateX(4px); border-color: var(--brass); }
 button.choice.gift .gtext { display: flex; flex-direction: column; gap: .1rem; flex: 1; min-width: 0; }
 button.choice.gift b { font-size: 1.25rem; color: var(--brass); }
-button.choice.gift em { flex: 0 0 auto; margin-left: auto; font-size: .82rem; font-style: normal; color: var(--blood); }
 button.choice.gift.bane { border-style: dashed; border-color: var(--blood); border-left: 4px solid var(--blood); }
 @media (max-width: 760px) {
   .anc-plate h2 { font-size: 1.7rem; }
@@ -425,7 +425,6 @@ button.choice.gift.bane { border-style: dashed; border-color: var(--blood); bord
   .anc-face .sigil { width: 42px; height: 42px; }
   .bubble { font-size: .95rem; }
   button.choice.gift { flex-wrap: wrap; gap: .3rem .75rem; }
-  button.choice.gift em { flex-basis: 100%; box-sizing: border-box; margin-left: 0; padding-left: calc(44px + .75rem); }
 }
 @media (prefers-reduced-motion: reduce) { button.choice.gift { transition: none; } button.choice.gift:hover { transform: none; } }
 .card.t-curse { --frame: #4a3a52; }
@@ -1088,3 +1087,14 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 #chatpeek.on { opacity: 1; transform: none; }
 #chatpeek p { margin: 0; padding: .4rem .7rem; border-radius: 10px; background: var(--panel); border: 1.5px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.35); font-size: .9rem; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { #chatpeek { transition: none; } }
+/* Coming back to a co-op game after a drop. */
+.rejoin { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; margin: .4rem 0 .8rem; }
+.rejoin .continue { margin: 0; }
+.coopnote + .reconnect { margin-left: .4rem; vertical-align: middle; }
+/* The damage preview's total when a move hits several enemies. */
+.dmgtotal { display: inline-block; margin-right: .6rem; padding: .1em .55em; border-radius: 6px; background: var(--panel); border: 1px solid var(--blood); font-weight: 600; }
+.dmgtotal b { color: var(--blood); font-size: 1.05em; }
+/* A multi-play's queue: the cards it will take, face down, behind the one being played. */
+.cardback { position: fixed; z-index: 61; width: 120px; height: 168px; box-sizing: border-box; border-radius: 10px; border: 2px solid var(--line); pointer-events: none;
+  background: radial-gradient(circle at 50% 46%, var(--wax) 0 13%, transparent 14%), radial-gradient(circle at 50% 46%, transparent 0 21%, var(--line) 22% 24%, transparent 25%), repeating-linear-gradient(45deg, var(--panel) 0 7px, var(--bg) 7px 14px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.45); transition: left .28s ease-out, top .28s ease-out, transform .28s ease-out, opacity .35s; }

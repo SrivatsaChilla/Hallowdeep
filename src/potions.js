@@ -77,7 +77,7 @@
   potion('FRESH_START', { name: 'Fresh Start Flask', rarity: 'Rare', text: 'Shuffle ALL your cards into your draw pile. Draw 5 cards.',
     use: async (g) => { g.draw.push(...g.hand.splice(0), ...g.discard.splice(0)); g.rng.shuffle(g.draw); await g.rh('onShuffle'); await g.drawCards(5); } });
   potion('CHAOS_DISTILLATE', { name: 'Chaos Distillate', rarity: 'Rare', text: 'Play the top 3 cards of your draw pile.',
-    use: async (g) => { for (let i = 0; i < 3; i++) { const c = await g.takeTopOfDraw(); if (!c) break; await g.autoPlay(c, {}); if (g.over) break; } } });
+    use: async (g) => { if (g.ui.queueBacks) g.ui.queueBacks(g, 3); for (let i = 0; i < 3; i++) { const c = await g.takeTopOfDraw(); if (!c) break; await g.autoPlay(c, {}); if (g.over) break; } } });
   potion('FORESIGHT', { name: 'Foresight Drop', rarity: 'Rare', text: 'Choose a card in your draw pile and put it in your hand.',
     use: async (g) => { if (!g.draw.length) return; const [c] = await g.choose({ from: g.draw.slice(), n: 1, prompt: 'Take a card from your draw pile' }); if (c) { g.draw.splice(g.draw.indexOf(c), 1); g.addToHand(c); } } });
   potion('BOTTOMLESS_BREW', { name: 'Bottomless Brew', rarity: 'Rare', outside: true, text: 'Fill every empty potion slot with a random potion.',

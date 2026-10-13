@@ -156,8 +156,12 @@ Rules from the wiki's co-op page; the design and status are in dev/MULTIPLAYER.m
 - Co-op bosses: the host picks one boss per act for the whole party, at random, but a boss the host met in recent
   co-op runs sits out until the other bosses of its act have come up.
 - Damage preview (not in the original): while a card or potion is aimed, or a card that needs no target is pointed
-  at, each HP bar shows the HP it would take as a pale stretch, and Guard shows what it would become. It is worked out
-  by playing the move on a copy of the fight (src/preview.js), so it is exact.
+  at, each HP bar shows the HP it would take as a pale stretch, and Guard shows what it would become; a move that hits
+  several enemies also shows the total. It is worked out by playing the move on copies of the fight (src/preview.js),
+  so it is exact, and it leaves out anything that hangs on the order of the draw pile or on chance (Cascade, random
+  hits), so it never gives away what is coming.
+- Cards that play themselves (Cascade, Frenzied Hands, Furtive, Chaos Distillate) show in the middle of the fight for
+  a moment before they resolve; a multi-play sets out the cards it will take face down behind it.
 - Deck view: Show upgrades draws every card that can still be upgraded as its upgraded version.
 - Sound: none of the original's sounds or music are used. Effects (cards, hits, Guard, potions, gold, rewards) and
   ambient music (calm, fight and boss moods) are made in the browser as the game plays (src/audio.js), with volume

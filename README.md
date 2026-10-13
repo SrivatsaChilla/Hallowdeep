@@ -34,11 +34,14 @@ join with it. No account needed.
 - **Fights side by side.** See your teammates' HP, Energy and cards in hand, where they are pointing, what they
   are aiming at, and every card they play.
 - **Party chat** (press T), Mend at rest sites, potions thrown to a teammate, and 37 co-op only cards.
+- **Dropped out?** Refresh, or reopen the game on the same device, and pick **Rejoin your co-op game** to get your
+  seat back, even in the middle of a fight. If the host drops, they rejoin the same way and everyone reconnects.
 - Enemies get more HP the bigger the party.
 
 ## Also
 
-- **Damage preview:** aim a card or potion and every health bar shows exactly what it would take.
+- **Damage preview:** aim a card or potion and every health bar shows exactly what it would take, with a total
+  when it hits several enemies. Anything left to chance or to the draw pile stays hidden.
 - **Sound:** effects and ambient music, made in the browser. Volume and mute are under the speaker button.
 
 ## Run it locally

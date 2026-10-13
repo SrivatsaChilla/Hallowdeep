@@ -395,6 +395,7 @@
       <h1>HallowDeep</h1>
       <p class="lede">Fight your way through ${HD.ACT} with a deck that grows as you go.</p>
       ${readSave() ? `<button class="primary continue" data-act="resume">Continue your run (${T('Depth')} ${readSave().run.data.floor})</button>` : ''}
+      ${HD.coopRejoinHTML ? HD.coopRejoinHTML() : ''}
       <div class="roster">
         ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}
       </div>
@@ -488,6 +489,20 @@
     </div>`;
   }
 
+  // The previewed move's damage to all enemies together, when it hits more than one (and none of it is left to chance).
+  function damageTotal(g) {
+    const out = S.preview && !S.busy && !S.preview.hidden ? S.preview.out : null;
+    if (!out) return '';
+    let hp = 0, guard = 0, hit = 0;
+    for (const e of g.enemies) {
+      const pv = out[e.uid];
+      if (!pv) continue;
+      const lost = Math.max(0, e.hp - pv.hp), broke = Math.max(0, e.block - pv.block);
+      if (lost || broke) hit++;
+      hp += lost; guard += broke;
+    }
+    return hit >= 2 ? `<span class="dmgtotal">Total: <b>${hp}</b> damage to ${hit} enemies${guard ? `, ${guard} ${T('Guard')} broken` : ''}</span>` : '';
+  }
   function combatScreen() {
     const g = S.g;
     const p = g.p;
@@ -514,6 +529,7 @@
       : S.selPotion != null && S.run.potions[S.selPotion] ? `Choose a target for ${esc(HD.POTIONS[S.run.potions[S.selPotion]].name)}, or press Esc.`
       : g.phase === 'enemy' ? 'Enemies are acting.' : S.coop ? S.coop.combatNote(g) : '';
     const stuck = g.phase === 'player' && !S.busy && !g.hand.some((c) => g.canPlay(c));
+    const total = damageTotal(g);
     const log = S.showLog ? `<div class="log" data-key="log" aria-live="polite">${g.log.slice(-14).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : '';
     return `${bar()}<main class="combat" data-key="scr-combat-${g.encId}-${S.run.floor}">
       <section class="arena">
@@ -527,7 +543,7 @@
         ${S.coop ? S.coop.alliesHTML(g) : ''}
         <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${foes}</div>
       </section>
-      <p class="hint" aria-live="polite">${hint}</p>
+      <p class="hint" aria-live="polite">${total}${hint}</p>
       <section class="dock">
         <div class="left">
           <div class="orbs" data-key="orbs"><div class="energy ${g.energy ? '' : 'spent'}" data-key="orb" aria-label="Energy ${g.energy} of ${g.maxEnergy}"><span>${g.energy}</span><small>/${g.maxEnergy}</small></div>${S.run.charId === 'CROWNED' || g.stars ? `<span class="glints" data-key="glints" tabindex="0" aria-label="${g.stars} ${T('Glint')}${g.stars === 1 ? '' : 's'}" ${tip(T('Glints'), HD.TERMS[T('Glint')] || '', 'Resource')}>${GLINT}<b>${g.stars}</b></span>` : ''}</div>
@@ -662,7 +678,7 @@
     const line = voice.lines[HD.hashSeed(`${r.seed}:${r.act}`) % voice.lines.length];
     const rows = S.offer.map((rid) => {
       const d = HD.RELICS[rid];
-      return `<button class="choice gift ${d.bane ? 'bane' : ''}" data-key="gift-${rid}" data-act="gift" data-arg="${rid}">${HD.relicIcon(rid, 'medal')}<span class="gtext"><b>${esc(d.name)}</b><span>${esc(d.text)}</span></span>${d.bane ? '<em>Comes with a cost</em>' : ''}</button>`;
+      return `<button class="choice gift ${d.bane ? 'bane' : ''}" data-key="gift-${rid}" data-act="gift" data-arg="${rid}">${HD.relicIcon(rid, 'medal')}<span class="gtext"><b>${esc(d.name)}</b><span>${esc(d.text)}</span></span></button>`;
     }).join('');
     return `${bar()}<main class="panel ancient" data-key="scr-ancient">
       <header class="anc-plate"><h2>${esc(who)}</h2>${voice.epithet ? `<small>${esc(T(voice.epithet))}</small>` : ''}</header>
@@ -1208,6 +1224,8 @@
     }),
     fx: (type, t, n) => { fxq.push({ type, id: t.isPlayer ? (S.me && t.seat !== S.me ? `a${t.seat.index}` : 'p') : t.uid, n }); scheduleRender(); fxSound(type, t, n); },
     pace: async (g, e) => { S.acting = e.uid; render(); await HD.sleep(reduced() ? 150 : 480); S.acting = null; },
+    autoShow: (g, c) => showAuto(g, c),
+    queueBacks: (g, n) => queueBacks(g, n),
   };
 
   // ---------- aiming ----------
@@ -1284,7 +1302,7 @@
     const sig = `${JSON.stringify(a)}|${HD.fightHash(g)}`;
     if (sig === pvSig) return;
     pvSig = sig;
-    HD.preview(g, seat, a).then((out) => { if (pvSig !== sig) return; S.preview = out ? { sig, out } : null; scheduleRender(); });
+    HD.preview(g, seat, a).then((res) => { if (pvSig !== sig) return; S.preview = res ? { sig, out: res.out, hidden: res.hidden } : null; scheduleRender(); });
   }
 
   // ---------- dragging cards ----------
@@ -1532,6 +1550,67 @@
       { transform: `translate(${end.x.toFixed(1)}px, ${end.y.toFixed(1)}px) scale(.3)`, opacity: 0 },
     ], { duration: STAGE_MS, easing: 'ease-in-out', fill: 'both' });
     an.onfinish = an.oncancel = () => { k.remove(); staged = Math.max(0, staged - 1); };
+  }
+  // ---------- cards that play themselves (Cascade, Frenzied Hands, Furtive, Chaos Distillate...) ----------
+  // Each one comes out of the draw pile (or the hand, or a teammate's panel) to the middle of the fight face up, holds
+  // long enough to read, and then plays. A multi-play first sets out the cards it will take face down in a queue behind
+  // it, so nothing about them shows before each one is played (and the order of the draw pile stays secret).
+  const AUTO_HOLD_MS = 560;
+  const BACKS_MAX = 6;
+  let backs = []; // the face-down queue, front first
+  const stageSpot = (slot) => { const a = rectOf($('.arena')); return { x: a.x - slot * 34, y: a.top + a.h * 0.38 - slot * 12, scale: 1.15 - slot * 0.08 }; };
+  function autoOrigin(g, c) {
+    const hand = c && $(`[data-key="h${c.uid}"]`);
+    if (hand) return rectOf(hand);
+    const el = S.me && g.seat !== S.me ? $(`[data-key="a${g.seat.index}"]`) : $('[data-act="pile"][data-arg="draw"]');
+    return el ? rectOf(el) : null;
+  }
+  // Puts a flying piece at a screen point (its center), then moves it with a transition.
+  const place = (el, at, scale) => { el.style.left = `${at.x - 60}px`; el.style.top = `${at.y - 84}px`; el.style.transform = `scale(${scale})`; };
+  function relayBacks() { backs.forEach((el, i) => { const at = stageSpot(i + 1); el.style.zIndex = String(61 - i); place(el, at, at.scale); }); }
+  function queueBacks(g, n) {
+    if (reduced() || S.screen !== 'combat' || !$('.arena')) return;
+    for (const b of backs) b.remove();
+    backs = [];
+    const from = autoOrigin(g, null);
+    if (!from) return;
+    for (let i = 0; i < Math.min(n, BACKS_MAX); i++) {
+      const el = document.createElement('div');
+      el.className = 'cardback';
+      fxLayer().appendChild(el);
+      place(el, from, 0.45);
+      backs.push(el);
+    }
+    requestAnimationFrame(relayBacks);
+    setTimeout(relayBacks, 30); // also when animation frames are paused
+    // Cards the multi-play never reached (the piles ran dry) fade away afterwards.
+    const mine = backs.slice();
+    setTimeout(() => { for (const b of mine) if (b.isConnected) { b.style.opacity = '0'; setTimeout(() => b.remove(), 400); } backs = backs.filter((b) => !mine.includes(b) || b.isConnected); }, n * (AUTO_HOLD_MS + 700) + 1500);
+  }
+  async function showAuto(g, c) {
+    if (reduced() || S.screen !== 'combat' || !$('.arena')) return;
+    const back = backs.shift();
+    const from = back ? rectOf(back) : autoOrigin(g, c);
+    if (back) back.remove();
+    relayBacks();
+    if (!from) return;
+    const box = document.createElement('div');
+    box.innerHTML = cardHTML(c, {});
+    const k = box.firstElementChild;
+    if (!k) return;
+    k.classList.add('flying', 'auto');
+    k.style.cssText = 'position:fixed;width:120px;height:168px;margin:0;z-index:62;transition:left .24s ease-out,top .24s ease-out,transform .24s ease-out,opacity .3s;';
+    fxLayer().appendChild(k);
+    place(k, from, back ? stageSpot(1).scale : 0.5);
+    const at = stageSpot(0);
+    requestAnimationFrame(() => place(k, at, at.scale));
+    setTimeout(() => place(k, at, at.scale), 30);
+    await HD.sleep(AUTO_HOLD_MS);
+    // Now it plays: it slips toward the enemies and fades while its effect lands.
+    k.style.transition = 'left .32s ease-in,top .32s ease-in,transform .32s ease-in,opacity .32s ease-in';
+    place(k, { x: at.x + 140, y: at.y - 30 }, 0.45);
+    k.style.opacity = '0';
+    setTimeout(() => k.remove(), 400);
   }
   // A short label floating over someone (another player's card or potion name).
   const label = (id, text) => { fxq.push({ type: 'say', id, n: text }); scheduleRender(); };

@@ -126,6 +126,7 @@
       else if (a.k === 'end') await this.endTurn();
       else if (a.k === 'unend') this.cancelEndTurn();
       else if (a.k === 'leave') this.leave();
+      else if (a.k === 'back') this.comeBack();
       await this.endRound(); // the last player still playing may have fallen, or left
     }
     // The active player left the game (their connection dropped). They stop taking part, like a player who fell, so
@@ -137,6 +138,13 @@
       s.dead = true; s.ready = false;
       this.say(`${this.p.name} left the game.`);
       if (this.seats.every((x) => x.dead)) { this.over = true; this.won = false; }
+    }
+    // A player who left the fight rejoined the game: they play on from where they were. Only the host sends this.
+    comeBack() {
+      const s = this.seat;
+      if (!s.gone || this.over) return;
+      s.gone = false;
+      if (s.p.hp > 0) { s.dead = false; s.ready = false; this.say(`${this.p.name} is back.`); }
     }
     freshTurn() { return { cards: 0, attacks: 0, skills: 0, powers: 0, played: 0, types: new Set(), lostHp: false, burned: false, blockFromCard: false, starsGained: 0, starsSpent: 0, created: 0, energySpent: 0 }; }
 
@@ -823,7 +831,10 @@
       await this.topCheck();
       return true;
     }
+    // A card that plays itself (Cascade, Frenzied Hands, Furtive...). The screen first shows it in the middle of the
+    // fight for a moment (ui.autoShow); a multi-play has already set out the cards it will take face down (ui.queueBacks).
     async autoPlay(c, o = {}) {
+      if (this.ui.autoShow) await this.ui.autoShow(this, c);
       const d = CARDS[c.id];
       if (d.cost === null || HD.kwOf(c).includes('Unplayable')) {
         if (o.burn) await this.burn(c); else this.discard.push(c);
@@ -955,6 +966,7 @@
         const x = this.rng.pick(this.hand); const id = this.randomPoolCard((d) => d.id !== x.id);
         Object.assign(x, { id, up: false, bonus: 0, replay: 0, costTurn: null, confCost: null, freeTurn: false, freeCombat: false });
       }
+      if (p.pw.mayhem && this.ui.queueBacks) this.ui.queueBacks(this, p.pw.mayhem);
       for (let i = 0; i < (p.pw.mayhem || 0) && !this.over; i++) { const x = await this.takeTopOfDraw(); if (x) await this.autoPlay(x, {}); }
       this.checkEnd();
       await this.topCheck();
