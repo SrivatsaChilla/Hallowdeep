@@ -128,7 +128,7 @@
     afterCombat: (run) => { if (run.hp <= run.maxHp / 2) run.heal(12); } });
   relic('Rare', 'EMBER_EGG', { name: 'Ember Egg', text: 'Whenever you add an Attack to your deck, Upgrade it.', eggType: 'Attack' });
   relic('Rare', 'WITHERED_HAND', { name: 'Withered Hand', text: 'Whenever you play a Power, a random card in your hand is free this turn.',
-    afterPlay: async (g, r, c, d) => { if (d.type !== 'Power') return; const xs = g.hand.filter((x) => typeof CARDS[x.id].cost === 'number' && g.costOf(x) > 0); if (xs.length) g.rng.pick(xs).freeTurn = true; } });
+    afterPlay: async (g, r, c, d) => { if (d.type !== 'Power') return; const costs = (x) => (typeof CARDS[x.id].cost === 'number' && g.costOf(x) > 0) || (typeof g.starCostOf(x) === 'number' && g.starCostOf(x) > 0); const xs = g.hand.filter(costs); if (xs.length) g.rng.pick(xs).freeTurn = true; } });
   relic('Rare', 'WORN_COIN', { name: 'Worn Coin', text: 'On pickup, gain 300 Gold.', noShop: true, onPickup: (run) => run.gainGold(300) });
   relic('Rare', 'POCKET_SUNDIAL', { name: 'Pocket Sundial', text: 'If you play 3 or fewer cards during your turn, draw 3 extra cards next turn.',
     turnEnd: async (g) => { if (g.t.cards <= 3) g.addPw(g.p, 'nextDraw', 3); } });

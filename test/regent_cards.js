@@ -1,5 +1,6 @@
 // Behavior checks for the Regent's cards, relics and potions: the Regal Blade (Usurper, Hunting Edge, Riposte, Call the
-// Blade), Glint powers, created-card counters, Thralls, Hollow Form, Royal Stare and the end-of-combat Gold.
+// Blade), Glint powers, created-card counters, Thralls, Hollow Form, Royal Stare, the end-of-combat Gold, and free
+// play (no Energy and no Glints) versus "costs 0 Energy".
 // Usage: node test/regent_cards.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = vm.createContext({ console, Math, Promise, setTimeout });
@@ -105,6 +106,34 @@ const blade = (g) => g.hand.find((c) => c.id === 'REGAL_BLADE');
   eq('Fencing Manual: Forge 10 at combat start', 10 + blade(g).forged, 20);
   g = await fight(); await HD.POTIONS.GLINT_FLASK.use(g); await HD.POTIONS.ROYAL_NERVE.use(g);
   eq("Star Potion and King's Courage: 3 Glints; Forge 15", [g.stars, 10 + blade(g).forged], [3, 25]);
+
+  // ---------- free to play: no Energy and no Glints ----------
+  g = await fight({ hand: ['STARFALL'] }); await HD.POTIONS.MADCAP_DROPS.use(g);
+  const sf = g.hand[0];
+  eq('Touch of Insanity: Starfall (0 Energy, 2 Glints) is free, so it costs 0 Glints and is playable with none', [g.starCostOf(sf), g.canPlay(sf)], [0, true]);
+  await play(g, 'STARFALL');
+  eq('Playing it spends no Glints and no Energy', [g.stars, g.energy, dealt(g)], [0, 9, 8]);
+  g = await fight({ stars: 2 }); g.discard = [g.makeCard('CONJUNCTION', false)]; await HD.POTIONS.MEMORY_DRAUGHT.use(g); await play(g, 'CONJUNCTION');
+  eq('Liquid Memories: Conjunction is free this turn (2 Glints kept, +2 Energy)', [g.stars, g.energy], [2, 11]);
+  g = await fight({ noStarter: true, relics: ['BRIGHT_SCARF'], hand: ['WARD_OFF', 'WARD_OFF', 'WARD_OFF', 'WARD_OFF', 'STARFALL'] });
+  for (let i = 0; i < 4; i++) await play(g, 'WARD_OFF');
+  eq('Brilliant Scarf: the 5th card is free, Glints included', [g.starCostOf(g.hand[0]), g.canPlay(g.hand[0])], [0, true]);
+  await play(g, 'STARFALL'); eq('... and playing it spends none', [g.stars, g.energy], [0, 5]);
+  g = await fight({ noStarter: true, relics: ['WITHERED_HAND'], hand: ['EVENT_HORIZON', 'STARFALL'] }); await play(g, 'EVENT_HORIZON');
+  eq('Mummified Hand can pick a card that only costs Glints, and makes it free', [g.hand[0].freeTurn, g.starCostOf(g.hand[0])], [true, 0]);
+  g = await fight({ hand: ['STARFALL'] }); g.p.pw.hollowForm = 2;
+  eq('Void Form: the first cards each turn are free, Glints included', g.starCostOf(g.hand[0]), 0);
+  // "Costs 0 Energy" only changes Energy
+  g = await fight({ hand: ['STARRY_MANTLE', 'STARFALL'] }); g.p.pw.rot = 1; g.p.pw.freeSkill = 1;
+  g.hand[1].ench = { id: 'TEZCATARAS_EMBER', n: 1 };
+  eq('Corruption, Pounce and Old Ember cost 0 Energy but keep the Glint cost', [g.starCostOf(g.hand[0]), g.canPlay(g.hand[0]), g.starCostOf(g.hand[1]), g.canPlay(g.hand[1])], [1, false, 2, false]);
+  // X costs: a free X card uses everything you have and spends none of it
+  g = await fight({ stars: 4, hand: ['STARDRIFT'] }); g.hand[0].freeTurn = true; await play(g, 'STARDRIFT');
+  eq('Stardust (X Glints), free: hits 4 times and keeps all 4 Glints', [dealt(g), g.stars], [20, 4]);
+  g = await fight({ stars: 4, hand: ['STARDRIFT'] }); await play(g, 'STARDRIFT');
+  eq('Stardust, not free: hits 4 times and spends all 4 Glints', [dealt(g), g.stars], [20, 0]);
+  g = await fight({ hand: ['CYCLONE_SWING'] }); g.energy = 3; g.hand[0].freeTurn = true; await play(g, 'CYCLONE_SWING');
+  eq('Whirlwind (X Energy), free: X is the Energy you have, none spent', [dealt(g), g.energy], [15, 3]);
 
   // ---------- run wiring ----------
   const r = new HD.Run('anc', 'CROWNED'); r.addRelic('OLD_TOOTH'); r.addRelic('ELDER_TOUCH');

@@ -206,7 +206,6 @@
       if (c.setCost != null && k > c.setCost) k = c.setCost;
       if (d.type === 'Power' && this.p.pw.curious) k -= this.p.pw.curious;
       if (d.type === 'Power' && this.has('SPIKED_GLOVES')) k += 1;
-      if (this.has('BRIGHT_SCARF') && this.t && this.t.cards === 4 && this.hand.includes(c)) k = 0;
       if (c.costTurn != null) k = c.costTurn;
       if (c.bonusCost) k += c.bonusCost;
       if (d.costFn) k = d.costFn(this, c, k);
@@ -214,7 +213,7 @@
       if (d.type === 'Attack' && this.p.pw.tangled) k += 1;
       if (d.type === 'Skill' && this.p.pw.freeSkill) k = 0;
       if (d.type === 'Power' && this.p.pw.freePower) k = 0;
-      if (this.hollowFree() || c.freeTurn || c.freeCombat || (d.type === 'Attack' && this.p.pw.keepSwinging) || (d.type === 'Skill' && this.p.pw.rot)) k = 0;
+      if (this.freeToPlay(c) || (d.type === 'Attack' && this.p.pw.keepSwinging) || (d.type === 'Skill' && this.p.pw.rot)) k = 0;
       return Math.max(0, k);
     }
     canPlay(c) {
@@ -637,10 +636,15 @@
     }
     // ---------- Stars ----------
     hollowFree() { return !!this.p.pw.hollowForm && this.phase === 'player' && this.t.cards < this.p.pw.hollowForm; }
+    // "Free to play" in the data costs nothing: no Energy and no Glints. "Costs 0 Energy" effects
+    // (Corruption, Pounce, Synthesis, Unrelenting, Old Ember...) only change the Energy cost in costOf.
+    freeToPlay(c) {
+      return !!(c.freeTurn || c.freeCombat || this.hollowFree() || (this.has('BRIGHT_SCARF') && this.t && this.t.cards === 4 && this.hand.includes(c)));
+    }
     starCostOf(c) {
       const d = CARDS[c.id];
       if (d.star === 'X') return 'X';
-      if (d.star == null || this.hollowFree()) return 0;
+      if (d.star == null || this.freeToPlay(c)) return 0;
       const k = (c.up && d.upStar != null ? d.upStar : d.star) + (c.starBonus || 0);
       return Math.max(0, k);
     }
@@ -766,11 +770,12 @@
       if (!this.canPlay(c)) return false;
       const d = CARDS[c.id];
       let x = 0, paid = 0;
-      if (d.cost === 'X') { x = this.energy + (this.has('UNKNOWN_REAGENT') ? 2 : 0); paid = this.energy; this.energy = 0; }
+      const free = this.freeToPlay(c);
+      if (d.cost === 'X') { x = this.energy + (this.has('UNKNOWN_REAGENT') ? 2 : 0); paid = free ? 0 : this.energy; this.energy -= paid; }
       else { paid = this.costOf(c); this.energy -= paid; }
       const sc = this.starCostOf(c);
-      const starsPaid = sc === 'X' ? this.stars : sc;
-      if (sc === 'X') x = starsPaid;
+      if (sc === 'X') x = this.stars;
+      const starsPaid = sc === 'X' ? (free ? 0 : this.stars) : sc;
       if (paid > 0) { this.t.energySpent += paid; await this.hook('energySpent', paid); }
       if (starsPaid > 0) await this.spendStars(starsPaid);
       if (d.type === 'Attack' && this.p.pw.keepSwinging) delete this.p.pw.keepSwinging;

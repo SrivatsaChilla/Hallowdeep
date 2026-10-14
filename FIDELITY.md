@@ -87,7 +87,13 @@ Built from the v0.111 data: 75 HP, 99 Gold, 3 Energy, 4 Strikes, 4 Defends, Fall
 Card text follows the card where it disagrees with the power text (Conqueror lasts this turn, Tyranny draws and Exhausts 1, Royalties gives 30 Gold).
 
 Approximations:
-- Void Form makes the first 2 cards each turn free of both Energy and Stars ("free to play"); X-cost cards still spend everything.
+- Free play follows the data's wording. "Free to play" or "is free" (Void Form, Bullet Time, Infernal Blade, Discovery,
+  Distraction, White Noise, Metamorphosis, Crossbow, Jeweled Mask, Mummified Hand, Brilliant Scarf, the card potions,
+  Liquid Memories, Touch of Insanity, Sly) costs no Energy and no Stars. "Costs 0 Energy" (Corruption, Pounce, Synthesis,
+  Unrelenting, Veilpiercer, Flatten, Tezcatara's Ember) changes only the Energy cost.
+- A free X-cost card (any character) uses everything you have as X and spends none of it, as in Slay the Spire 1; the
+  v0.111 data does not say.
+- Mummified Hand can pick a card that costs only Stars.
 - Crescent Spear counts cards with a Star cost in every pile (hand, draw, discard, Exhaust) plus itself, and counts X Star cards.
 - Black Hole deals its damage once per gain or spend, not once per Star.
 - Tyranny keeps the Exhaust keyword the data gives it; a played Power leaves no card behind, so it has no effect.
