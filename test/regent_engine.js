@@ -36,6 +36,17 @@ const dealt = (g) => 500 - g.enemies[0].hp;
   await g.playCard(g.hand[0], g.enemies[0]);
   eq('Spending Stars on a 0 Energy, 2 Star card', [g.stars, g.energy, dealt(g), g.t.starsSpent], [1, 8, 8, 2]);
   eq('Star events reach registered hooks', seen.slice(-2), [['gained', 3], ['spent', 2]]);
+  // A free card costs nothing at all, Glint included; a card that only costs 0 still costs its Glint.
+  g = await fight(['T_STAR2']); g.hand[0].freeTurn = true;
+  eq('A card free this turn costs no Glint', [g.starCostOf(g.hand[0]), g.canPlay(g.hand[0])], [0, true]);
+  await g.playCard(g.hand[0], g.enemies[0]);
+  eq('and plays without spending any', [g.stars, g.t.starsSpent, dealt(g)], [0, 0, 8]);
+  g = await fight(['T_STAR2']); g.hand[0].freeCombat = true;
+  eq('A card free this fight costs no Glint', g.starCostOf(g.hand[0]), 0);
+  g = await fight(['T_STAR2']); g.p.pw.keepSwinging = 1; g.stars = 2;
+  eq('A card that only costs 0 still costs its Glint', [g.costOf(g.hand[0]), g.starCostOf(g.hand[0])], [0, 2]);
+  g = await fight(['T_STARX']); g.hand[0].freeTurn = true; g.stars = 3;
+  eq('A free X Glint card still spends what it has', g.starCostOf(g.hand[0]), 'X');
   g = await fight(['T_STARX']); g.stars = 4; await g.playCard(g.hand[0], g.enemies[0]);
   eq('X Star cost spends every Star and passes X to the card', [g.stars, dealt(g)], [0, 20]);
   g = await fight(['T_STARX']); eq('An X Star card is playable with 0 Stars', g.canPlay(g.hand[0]), true);

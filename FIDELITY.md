@@ -88,6 +88,9 @@ Card text follows the card where it disagrees with the power text (Conqueror las
 
 Approximations:
 - Void Form makes the first 2 cards each turn free of both Energy and Stars ("free to play"); X-cost cards still spend everything.
+- Everything that makes a card free (Void Form, Bright Scarf, a card made free this turn or this fight by a potion,
+  card or relic) waives its Stars as well as its Energy. Effects that only make a card cost 0 (Corruption-like
+  powers, Keep Swinging, Lunge, Assembly, the Old Ember enchantment) leave its Star cost alone.
 - Crescent Spear counts cards with a Star cost in every pile (hand, draw, discard, Exhaust) plus itself, and counts X Star cards.
 - Black Hole deals its damage once per gain or spend, not once per Star.
 - Tyranny keeps the Exhaust keyword the data gives it; a played Power leaves no card behind, so it has no effect.

@@ -231,7 +231,7 @@
       if (c.setCost != null && k > c.setCost) k = c.setCost;
       if (d.type === 'Power' && this.p.pw.curious) k -= this.p.pw.curious;
       if (d.type === 'Power' && this.has('SPIKED_GLOVES')) k += 1;
-      if (this.has('BRIGHT_SCARF') && this.t && this.t.cards === 4 && this.hand.includes(c)) k = 0;
+      if (this.scarfFree(c)) k = 0;
       if (c.costTurn != null) k = c.costTurn;
       if (c.bonusCost) k += c.bonusCost;
       if (d.costFn) k = d.costFn(this, c, k);
@@ -662,10 +662,14 @@
     }
     // ---------- Stars ----------
     hollowFree() { return !!this.p.pw.hollowForm && this.phase === 'player' && this.t.cards < this.p.pw.hollowForm; }
+    scarfFree(c) { return this.has('BRIGHT_SCARF') && !!this.t && this.t.cards === 4 && this.hand.includes(c); }
+    // "Free" (Hollow Form, Bright Scarf, a card made free this turn or this fight): no Energy and no Glint. A card that
+    // only "costs 0" (Rot Oath, Keep Swinging, Lunge, Assembly, Old Ember) still costs its Glint.
+    freeToPlay(c) { return this.hollowFree() || !!c.freeTurn || !!c.freeCombat || this.scarfFree(c); }
     starCostOf(c) {
       const d = CARDS[c.id];
       if (d.star === 'X') return 'X';
-      if (d.star == null || this.hollowFree()) return 0;
+      if (d.star == null || this.freeToPlay(c)) return 0;
       const k = (c.up && d.upStar != null ? d.upStar : d.star) + (c.starBonus || 0);
       return Math.max(0, k);
     }
