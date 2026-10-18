@@ -25,9 +25,10 @@ https://github.com/user-attachments/assets/d4d03bcb-1d71-41a8-8b12-3d0dcacf00bd
 
 </div>
 
-HallowDeep is a clone of Slay the Spire 2: every rule and number follows the game's v0.111 data, with its own
-names, card art and interface. Pick one of five heroes, build a deck as you go, and fight your way up three acts.
-It runs on desktops, tablets and phones, and saves as you play.
+HallowDeep is a clone of Slay the Spire 2: every rule and number follows the game's v0.111 data, with its own card
+art and interface. Pick a hero (Ironclad, Silent, Regent, Necrobinder or Defect), build a deck as you go, and fight
+your way up three acts, then climb Ascension 1 to 10 for each hero. It shows the original names, with a switch for
+HallowDeep's own. It runs on desktops, tablets and phones, and saves as you play.
 
 ## Play together
 
@@ -57,5 +58,11 @@ python3 build.py
 ```
 
 Then open `dist/hallowdeep.html` in a browser. Developer notes are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Host your own copy
+
+Netlify builds the game from this repo as is (`netlify.toml` runs `build.py` and serves `dist/`). Co-op works without
+any setup; to help players on strict networks connect, add a Cloudflare TURN key as the `CF_TURN_KEY_ID` and
+`CF_TURN_API_TOKEN` environment variables (mark the token secret).
 
 <sub>An unofficial fan project, not affiliated with Mega Crit. Game data from [Spire Codex](https://github.com/ptrlrd/spire-codex). For personal and learning use.</sub>
