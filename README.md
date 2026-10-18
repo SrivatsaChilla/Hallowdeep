@@ -55,20 +55,29 @@ else joins with it. No accounts, nothing to install.
 - **Show upgrades** in your deck view to see what every card becomes before you upgrade it.
 - **Sound and music,** made in your browser as you play. Volume and mute are under the speaker button.
 
-## Run it locally
+## Play it on your own computer
 
-From the HallowDeep folder:
+All you need is Python 3. Grab the code and build the game:
 
 ```bash
+git clone https://github.com/SrivatsaChilla/Hallowdeep.git
+cd Hallowdeep
 python3 build.py
 ```
 
-Then open `dist/hallowdeep.html` in a browser. Developer notes are in [CONTRIBUTING.md](CONTRIBUTING.md).
+That packs the whole game into one file, `dist/hallowdeep.html`. Double-click it to play in your browser; solo
+runs work even offline. Curious how it's put together? [CONTRIBUTING.md](CONTRIBUTING.md) walks through the code.
 
-## Host your own copy
+## Put your own copy online
 
-Netlify builds the game from this repo as is (`netlify.toml` runs `build.py` and serves `dist/`). Co-op works without
-any setup; to help players on strict networks connect, add a Cloudflare TURN key as the `CF_TURN_KEY_ID` and
-`CF_TURN_API_TOKEN` environment variables (mark the token secret).
+Fork this repo and add it to [Netlify](https://www.netlify.com/). It finds `netlify.toml`, builds the game and puts
+it online, with co-op working from the start.
+
+If a friend can't connect (school and office networks often block direct connections), give the game a
+[Cloudflare TURN](https://developers.cloudflare.com/realtime/turn/) key. Add these in Netlify's environment
+variables:
+
+- `CF_TURN_KEY_ID`
+- `CF_TURN_API_TOKEN` (tick "Contains secret values")
 
 <sub>An unofficial fan project, not affiliated with Mega Crit. Game data from [Spire Codex](https://github.com/ptrlrd/spire-codex). For personal and learning use.</sub>
