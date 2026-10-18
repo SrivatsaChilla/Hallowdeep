@@ -8,9 +8,9 @@
 
 No download or account needed.
 
-<a href="docs/hallowdeep.mp4"><img src="docs/hallowdeep.jpg" alt="HallowDeep in action: click to watch the 21 second video" width="808"></a>
+https://github.com/user-attachments/assets/d4d03bcb-1d71-41a8-8b12-3d0dcacf00bd
 
-<sub>▶ Click the picture to watch the 21 second video.</sub>
+<sub>Video not playing? [Download it](docs/hallowdeep.mp4) (21 seconds).</sub>
 
 <table>
 <tr>
