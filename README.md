@@ -8,6 +8,10 @@
 
 No download or account needed.
 
+<a href="docs/hallowdeep.mp4"><img src="docs/hallowdeep.jpg" alt="HallowDeep in action: click to watch the 21 second video" width="808"></a>
+
+<sub>▶ Click the picture to watch the 21 second video.</sub>
+
 <table>
 <tr>
 <td><img src="docs/screenshots/fight.jpg" alt="A fight: the Wirebound faces three Choir monsters with a hand of five cards" width="400"></td>
