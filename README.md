@@ -8,10 +8,6 @@
 
 No download or account needed.
 
-https://github.com/user-attachments/assets/d4d03bcb-1d71-41a8-8b12-3d0dcacf00bd
-
-<sub>Video not playing? [Download it](docs/hallowdeep.mp4) (21 seconds).</sub>
-
 <table>
 <tr>
 <td><img src="docs/screenshots/fight.jpg" alt="A fight: the Wirebound faces three Choir monsters with a hand of five cards" width="400"></td>
@@ -50,6 +46,9 @@ else joins with it. No accounts, nothing to install.
 
 - **Damage preview.** Aim a card or potion and every health bar shows exactly what it will take, plus the total when
   it hits several enemies. Anything left to chance or to your draw pile stays secret.
+- **Incoming total.** When several enemies attack at once, or one hits more than once, the damage headed your way is
+  added up above the enemies. If the enemies' turn would kill you, it turns red and says how much more Block you need
+  to survive.
 - **Cards that play themselves** (Cascade, Mayhem, Distilled Chaos) rise from your draw pile into a queue, face down
   until each one plays.
 - **Show upgrades** in your deck view to see what every card becomes before you upgrade it.

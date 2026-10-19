@@ -7,3 +7,5 @@ dev/audit_report.txt
 __pycache__/
 node_modules/
 *.log
+# launch video work files from the Brag skill (the finished video is uploaded to GitHub, not committed)
+brag-output*/
