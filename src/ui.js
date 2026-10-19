@@ -101,8 +101,10 @@
   const NODE_ICON = HD.NODE_ICONS; // map node icons live in sigils.js
   const NODE_LABEL = { monster: 'Fight', elite: 'Elite', rest: 'Rest site', shop: 'Shop', treasure: 'Treasure', unknown: 'Unknown', boss: 'Boss' };
 
-  // Abstract creature sigil, derived from the monster id. Original art stand-in.
+  // An enemy's drawing (foes1-3.js), or for anything without one an abstract sigil derived from its id.
   function sigil(id, size) {
+    const art = HD.FOE_ART[id];
+    if (art) return `<svg class="sigil foe-art" width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true" style="--d:${-(HD.hashSeed(id + 'd') % 3000)}ms">${art}</svg>`;
     let h = HD.hashSeed(id);
     const sides = 3 + (h % 5); h >>>= 3;
     const rot = h % 360; h >>>= 9;
@@ -530,6 +532,18 @@
       : g.phase === 'enemy' ? 'Enemies are acting.' : S.coop ? S.coop.combatNote(g) : '';
     const stuck = g.phase === 'player' && !S.busy && !g.hand.some((c) => g.canPlay(c));
     const total = damageTotal(g);
+    const inc = g.phase === 'player' && !g.over ? g.incoming() : null;
+    // need: the Block still needed to live through the enemies' turn (0: you live; Infinity: Block alone won't do).
+    const need = inc ? S.need : null;
+    const lethal = need > 0;
+    const showInc = inc && ((inc.total && (inc.attackers >= 2 || inc.multi)) || lethal);
+    const needText = need === Infinity ? `Lethal even with more ${T('Guard')}` : lethal ? `${T('Guard')} <b>${need}</b> more to survive` : '';
+    const incBody = showInc ? `${inc.total ? `${icon('attack')}Incoming <b>${inc.total}</b>` : ''}${needText ? `<span class="need">${needText}</span>` : ''}` : '';
+    const incLabel = showInc ? `${inc.total ? `Incoming damage this turn: ${inc.total}. ` : ''}${needText.replace(/<\/?b>/g, '')}` : '';
+    const incCls = lethal ? ' lethal' : '';
+    const incoming = showInc ? `<div class="incoming${incCls}" data-key="incoming" role="note" aria-label="${incLabel}">${incBody}</div>` : '';
+    // Short screens have no room by the enemies, so the total moves into the hint line (while it isn't busy with a preview).
+    const incomingLine = showInc && !total ? `<span class="incoming-line${incCls}">${incBody}</span>` : '';
     const log = S.showLog ? `<div class="log" data-key="log" aria-live="polite">${g.log.slice(-14).map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : '';
     return `${bar()}<main class="combat" data-key="scr-combat-${g.encId}-${S.run.floor}">
       <section class="arena">
@@ -541,9 +555,9 @@
           ${cellRow(g)}${clutchBox(g)}
         </div>
         ${S.coop ? S.coop.alliesHTML(g) : ''}
-        <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${foes}</div>
+        <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${incoming}${foes}</div>
       </section>
-      <p class="hint" aria-live="polite">${total}${hint}</p>
+      <p class="hint" aria-live="polite">${total}${incomingLine}${hint}</p>
       <section class="dock">
         <div class="left">
           <div class="orbs" data-key="orbs"><div class="energy ${g.energy ? '' : 'spent'}" data-key="orb" aria-label="Energy ${g.energy} of ${g.maxEnergy}"><span>${g.energy}</span><small>/${g.maxEnergy}</small></div>${S.run.charId === 'CROWNED' || g.stars ? `<span class="glints" data-key="glints" tabindex="0" aria-label="${g.stars} ${T('Glint')}${g.stars === 1 ? '' : 's'}" ${tip(T('Glints'), HD.TERMS[T('Glint')] || '', 'Resource')}>${GLINT}<b>${g.stars}</b></span>` : ''}</div>
@@ -563,6 +577,7 @@
 
   // After a fight: a Loot list of one-line rows. Gold, potions and relics are taken with a click; a card reward opens
   // its own Choose a Card screen (Back returns here with the reward kept, Skip gives it up).
+  const GO_ARROW = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CARD_ROW_ICON = '<svg class="rowico" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="2" width="12" height="16" rx="2" fill="#e9dcc0" stroke="#3a2a1a" stroke-width="1.4"/><rect x="6" y="4.5" width="8" height="5.5" rx="1" fill="#8a3a2a"/><path d="M6.5 12.5h7M6.5 14.8h5" stroke="#3a2a1a" stroke-width="1.2" stroke-linecap="round"/></svg>';
   function lootRow(it, i) {
     const r = S.run, arg = `rw:${i}`, key = `data-key="lr-${i}"`;
@@ -602,7 +617,7 @@
       <h2 class="ribbon">Loot!</h2>
       ${S.kind === 'boss' ? `<p class="hint">${esc(actName())} falls quiet.</p>` : ''}
       <div class="lootbox">${rows || '<p class="lootempty">Nothing left to take.</p>'}</div>
-      <button class="primary lootgo" data-act="continue">${S.kind === 'boss' ? 'Finish the act' : left ? 'Skip' : 'Continue'}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="primary lootgo" data-act="continue">${S.kind === 'boss' ? 'Finish the act' : left ? 'Skip' : 'Continue'}${GO_ARROW}</button>
     </main>`;
   }
 
@@ -863,11 +878,74 @@
     }
     return el;
   }
+  const isCardGain = (it) => /card|upgraded|removed|enchanted|downgraded/.test(it.kind);
+  // Gains leave for the top bar: cards to the deck, the rest to their own spot; removed cards fade away instead.
+  function flyAway(pieces) {
+    return Promise.all(pieces.map(([it, el], i) => new Promise((res) => {
+      if (it.kind === 'removed') {
+        el.animate([{ opacity: 1, filter: 'none' }, { opacity: 0, filter: 'grayscale(1) brightness(.4)', transform: 'scale(.85)' }], { duration: 500, delay: i * 60, fill: 'forwards' }).onfinish = res;
+        return;
+      }
+      const to = targetFor(it);
+      if (!to) { res(); return; }
+      const a = el.getBoundingClientRect(), b = to.getBoundingClientRect();
+      const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
+      el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.15)`, opacity: 0.2 }],
+        { duration: 480, delay: i * 70, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = () => { pulse(targetFor(it)); res(); };
+    })));
+  }
+  // A non-card gain as a Loot row, to read rather than take.
+  function gainRow(it) {
+    if (it.kind === 'relic') { const d = HD.RELICS[it.id]; return `${HD.relicIcon(it.id)}<span><b>${esc(d.name)}</b><small>${esc(d.text)}</small></span>`; }
+    if (it.kind === 'potion') { const d = HD.POTIONS[it.id]; return `${HD.potionIcon(it.id)}<span><b>${esc(d.name)}</b><small>${esc(d.text)}</small></span>`; }
+    if (it.kind === 'gold') return `${COIN}<span>${it.n > 0 ? '+' : ''}${it.n} Gold</span>`;
+    return `<span>${it.n > 0 ? '+' : ''}${it.n} Max HP</span>`;
+  }
+  // Several cards at once (a relic like Large Capsule): everything gained is laid out like the Loot screen after a
+  // fight and stays until Continue, then flies into the top bar.
+  const GAINS_FLY_MAX_MS = 1600;
+  async function lootPanel(layer, items) {
+    sfx(items.some((x) => x.kind === 'relic') ? 'relic' : 'card');
+    const others = items.filter((it) => !isCardGain(it)), cards = items.filter(isCardGain);
+    const added = cards.filter((it) => it.kind === 'card').length;
+    const dim = document.createElement('div');
+    dim.className = 'show-dim gains-dim';
+    const box = document.createElement('div');
+    box.className = 'gains';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', 'Loot');
+    box.innerHTML = `<h2 class="ribbon">Loot!</h2>
+      <div class="lootbox">${others.map((it, i) => `<div class="loot lootrow" data-i="${i}">${gainRow(it)}</div>`).join('')}
+        <div class="loot lootrow cardrow">${CARD_ROW_ICON}<span>${added === 1 ? 'A card was' : `${added} cards were`} added to your deck</span></div></div>
+      <div class="show-row gains-cards"></div>
+      <button class="primary lootgo" type="button">Continue${GO_ARROW}</button>`;
+    const pieces = others.map((it, i) => [it, box.querySelector(`[data-i="${i}"] > :first-child`)]);
+    const row = box.querySelector('.gains-cards');
+    for (const it of cards) { const el = pieceFor(it); row.appendChild(el); pieces.push([it, el]); }
+    layer.appendChild(dim);
+    layer.appendChild(box);
+    const go = box.querySelector('.lootgo');
+    go.focus({ preventScroll: true });
+    await new Promise((res) => {
+      go.addEventListener('click', res, { once: true });
+      box.addEventListener('keydown', (e) => { if (e.key === 'Escape') res(); });
+    });
+    if (!reduced()) {
+      for (const el of box.querySelectorAll('.ribbon, .lootbox, .lootgo')) el.style.visibility = 'hidden';
+      // A stalled animation must never leave the player stuck behind the panel.
+      await Promise.race([flyAway(pieces.filter(([, el]) => el)), new Promise((res) => setTimeout(res, GAINS_FLY_MAX_MS))]);
+    }
+    box.remove();
+    dim.remove();
+  }
   async function showcase() {
     if (showing || !S.run || !S.run.feed || !S.run.feed.length || S.screen === 'title') return;
     showing = true;
     const layer = fxLayer();
     while (S.run.feed.length) {
+      // Mid-fight gains keep the quick showcase, so a panel never stops a fight.
+      if (S.screen !== 'combat' && S.run.feed.filter((x) => x.kind === 'card').length >= 2) { await lootPanel(layer, S.run.feed.splice(0)); continue; }
       // Show up to six things at once; cards line up together the way multiple rewards do.
       const batch = S.run.feed.splice(0, 6);
       const SOUND = { relic: 'relic', upgraded: 'upgrade', maxhp: 'maxhp', card: 'card', enchanted: 'upgrade', potion: 'potion', gold: 'coin', removed: 'remove' };
@@ -877,7 +955,7 @@
       box.className = 'showcase';
       const rowItems = document.createElement('div'), rowCards = document.createElement('div');
       rowItems.className = 'show-row'; rowCards.className = 'show-row';
-      const pieces = batch.map((it) => { const el = pieceFor(it); (/card|upgraded|removed|enchanted|downgraded/.test(it.kind) ? rowCards : rowItems).appendChild(el); return [it, el]; });
+      const pieces = batch.map((it) => { const el = pieceFor(it); (isCardGain(it) ? rowCards : rowItems).appendChild(el); return [it, el]; });
       for (const row of [rowItems, rowCards]) if (row.children.length) box.appendChild(row);
       const dim = document.createElement('div');
       dim.className = 'show-dim';
@@ -891,18 +969,7 @@
       }
       pieces.forEach(([, el], i) => el.animate([{ opacity: 0, transform: 'translateY(18px) scale(.7)' }, { opacity: 1, transform: 'none' }], { duration: 260, delay: i * 70, easing: 'cubic-bezier(.2,.8,.3,1.2)', fill: 'backwards' }));
       await new Promise((res) => setTimeout(res, hold));
-      await Promise.all(pieces.map(([it, el], i) => new Promise((res) => {
-        if (it.kind === 'removed') {
-          el.animate([{ opacity: 1, filter: 'none' }, { opacity: 0, filter: 'grayscale(1) brightness(.4)', transform: 'scale(.85)' }], { duration: 500, delay: i * 60, fill: 'forwards' }).onfinish = res;
-          return;
-        }
-        const to = targetFor(it);
-        if (!to) { res(); return; }
-        const a = el.getBoundingClientRect(), b = to.getBoundingClientRect();
-        const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
-        el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.15)`, opacity: 0.2 }],
-          { duration: 480, delay: i * 70, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = () => { pulse(targetFor(it)); res(); };
-      })));
+      await flyAway(pieces);
       box.remove();
       if (reduced()) dim.remove(); else dim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).onfinish = () => dim.remove();
     }
@@ -1030,8 +1097,14 @@
     if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', fontsChanged);
   }
   function afterRender() {
+    // Layout writes first (fitting the hand and card text), then everything that reads layout, so one redraw costs
+    // one layout instead of several.
+    fitNames();
+    fitHand();
+    fitHandText();
+    liftCard();
     flushFx();
-    if (S.screen === 'combat') updatePreview(); else S.preview = null;
+    if (S.screen === 'combat') { updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
     if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
     showcase();
     if (tipAnchor) {
@@ -1041,10 +1114,6 @@
       if (now && (now.dataset.tt != null || now.matches(GLOSSED))) showTip(now); else hideTip();
     }
     if (S.screen !== 'combat') persist();
-    fitNames();
-    fitHand();
-    fitHandText();
-    liftCard();
     BG.set(S.screen === 'combat' ? 'fight' : 'calm');
     if (HD.audio) HD.audio.mood(S.screen === 'combat' ? (S.kind === 'boss' ? 'boss' : 'fight') : ['title', 'lobby', 'end'].includes(S.screen) ? 'title' : 'calm');
     if (S.screen === 'map' && S.scrollMap) {
@@ -1098,7 +1167,10 @@
   }
   function fitNames() {
     for (const el of document.querySelectorAll('.card:not(.big) .cname')) {
-      if (el.scrollWidth <= el.clientWidth) continue;
+      // Each name is measured once per screen size (0: it fits as is); cardHTML applies what was found.
+      const key = fitKey(el.textContent, el.closest('.dock') ? 'hand' : 'full');
+      if (nameFit.has(key)) continue;
+      if (el.scrollWidth <= el.clientWidth) { nameFit.set(key, 0); continue; }
       const cur = parseFloat(getComputedStyle(el).fontSize);
       // Phone hand cards are read by lifting them (scaled up), so their names may shrink further.
       const floor = compact() && el.closest('.dock') ? 6 : 8;
@@ -1106,7 +1178,7 @@
       el.style.fontSize = `${size}px`;
       // Widths round to whole pixels; nudge down until the name truly fits.
       for (let i = 0; i < 8 && size > floor && el.scrollWidth > el.clientWidth; i++) { size = Math.round((size - 0.3) * 10) / 10; el.style.fontSize = `${size}px`; }
-      nameFit.set(fitKey(el.textContent, el.closest('.dock') ? 'hand' : 'full'), size);
+      nameFit.set(key, size);
     }
   }
   // Cards overlap just enough to fit the hand; past a limit the hand scrolls instead.
@@ -1229,8 +1301,8 @@
   };
 
   // ---------- aiming ----------
-  function foeAt(x, y) {
-    const el = document.elementFromPoint(x, y);
+  const foeAt = (x, y) => foeOf(document.elementFromPoint(x, y));
+  function foeOf(el) {
     const f = el && el.closest('.foe');
     if (!f || !S.g) return null;
     return S.g.alive().find((e) => `e${e.uid}` === f.dataset.key) || null;
@@ -1268,7 +1340,8 @@
   function aimedMove() {
     const g = S.g;
     if (S.screen !== 'combat' || !g || S.busy || S.overlay || g.over || g.phase !== 'player' || (S.me && (S.me.dead || S.me.ready))) return null;
-    const foe = S.mouse ? foeAt(S.mouse.x, S.mouse.y) : null;
+    const at = S.mouse ? document.elementFromPoint(S.mouse.x, S.mouse.y) : null; // one hit test serves both checks
+    const foe = foeOf(at);
     if (drag && drag.on) {
       if (drag.targeted) return foe ? { k: 'play', card: drag.c.uid, target: foe.uid } : null;
       if (!drag.k.classList.contains('armed') || CARDS[drag.c.id].target === 'ally') return null; // ally cards: no preview
@@ -1279,8 +1352,7 @@
     if (S.selPotion != null && !(S.coop && S.coop.giving)) return foe ? { k: 'potion', slot: S.selPotion, target: foe.uid } : null;
     // With a mouse, a card in hand that needs no choice of enemy shows what it would do as soon as it is pointed at.
     if (S.sel || S.selPotion != null || dragOnly() || !S.mouse) return null;
-    const el = document.elementFromPoint(S.mouse.x, S.mouse.y);
-    const h = el && el.closest('.hand .card');
+    const h = at && at.closest('.hand .card');
     const c = h && g.hand.find((x) => `h${x.uid}` === h.dataset.key);
     if (!c || !g.canPlay(c) || CARDS[c.id].target === 'ally') return null;
     if (CARDS[c.id].target !== 'enemy') return { k: 'play', card: c.uid };
@@ -1292,6 +1364,17 @@
     if (S.sel && CARDS[S.sel.id].target === 'enemy') return S.sel.id;
     if (S.selPotion != null && !(S.coop && S.coop.giving)) return S.run.potions[S.selPotion] || null;
     return null;
+  }
+  // The Block still needed to survive the enemies' turn, played out on copies; worked out again whenever the fight changes.
+  let svSig = null;
+  function updateSurvival() {
+    const g = S.g, seat = S.me ? S.me.index : 0;
+    if (!g || g.over || g.phase !== 'player' || !g.seats[seat] || g.seats[seat].dead) { svSig = null; if (S.need != null) { S.need = null; scheduleRender(); } return; }
+    if (S.busy) return; // mid-move: keep the last answer until the move lands
+    const sig = HD.fightHash(g);
+    if (sig === svSig) return;
+    svSig = sig;
+    HD.blockNeeded(g, seat).then((n) => { if (svSig !== sig || n === S.need) return; S.need = n; scheduleRender(); });
   }
   // Played on a copy of the fight; worked out again whenever the move or the fight changes.
   let pvSig = null;
@@ -1890,6 +1973,17 @@
     const c = mine(() => S.g.hand.find((x) => `h${x.uid}` === el.dataset.key));
     if (c) drag = { c, el, x0: ev.clientX, y0: ev.clientY, on: false };
   });
+  // Pointer moves can come faster than the screen redraws; dragging, aiming and the preview catch up once per frame.
+  let pointerFrame = 0;
+  function pointerWork() {
+    pointerFrame = 0;
+    const m = S.mouse;
+    if (!m) return;
+    if (drag && drag.on) moveDrag(m.x, m.y);
+    updateAim();
+    updatePreview();
+    if (S.coop) S.coop.pointer(m.x, m.y, aimCard());
+  }
   document.addEventListener('pointermove', (ev) => {
     S.mouse = { x: ev.clientX, y: ev.clientY };
     if (drag && !drag.on) {
@@ -1897,10 +1991,7 @@
       if (S.busy || !mine(() => S.g.canPlay(drag.c))) { drag = null; return; }
       mine(startDrag);
     }
-    if (drag && drag.on) moveDrag(ev.clientX, ev.clientY);
-    updateAim();
-    updatePreview();
-    if (S.coop) S.coop.pointer(ev.clientX, ev.clientY, aimCard());
+    if (!pointerFrame) pointerFrame = requestAnimationFrame(pointerWork);
   });
   document.documentElement.addEventListener('pointerleave', () => { if (S.coop) S.coop.pointerOff(); });
   document.addEventListener('pointerup', (ev) => {
@@ -1945,10 +2036,9 @@
     let mode = null, col = '#888', motes = [], w = 0, h = 0, last = 0, raf = 0;
     const spawn = (any) => ({ x: Math.random() * w, y: any ? Math.random() * h : h + 8, r: 0.6 + Math.random() * 1.9, vy: 0.1 + Math.random() * 0.28, ph: Math.random() * 6.28, a: 0.12 + Math.random() * 0.3 });
     function size() {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      // Soft dust needs no retina pixels: a 1x canvas is a quarter of the work on a 2x screen.
       w = innerWidth; h = innerHeight;
-      cv.width = w * dpr; cv.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cv.width = w; cv.height = h;
       motes = Array.from({ length: Math.round((w * h) / 24000) }, () => spawn(true));
     }
     function paint(t) {

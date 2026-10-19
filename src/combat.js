@@ -1194,6 +1194,18 @@
       if (m.summon) kinds.push('summon');
       return { kind: kinds[0] || 'unknown', kinds, name: m.name, dmg: m.atk != null ? this.enemyDmg(e, m.atk) : null, hits: m.hitsFn ? m.hitsFn(e) : m.hits || 1, block: m.block || 0 };
     }
+    // The intents' damage added up, for the Incoming total: worth showing with two or more attackers or a multi-hit.
+    incoming() {
+      let total = 0, attackers = 0, multi = false;
+      for (const e of this.alive()) {
+        const it = this.intentOf(e);
+        if (it.dmg == null) continue;
+        total += it.dmg * it.hits;
+        attackers++;
+        if (it.hits > 1) multi = true;
+      }
+      return { total, attackers, multi };
+    }
   }
   // Damage modifiers other modules register (co-op cards): ATK_ADD adds to a player's attack, TAKEN_MODS changes what an
   // enemy deals to the active player.

@@ -16,6 +16,12 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   g.p.pw.sapped=1; eq('6+2 sapped exposed', g.atkDmg(6,e,null), 9);
   delete g.p.pw.sapped; delete g.p.pw.might; g.p.pw.exposed=1; e.pw.might=0;
   eq('enemy 14 vs exposed player', g.enemyDmg(e,14), 21);
+  // Incoming total: every attack intent's damage times its hits
+  const gi=new HD.Combat(new HD.Run('inc'),'CRABS',HD.autoUI); await gi.start(); const [iClaw,iCannon]=gi.enemies;
+  gi.facing=iClaw.uid; iClaw.intent='THRASH'; iCannon.intent='TARGETING_RETICLE'; eq('incoming: Thrash 12 + Reticle 3 from behind (4)', gi.incoming(), {total:16,attackers:2,multi:false});
+  iClaw.intent='BUG_STING'; iCannon.intent='CHARGE_UP'; eq('incoming: Bug Sting 6x2 alone', gi.incoming(), {total:12,attackers:1,multi:true});
+  gi.p.pw.exposed=1; eq('incoming follows the intents (Vulnerable player)', gi.incoming().total, 18);
+  delete gi.p.pw.exposed; iClaw.intent='ADAPT'; iCannon.alive=false; eq('incoming: nothing attacking', gi.incoming(), {total:0,attackers:0,multi:false});
   // Pity: fresh normal reward rare band is negative
   const r2=new HD.Run('p'); r2.rarityOffset=-5; let rares=0; for(let i=0;i<3000;i++){ r2.rarityOffset=-5; if(r2.rollRarity('monster',false)==='Rare') rares++; } eq('no rares at reset', rares, 0);
   r2.rarityOffset=40; let rr=0; for(let i=0;i<5000;i++){ if(r2.rollRarity('monster',false)==='Rare') rr++; } console.log('     rare at +40 offset ~43%:', (rr/50).toFixed(1)+'%');

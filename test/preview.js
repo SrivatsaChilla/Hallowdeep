@@ -19,7 +19,7 @@ const POTIONS = ['FLAME_FLASK', 'BLASTING_VIAL', 'TOXIN_FLASK', 'EXPOSING_VIAL',
 // The real fight answers prompts the way the preview's copy does, so the two can be compared exactly.
 const FIRST = { choose: async (g, o) => o.from.slice(0, o.min != null ? o.min : o.n) };
 
-const st = { fights: 0, previews: 0, checked: 0, wrong: 0, touched: 0, none: 0, hidden: 0, errors: 0 };
+const st = { fights: 0, previews: 0, checked: 0, wrong: 0, touched: 0, none: 0, hidden: 0, errors: 0, needs: 0, needWrong: 0, needSpare: 0 };
 const read = (g) => {
   const out = {};
   for (const e of g.enemies) out[e.uid] = e.alive ? { hp: Math.max(0, e.hp), block: e.block } : { hp: 0, block: 0 };
@@ -69,7 +69,18 @@ async function fight(i) {
     }
     // Make one move for real (sometimes end the turn instead) and compare it with its preview.
     const j = moves.length && rng.next() < 0.85 ? rng.int(moves.length) : -1;
-    if (j < 0) { await g.act(seat.index, { k: 'end' }); continue; }
+    if (j < 0) {
+      // The survival check before ending the turn: it must leave the real fight alone, and 0 means you live.
+      const hash = HD.fightHash(g), uid = HD.uidPeek();
+      const need = await HD.blockNeeded(g, seat.index);
+      st.needs++;
+      if (HD.fightHash(g) !== hash || HD.uidPeek() !== uid) { st.touched++; console.error(`fight ${i}: the survival check changed the real fight`); }
+      const solo = g.seats.length === 1;
+      await g.act(seat.index, { k: 'end' });
+      if (solo && need === 0 && seat.dead) { st.needWrong++; console.error(`fight ${i} (${g.encId}): said you live, but you died`); }
+      if (solo && need > 0 && need !== Infinity && !seat.dead) st.needSpare++; // luck went your way: the mixes keep the worst case
+      continue;
+    }
     const name = moves[j].k === 'play' ? cardName(seat, moves[j].card) : seat.run.potions[moves[j].slot];
     const before = read(g);
     await g.act(seat.index, moves[j]);
@@ -88,10 +99,24 @@ async function fight(i) {
   }
 }
 
+// The survival number on a known fight: two crabs hit for 12 + 4 (the one behind you deals 50% more), you have 10 HP.
+async function survivalChecks() {
+  const g = new HD.Combat(new HD.Run('need'), 'CRABS', HD.autoUI); await g.start();
+  const [claw, cannon] = g.enemies; g.facing = claw.uid; claw.intent = 'THRASH'; cannon.intent = 'TARGETING_RETICLE';
+  g.p.hp = 10; g.p.block = 0;
+  const hash = HD.fightHash(g);
+  const got = [await HD.blockNeeded(g, 0)];
+  g.p.block = 7; got.push(await HD.blockNeeded(g, 0));
+  g.p.block = 0; g.p.pw.doom = 50; got.push(await HD.blockNeeded(g, 0)); delete g.p.pw.doom;
+  const want = [7, 0, Infinity]; // 16 - 7 leaves 1 HP; with 7 Block you live; a Knell of 50 kills you whatever you block
+  if (JSON.stringify(got) !== JSON.stringify(want) || HD.fightHash(g) !== hash) { st.needWrong++; console.error('survival checks:', got, '!= ', want); }
+}
+
 (async () => {
+  try { await survivalChecks(); } catch (e) { st.errors++; console.error('survival checks:', e.stack.split('\n').slice(0, 5).join('\n')); }
   for (let i = 0; i < FIGHTS; i++) {
     try { await fight(i); } catch (e) { st.errors++; console.error(`fight ${i}:`, e.stack.split('\n').slice(0, 5).join('\n')); if (st.errors > 3) break; }
   }
   console.log(JSON.stringify(st));
-  if (st.wrong || st.touched || st.errors || !st.checked) process.exitCode = 1;
+  if (st.wrong || st.touched || st.errors || st.needWrong || !st.checked) process.exitCode = 1;
 })();

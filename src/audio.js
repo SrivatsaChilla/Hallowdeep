@@ -29,12 +29,16 @@
     comp.connect(ctx.destination);
     master = gainTo(comp);
     sfxBus = gainTo(master); musicBus = gainTo(master);
-    // One shared echo, like a stone hall. Each bus feeds it through its own volume.
-    const verb = ctx.createConvolver();
-    verb.buffer = hall(2.6);
-    const wet = gainTo(master, 0.32);
-    verb.connect(wet);
-    sfxEcho = gainTo(verb); musicEcho = gainTo(verb);
+    // One shared echo, like a stone hall. Each bus feeds it through its own volume. Building the reverb is the slow
+    // part of starting audio, so it is attached a moment later instead of inside the first click (sounds play dry
+    // until then).
+    sfxEcho = ctx.createGain(); musicEcho = ctx.createGain();
+    setTimeout(() => {
+      const verb = ctx.createConvolver();
+      verb.buffer = hall(HALL_SEC);
+      verb.connect(gainTo(master, 0.32));
+      sfxEcho.connect(verb); musicEcho.connect(verb);
+    }, REVERB_DELAY_MS);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -43,9 +47,12 @@
     return ctx;
   }
   function gainTo(dest, v = 1) { const g = ctx.createGain(); g.gain.value = v; g.connect(dest); return g; }
+  // A shorter impulse costs less to set up and less audio-thread work on every frame of sound.
+  const HALL_SEC = 1.4;
+  const REVERB_DELAY_MS = 250;
   function hall(sec) {
     const n = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, n, ctx.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < n; i++) { const k = 1 - i / n; d[i] = (Math.random() * 2 - 1) * k * k * k; } }
     return b;
   }
   // Volumes, eased so a change never clicks.

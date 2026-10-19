@@ -99,4 +99,56 @@
       return null; // a preview must never break the real fight
     }
   };
+
+  // Survival: the least extra Block the player needs to live through their own end of turn and the enemies' turn.
+  // Played out on mixed copies only, keeping the worst case, so it never depends on the real draw pile or on luck.
+  const SURVIVE_MIXES = 3;
+  const MAX_EXTRA = 999;
+  async function lives(g, seat, extra) {
+    const x = HD.copyFight(g);
+    const s = x.seats[seat];
+    if (!s || x.over || s.dead) return null;
+    unknown(x);
+    s.p.block += extra;
+    const run = async () => { await x.withSeat(s, () => x.seatTurnEnd()); if (!x.over) await x.enemyTurn(); return true; };
+    let timer;
+    const late = new Promise((res) => { timer = setTimeout(() => res('late'), WAIT_MS); });
+    const done = await Promise.race([run(), late]);
+    clearTimeout(timer);
+    return done === 'late' ? null : !s.dead && s.p.hp > 0;
+  }
+  // Between simulations the browser gets a chance to paint (a posted message is the quickest way back; the tests'
+  // sandbox has only setTimeout).
+  const breather = typeof MessageChannel === 'function'
+    ? () => new Promise((res) => { const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); res(); }; ch.port2.postMessage(0); })
+    : () => new Promise((res) => setTimeout(res, 0));
+  const GUESS_SLACK = 10; // over the incoming attacks, for blockable damage at the end of the turn
+  // Resolves with 0 (you live as you are), the Block still needed, Infinity (Block alone can't save you), or null.
+  HD.blockNeeded = async (g, seat) => {
+    try {
+      // Every simulation starts from one snapshot, so a move made meanwhile can't mix two fights into one answer.
+      const snap = HD.copyFight(g);
+      const safe = async (extra) => {
+        for (let i = 0; i < SURVIVE_MIXES; i++) {
+          await breather();
+          const ok = await lives(snap, seat, extra);
+          if (ok === null) throw new Error('no answer');
+          if (!ok) return false;
+        }
+        return true;
+      };
+      if (await safe(0)) return 0;
+      // Blocking every attack is usually enough, so the search starts below that; only past it does it need the full range.
+      const guess = Math.min(MAX_EXTRA, snap.incoming().total + GUESS_SLACK);
+      let lo = 0, hi = guess; // lo dies, hi lives
+      if (!(await safe(guess))) {
+        if (!(await safe(MAX_EXTRA))) return Infinity;
+        lo = guess; hi = MAX_EXTRA;
+      }
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (await safe(mid)) hi = mid; else lo = mid; }
+      return hi;
+    } catch (e) {
+      return null; // like the preview, this must never break the real fight
+    }
+  };
 })();
