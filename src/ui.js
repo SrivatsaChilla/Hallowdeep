@@ -538,7 +538,7 @@
     const lethal = need > 0;
     const showInc = inc && ((inc.total && (inc.attackers >= 2 || inc.multi)) || lethal);
     const needText = need === Infinity ? `Lethal even with more ${T('Guard')}` : lethal ? `${T('Guard')} <b>${need}</b> more to survive` : '';
-    const incBody = showInc ? `${inc.total ? `${icon('attack')}Incoming <b>${inc.total}</b>` : ''}${needText ? `<span class="need">${needText}</span>` : ''}` : '';
+    const incBody = showInc ? `${inc.total ? `<span class="incsum">${icon('attack')}Incoming <b>${inc.total}</b></span>` : ''}${needText ? `<span class="need">${needText}</span>` : ''}` : '';
     const incLabel = showInc ? `${inc.total ? `Incoming damage this turn: ${inc.total}. ` : ''}${needText.replace(/<\/?b>/g, '')}` : '';
     const incCls = lethal ? ' lethal' : '';
     const incoming = showInc ? `<div class="incoming${incCls}" data-key="incoming" role="note" aria-label="${incLabel}">${incBody}</div>` : '';
@@ -1083,7 +1083,7 @@
     requestAnimationFrame(() => {
       refitQueued = false;
       if (!document.querySelector('.card')) return;
-      fitNames(); fitHand(); fitHandText(); liftCard();
+      fitNames(); fitHand(); fitHandText(); liftCard(); fitIncoming();
       // cards animate their tilt for a moment; measure the room they need again once they've settled
       clearTimeout(refit.settle);
       refit.settle = setTimeout(() => { if (document.querySelector('.hand .card')) { fitHand(); liftCard(); } }, 260);
@@ -1103,6 +1103,7 @@
     fitHand();
     fitHandText();
     liftCard();
+    fitIncoming();
     flushFx();
     if (S.screen === 'combat') { updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
     if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
@@ -1180,6 +1181,19 @@
       for (let i = 0; i < 8 && size > floor && el.scrollWidth > el.clientWidth; i++) { size = Math.round((size - 0.3) * 10) / 10; el.style.fontSize = `${size}px`; }
       nameFit.set(key, size);
     }
+  }
+  // The Incoming badge is centred over the enemies; a lone enemy sits against the edge, where it would run off screen.
+  // Then its two parts stack (still centred), and if that still doesn't fit it slides back inside.
+  function fitIncoming() {
+    const el = $('.incoming');
+    if (!el) return;
+    const box = el.closest('main').getBoundingClientRect(), pad = 8;
+    const over = () => { const r = el.getBoundingClientRect(); return r.width ? Math.max(0, r.right - box.right + pad) - Math.max(0, box.left + pad - r.left) : 0; };
+    el.classList.remove('stack'); el.style.translate = '';
+    if (!over()) return;
+    el.classList.add('stack');
+    const dx = over();
+    if (dx) el.style.translate = `${-dx}px 0`;
   }
   // Cards overlap just enough to fit the hand; past a limit the hand scrolls instead.
   function liftCard() {

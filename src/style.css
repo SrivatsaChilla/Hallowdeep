@@ -303,6 +303,10 @@ button:active:not(:disabled) { transform: translateY(1px); }
 /* The lift straightens a tilted card and can carry its corner out from under the mouse, which ends the hover and drops
    it back: a loop. While hovered, an invisible edge covers where the corners rested, so the card stays up. */
 .hand .card:hover::after { content: ''; position: absolute; inset: -14px -36px -50px; }
+/* The same loop for anything else that lifts or nudges on hover: a strip over the edge it moves off keeps the hover. */
+.pickrow .card:hover::after, .grid .card[role="button"]:hover::after { content: ''; position: absolute; left: -4px; right: -4px; top: calc(100% - 2px); height: 16px; }
+button.choice.gift, button.loot.lootrow { position: relative; }
+button.choice.gift:hover::after, button.loot.lootrow:hover:not(:disabled)::after { content: ''; position: absolute; top: -2px; bottom: -2px; right: calc(100% - 2px); width: 12px; }
 .hand .card.playable:hover { box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 0 0 2px var(--frame, var(--sts)); }
 /* The card being dragged leaves an empty slot (no faded copy), so a cancelled drag still flies back to its place. */
 .hand .card.ghost { visibility: hidden; }
@@ -1125,7 +1129,10 @@ button.loot.lootrow:hover:not(:disabled), button.loot.lootrow:focus-visible { bo
 .incoming { position: absolute; left: 50%; bottom: calc(100% + .35rem); transform: translateX(-50%); display: flex; align-items: center; gap: .3rem; padding: .12em .65em; border-radius: 6px; background: var(--panel); border: 1px solid var(--blood); font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 2; }
 .incoming .ico { width: 18px; height: 18px; color: var(--blood); }
 .incoming b { color: var(--blood); font-size: 1.1em; }
-.incoming b + .need::before, .incoming-line b + .need::before { content: '\00b7'; margin: 0 .35rem; }
+.incsum { display: inline-flex; align-items: center; gap: .3rem; }
+.incsum + .need::before { content: '\00b7'; margin: 0 .35rem; }
+.incoming.stack { flex-direction: column; gap: .05rem; text-align: center; }
+.incoming.stack .incsum + .need::before { content: none; }
 /* You would die this turn: the badge turns red. */
 .incoming.lethal, .incoming-line.lethal { background: var(--blood); border-color: var(--blood); color: var(--bg); }
 .incoming.lethal b, .incoming.lethal .ico, .incoming-line.lethal b, .incoming-line.lethal .ico { color: inherit; }
