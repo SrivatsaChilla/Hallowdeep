@@ -300,6 +300,9 @@ button:active:not(:disabled) { transform: translateY(1px); }
 }
 .hand .card:hover, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
 .hand .card.sel { transform: translateY(-46px) rotate(0) scale(1.12); z-index: 6; }
+/* The lift straightens a tilted card and can carry its corner out from under the mouse, which ends the hover and drops
+   it back: a loop. While hovered, an invisible edge covers where the corners rested, so the card stays up. */
+.hand .card:hover::after { content: ''; position: absolute; inset: -14px -36px -50px; }
 .hand .card.playable:hover { box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 0 0 2px var(--frame, var(--sts)); }
 /* The card being dragged leaves an empty slot (no faded copy), so a cancelled drag still flies back to its place. */
 .hand .card.ghost { visibility: hidden; }
