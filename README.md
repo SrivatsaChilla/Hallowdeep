@@ -8,6 +8,10 @@
 
 No download or account needed.
 
+https://github.com/user-attachments/assets/c2aeb425-5929-4779-b604-076eb1841396
+
+<sub>Video not playing? [Download it](docs/hallowdeep.mp4) (20 seconds).</sub>
+
 <table>
 <tr>
 <td><img src="docs/screenshots/fight.jpg" alt="A fight: the Wirebound faces three Choir monsters with a hand of five cards" width="400"></td>
