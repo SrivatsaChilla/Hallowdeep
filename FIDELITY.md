@@ -123,6 +123,7 @@ Card text follows the card where it disagrees with the power text (Reaper Form a
 
 Approximations:
 - Osty's attacks are not hit back by enemy Thorns (Spines), and they do not count as your hits for other characters' "you hit" effects.
+- Osty's attacks come from Attack cards, so they get every bonus worded for Attacks: Lethality, Vigor, Gigantification (Titan), Pen Nib (Quill Nib), Shadow Step (Shade Step), Miniature Cannon (Toy Cannon), Mystic Lighter (Odd Lighter) and enchantments. Your own Strength, Weak and Shrink stay off him. The data does not say how these powers treat Osty; this way an Osty card never uses one up for nothing.
 - Sic 'Em applies after its own hit, so only later Osty hits Summon.
 - "Ethereal cards played" counts cards you play that are Ethereal when played, not ones that play themselves.
 - Sacrifice's Block is not changed by Dexterity.

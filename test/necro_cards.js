@@ -42,6 +42,19 @@ const osty = (g) => (g.osty && g.osty.alive ? [g.osty.hp, g.osty.maxHp] : 'down'
   eq('Osty attacks do nothing while he is down', dealt(g), 0);
   g = await fight({ hand: ['PROD'] }); await g.summon(3); await g.apply(g.enemies[0], 'exposed', 2); await play(g, 'PROD');
   eq('Osty attacks are boosted by Vulnerable (6 x 1.5)', dealt(g), 9);
+  // Osty attacks come from Attack cards: bonuses to Attacks apply to them, the same as to yours.
+  g = await fight({ hand: ['PROD', 'PROD'] }); await g.summon(3); g.addPw(g.p, 'lethality', 50);
+  const pokeText = (x) => HD.CARDS.PROD.text(HD.vals(x.hand[0]), { d: (v) => v, b: (v) => v }, x.hand[0], x).match(/\d+/)[0];
+  const shown = pokeText(g); await play(g, 'PROD'); const lethal1 = dealt(g); await play(g, 'PROD');
+  eq('Lethality: Poke played first shows and deals 9 (6 x 1.5); the next Poke deals 6', [shown, lethal1, dealt(g) - lethal1], ['9', 9, 6]);
+  g = await fight({ hand: ['RAKE', 'PROD'] }); await g.summon(3); g.addPw(g.p, 'lethality', 50); await play(g, 'RAKE'); const rake = dealt(g); await play(g, 'PROD');
+  eq('Lethality: a Strike played first takes the bonus (9); Poke after it deals 6', [rake, dealt(g) - rake], [9, 6]);
+  g = await fight({ hand: ['PROD'] }); await g.summon(3); g.addPw(g.p, 'vigor', 5); await play(g, 'PROD');
+  eq('Vigor: the Osty Attack that uses it up gets it (6 + 5)', [dealt(g), g.p.pw.vigor || 0], [11, 0]);
+  g = await fight({ hand: ['PROD'] }); await g.summon(3); g.addPw(g.p, 'giga', 1); await play(g, 'PROD');
+  eq('Titan (next Attack deals triple): Poke deals 18 and uses it up', [dealt(g), g.p.pw.giga || 0], [18, 0]);
+  const slowHit = async (id) => { const x = await fight({ hand: [id] }); await x.summon(3); x.enemies[0].pw.slow = 1; x.t.played = 3; await play(x, id); return dealt(x); };
+  eq('Slow: an Osty hit takes the same boost per card played as your Strike (both 6)', await slowHit('PROD'), await slowHit('RAKE'));
   g = await fight({ hand: ['LET_LOOSE'] }); await g.summon(7); await play(g, 'LET_LOOSE');
   eq('Unleash: 6 plus Osty current HP (7)', dealt(g), 13);
   g = await fight({ hand: ['HARDEN', 'PROD'] }); await g.summon(3); await play(g, 'HARDEN'); await play(g, 'PROD');

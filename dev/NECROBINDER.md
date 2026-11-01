@@ -18,7 +18,9 @@ Spire wiki (slaythespire.wiki.gg pages for Osty, Doom and Soul). Data wins over 
 - After Block, unblocked enemy attack damage hits Osty first; overflow hits the player. Non-attack damage skips him.
 - When he reaches 0 HP he dies and can be Summoned again. He starts each combat down.
 - Osty Attacks (tag OstyAttack) use his own damage: not changed by the player's Strength or Weak. They do nothing while
-  he is down. Calcify adds to them; the target's Vulnerable still applies.
+  he is down. Calcify adds to them. Everything the target takes from attacks still applies (Vulnerable and its boosts,
+  Slow, Tracking), and so does every bonus worded for Attacks (Lethality, Vigor, Pen Nib...; see FIDELITY.md). In code,
+  ostyDmg runs through atkDmg with byOsty set, so the two cannot drift apart.
 
 ## Doom (HallowDeep: Knell)
 

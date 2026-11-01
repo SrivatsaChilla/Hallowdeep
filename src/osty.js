@@ -29,16 +29,10 @@
     return lost;
   };
   C.ostyAbsorb = async function (dmg) { return dmg - (await this.ostyLoseHp(dmg)); };
-  // Clutch's attack damage: his own number plus Harden, then the target's Exposed and Flutter; never your Might or Sapped.
-  C.ostyDmg = function (base, t) {
-    let d = base + (this.p.pw.harden || 0);
-    if (t) {
-      if (t.pw.flutter || t.pw.soar) d *= 0.5;
-      if (t.pw.exposed) d *= 1 + (this.has('PAPER_NEWT') ? 0.75 : 0.5) * (t.pw.debilitate ? 2 : 1);
-      if (t.markBy) d *= this.markMult(t, true);
-    }
-    return Math.max(0, Math.floor(d));
-  };
+  // Clutch's attack damage: his own number plus Calcify (Harden), through the same math as your Attacks (atkDmg) but
+  // never your Might, Sapped or shrinking. c is the card he attacks for: the one resolving, or the one in hand whose
+  // text is being shown.
+  C.ostyDmg = function (base, t, c = this.current) { return this.atkDmg(base + (this.p.pw.harden || 0), t, c, true); };
   // One Clutch attack (a card or a token): `hits` hits on one enemy. Does nothing while Clutch is down.
   C.ostyAttack = async function (t, base, hits = 1) {
     if (!this.ostyAlive() || this.over) return { fatal: false };

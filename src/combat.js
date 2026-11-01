@@ -260,21 +260,23 @@
     }
 
     // ---------- damage math ----------
-    atkDmg(base, t, c) {
+    // Your attack damage, or Clutch's (byOsty). His hits come from Attack cards, so every bonus to Attacks applies to
+    // them; your own Might, Sapped and shrinking do not, since he is his own creature (osty.js adds his Calcify).
+    atkDmg(base, t, c, byOsty = false) {
       const d0 = c ? CARDS[c.id] : null;
-      const isAtk = d0 && d0.type === 'Attack';
+      const isAtk = byOsty || (d0 && d0.type === 'Attack');
       let d = base;
       if (c && this.isCut(c) && this.has('PRACTICE_POST')) d += 3;
-      if (isAtk && c.up && this.has('TOY_CANNON')) d += 3;
+      if (isAtk && c && c.up && this.has('TOY_CANNON')) d += 3;
       if (c && CARDS[c.id].tags.includes('Shiv')) { d += this.p.pw.accuracy || 0; if (this.p.pw.ghostKnives && !(this.t && this.t.ghostUsed)) d += this.p.pw.ghostKnives; }
       const en = HD.enchOf(c);
       if (en && en.dmgAdd) d += en.dmgAdd(c.ench.n, c);
-      if (isAtk && c.ench && this.has('ODD_LIGHTER')) d += 9;
+      if (isAtk && c && c.ench && this.has('ODD_LIGHTER')) d += 9;
       if (isAtk && this.p.pw.vigor) d += this.p.pw.vigor;
-      d += (this.p.pw.might || 0) + (this.p.pw.mightTemp || 0);
-      for (const f of HD.ATK_ADD) d += f(this, c, t, isAtk);
-      if (this.p.pw.sapped) d *= 0.75;
-      if (this.shrunk()) d *= 0.7;
+      if (!byOsty) d += (this.p.pw.might || 0) + (this.p.pw.mightTemp || 0);
+      for (const f of HD.ATK_ADD) d += f(this, c, t, isAtk && !!c);
+      if (!byOsty && this.p.pw.sapped) d *= 0.75;
+      if (!byOsty && this.shrunk()) d *= 0.7;
       if (t) {
         if ((t.pw.flutter || t.pw.soar) && isAtk) d *= 0.5;
         if (isAtk && t.pw.sapped && this.p.pw.huntersMark) d *= HD.trackingMult || 1.5;
@@ -283,7 +285,7 @@
       }
       if (isAtk && this.p.pw.giga) d *= 3;
       // Lethality: the first Attack each turn (in hand: none played yet; resolving: it is the first).
-      if (isAtk && this.p.pw.lethality && (this.t ? this.t.attacks : 0) <= (this.hand.includes(c) ? 0 : 1)) d *= 1 + this.p.pw.lethality / 100;
+      if (isAtk && c && this.p.pw.lethality && (this.t ? this.t.attacks : 0) <= (this.hand.includes(c) ? 0 : 1)) d *= 1 + this.p.pw.lethality / 100;
       if (d0 && d0.dmgMult) d *= d0.dmgMult(this, t, c);
       if (en && en.mult) d *= en.mult;
       if (isAtk && this.p.pw.doubleAtk) d *= 2;

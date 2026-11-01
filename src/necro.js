@@ -15,7 +15,7 @@
   const hdName = (id) => CARDS[id].nameHD || CARDS[id].name;
   const wraiths = (n, up) => `${n === 1 ? 'a' : n} ${hdName('WRAITH')}${n === 1 ? '' : 's'}${up ? '+' : ''}`;
   const hitAll = async (g, n) => { for (const e of g.alive()) { await g.damage(e, n, {}); if (g.over) return; } };
-  const od = (g, n) => (g && g.ostyDmg ? g.ostyDmg(n, null) : n);
+  const od = (g, c, n) => (g && g.ostyDmg ? g.ostyDmg(n, null, c || null) : n); // c: the card, for Lethality
   const ostyHp = (g) => (g && g.ostyAlive && g.ostyAlive() ? g.osty.hp : 0);
   const ostyMax = (g) => (g && g.ostyAlive && g.ostyAlive() ? g.osty.maxHp : 0);
   const fleeting = (c) => HD.kwOf(c).includes('Fleeting');
@@ -31,12 +31,12 @@
   card('RAKE', { text: (v, f) => `Deal ${f.d(v.dmg)} damage.`, play: (g, c, t, v) => g.attack(t, v.dmg, 1, c) });
   card('BONE_WARD', { text: (v, f) => `Gain ${f.b(v.blk)} Guard.`, play: (g, c, t, v) => g.gainBlock(v.blk, true) });
   card('HAND_UP', { text: (v) => `Rouse ${v.summon}.`, play: (g, c, t, v) => g.summon(v.summon) });
-  card('LET_LOOSE', { text: (v, f, c, g) => `Clutch deals ${od(g, v.base + v.per * ostyHp(g))} damage. Deals additional damage equal to Clutch's current HP.`,
+  card('LET_LOOSE', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.base + v.per * ostyHp(g))} damage. Deals additional damage equal to Clutch's current HP.`,
     play: (g, c, t, v) => g.ostyAttack(t, v.base + v.per * ostyHp(g)) });
 
   // ---------- tokens ----------
   card('WRAITH', { text: (v) => `Draw ${plural(v.draw, 'card')}.`, play: (g, c, t, v) => g.drawCards(v.draw) });
-  card('SWEEPING_GLARE', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage to a random enemy.`,
+  card('SWEEPING_GLARE', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage to a random enemy.`,
     play: async (g, c, t, v) => { const e = g.randomEnemy(); if (e) await g.ostyAttack(e, v.ostyDamage); } });
 
   // ---------- common ----------
@@ -48,7 +48,7 @@
   card('SIPHON', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Upgrade ${plural(v.draw, 'random card')} in your discard pile.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); for (const x of g.rng.shuffle(g.discard.filter((y) => g.canUpgrade(y))).slice(0, v.draw)) g.upgradeInCombat(x); } });
   card('DREAD', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Apply ${v.vul} Exposed.`, play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); if (t.alive) await g.apply(t, 'exposed', v.vul); } });
-  card('SQUASH', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. Costs 0 if Clutch has attacked this turn.`,
+  card('SQUASH', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. Costs 0 if Clutch has attacked this turn.`,
     costFn: (g, c, k) => (g.t && g.t.ostyAttacks ? 0 : k), play: (g, c, t, v) => g.ostyAttack(t, v.ostyDamage) });
   card('TOMB_KEEPER', { text: (v, f) => `Gain ${f.b(v.blk)} Guard. Add ${wraiths(v.draw)} to your draw pile.`, play: async (g, c, t, v) => { await g.gainBlock(v.blk, true); await g.addWraiths(v.draw); } });
   card('GRAVE_BURST', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Put a card from your discard pile into your hand.`,
@@ -56,7 +56,7 @@
   card('SUMMONING_RITE', { text: (v) => `Next turn, Rouse ${v.summon} and gain ${v.en} Energy.`, play: async (g, c, t, v) => { g.addPw(g.p, 'rouseNext', v.summon); g.addPw(g.p, 'nextEnergy', v.en); } });
   card('DEATH_PULSE', { text: (v, f) => `Gain ${f.b(v.blk)} Guard. Apply ${v.doom} Knell to ALL enemies.`,
     play: async (g, c, t, v) => { await g.gainBlock(v.blk, true); for (const e of g.alive()) await g.applyDoom(e, v.doom); } });
-  card('PROD', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage.`, play: (g, c, t, v) => g.ostyAttack(t, v.ostyDamage) });
+  card('PROD', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage.`, play: (g, c, t, v) => g.ostyAttack(t, v.ostyDamage) });
   card('DRAW_FIRE', { text: (v, f) => `Rouse ${v.summon}. Gain ${f.b(v.blk)} Guard.`, play: async (g, c, t, v) => { await g.summon(v.summon); await g.gainBlock(v.blk, true); } });
   card('HARVEST', { text: (v, f) => `Deal ${f.d(v.dmg)} damage.`, play: (g, c, t, v) => g.attack(t, v.dmg, 1, c) });
   card('RIP_FREE', { text: (v, f, c) => `Deal ${f.d(v.dmg)} damage. Add ${wraiths(v.draw, c && c.up)} to your draw pile.`,
@@ -64,13 +64,13 @@
   card('DEATH_MARK', { text: (v) => `Apply ${v.doom} Knell. Draw ${plural(v.draw, 'card')}.`, play: async (g, c, t, v) => { await g.applyDoom(t, v.doom); await g.drawCards(v.draw); } });
   card('CARVING_RAKE', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. A card in your hand becomes Fleeting.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); const x = await pickHand(g, (y) => !fleeting(y), 'Make a card Fleeting'); if (x) x.addKw = (x.addKw || []).concat(['Fleeting']); } });
-  card('FLICK', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. A card in your hand gains Retain.`,
+  card('FLICK', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. A card in your hand gains Retain.`,
     play: async (g, c, t, v) => { await g.ostyAttack(t, v.ostyDamage); const x = await pickHand(g, (y) => !HD.kwOf(y).includes('Retain'), 'Give a card Retain'); if (x) x.addKw = (x.addKw || []).concat(['Retain']); } });
   card('SCATTER', { text: (v, f) => `Deal ${f.d(v.dmg)} damage to ALL enemies.`, play: (g, c, t, v) => g.attackAll(v.dmg, 1, c) });
   card('FLICKER', { text: (v) => `Gain ${v.en} Energy.`, play: async (g, c, t, v) => g.gainEnergy(v.en) });
 
   // ---------- uncommon ----------
-  card('BONE_BURST', { text: (v, f, c, g) => `If Clutch is here, he deals ${od(g, v.ostyDamage)} damage to ALL enemies and you gain ${f.b(v.blk)} Guard. Clutch falls.`,
+  card('BONE_BURST', { text: (v, f, c, g) => `If Clutch is here, he deals ${od(g, c, v.ostyDamage)} damage to ALL enemies and you gain ${f.b(v.blk)} Guard. Clutch falls.`,
     play: async (g, c, t, v) => { if (!g.ostyAlive()) return; await g.ostyAttackAll(v.ostyDamage); if (g.over) return; await g.gainBlock(v.blk, true); await g.killOsty(); } });
   card('STOLEN_HOURS', { text: (v) => `Gain ${v.en} Energy. Cards cost ${v.extraCost} more this turn.`, play: async (g, c, t, v) => { g.gainEnergy(v.en); g.addPw(g.p, 'stolenHours', v.extraCost); } });
   card('ENTOMB', { text: (v, f) => `Deal ${f.d(v.dmg)} damage.`, play: (g, c, t, v) => g.attack(t, v.dmg, 1, c) });
@@ -93,11 +93,11 @@
     play: async (g, c, t, v, x) => { for (let i = 0; i < x && !g.over; i++) await g.summon(v.summon); await g.addWraiths(x, 'draw', c.up); } });
   card('EXHUME', { text: (v) => `Put ${plural(v.draw, 'card')} from your discard pile into your hand.`, play: (g, c, t, v) => fromDiscard(g, v.draw, `Put up to ${v.draw} cards into your hand`) });
   card('WITHERING_TOUCH', { text: (v) => `The enemy loses ${v.loss} Might this turn.`, play: (g, c, t, v) => g.apply(t, 'mightDown', v.loss) });
-  card('RETRIEVE', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. The first time you play this card each turn, draw ${plural(v.draw, 'card')}.`,
+  card('RETRIEVE', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. The first time you play this card each turn, draw ${plural(v.draw, 'card')}.`,
     play: async (g, c, t, v) => { await g.ostyAttack(t, v.ostyDamage); if (c.fetchTurn !== g.turn) { c.fetchTurn = g.turn; await g.drawCards(v.draw); } } });
   card('OLD_FRIEND', { text: (v) => `Lose ${v.str} Might. Gain ${v.en} Energy at the start of each turn.`, play: async (g, c, t, v) => { g.addPw(g.p, 'might', -v.str); g.addPw(g.p, 'oldFriend', v.en); } });
   card('HAUNTING', { text: (v) => `Whenever you play a ${hdName('WRAITH')}, a random enemy loses ${v.hpLoss} HP.`, play: async (g, c, t, v) => g.addPw(g.p, 'haunting', v.hpLoss) });
-  card('CLAP', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage and applies ${v.vul} Exposed to ALL enemies.`,
+  card('CLAP', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage and applies ${v.vul} Exposed to ALL enemies.`,
     play: async (g, c, t, v) => { if (!g.ostyAlive()) return; await g.ostyAttackAll(v.ostyDamage); for (const e of g.alive()) await g.apply(e, 'exposed', v.vul); } });
   card('KILLING_INTENT', { text: (v) => `The first Attack each turn deals ${v.lethality}% more damage.`, play: async (g, c, t, v) => g.addPw(g.p, 'lethality', v.lethality) });
   card('SORROW', { text: (v, f) => `Gain ${f.b(v.blk)} Guard. Costs ${v.en} less whenever ANYONE dies.`, play: (g, c, t, v) => g.gainBlock(v.blk, true) });
@@ -108,14 +108,14 @@
   card('DRAG_UNDER', { text: (v, f, c, g) => `Deal ${f.d(v.dmg)} damage for each Fleeting card played this combat.${g && g.rs ? ` (${fleetingPlayed(g)})` : ''}`,
     play: async (g, c, t, v) => { const n = fleetingPlayed(g); if (n) await g.attack(t, v.dmg, n, c); } });
   card('DECOMPOSE', { text: (v) => `Apply ${v.power} Sapped. Apply ${v.power} Exposed.`, play: async (g, c, t, v) => { await g.apply(t, 'sapped', v.power); if (t.alive) await g.apply(t, 'exposed', v.power); } });
-  card('CLATTER', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. Hits once more for each other time he has attacked this turn.`,
+  card('CLATTER', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. Hits once more for each other time he has attacked this turn.`,
     play: (g, c, t, v) => g.ostyAttack(t, v.ostyDamage, 1 + (g.t.ostyAttacks || 0)) });
-  card('OTHER_HAND', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. Whenever you play a card that costs ${v.en} or more, return this from your discard pile to your hand.`,
+  card('OTHER_HAND', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. Whenever you play a card that costs ${v.en} or more, return this from your discard pile to your hand.`,
     play: (g, c, t, v) => g.ostyAttack(t, v.ostyDamage) });
   card('SEVER_TIES', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. Add a ${hdName('WRAITH')} to your draw pile, hand and discard pile.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); for (const w of ['draw', 'hand', 'discard']) await g.addWraiths(1, w); } });
   card('PALL', { text: (v) => `Whenever you apply Knell, gain ${v.blk} Guard.`, play: async (g, c, t, v) => g.addPw(g.p, 'pall', v.blk) });
-  card('GO_GET_EM', { text: (v, f, c, g) => `Clutch deals ${od(g, v.ostyDamage)} damage. Whenever Clutch hits the enemy this turn, Rouse ${v.sicEm}.`,
+  card('GO_GET_EM', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.ostyDamage)} damage. Whenever Clutch hits the enemy this turn, Rouse ${v.sicEm}.`,
     play: async (g, c, t, v) => { await g.ostyAttack(t, v.ostyDamage); if (t.alive) await g.apply(t, 'sicEm', v.sicEm); } });
   card('FLESH_TRICK', { text: (v) => `Whenever you apply a debuff to an enemy, it takes ${v.sleightOfFlesh} damage.`, play: async (g, c, t, v) => g.addPw(g.p, 'fleshTrick', v.sleightOfFlesh) });
   card('URGE_ON', { text: (v) => `Rouse ${v.summon}. Clutch heals ${v.heal} HP.`, play: async (g, c, t, v) => { await g.summon(v.summon); g.healOsty(v.heal); } });
@@ -156,7 +156,7 @@
   card('WRAITH_STORM', { text: (v, f, c, g) => `Deal ${f.d(v.base + v.per * (g && g.ash ? g.ash.filter((x) => x.id === 'WRAITH').length : 0))} damage. Deals ${v.per} more for each ${hdName('WRAITH')} in your Ash pile.`,
     play: (g, c, t, v) => g.attack(t, v.base + v.per * g.ash.filter((x) => x.id === 'WRAITH').length, 1, c) });
   card('ASH_SPIRIT', { text: (v) => `Whenever you play a Fleeting card, gain ${v.blockOnExhaust} Guard.`, play: async (g, c, t, v) => g.addPw(g.p, 'ashSpirit', v.blockOnExhaust) });
-  card('CRUSH_GRIP', { text: (v, f, c, g) => `Clutch deals ${od(g, v.base + v.per * (g && g.hand ? clutchCards(g, c) : 0))} damage. Deals ${v.per} more for each of your other Clutch Attacks.`,
+  card('CRUSH_GRIP', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.base + v.per * (g && g.hand ? clutchCards(g, c) : 0))} damage. Deals ${v.per} more for each of your other Clutch Attacks.`,
     play: (g, c, t, v) => g.ostyAttack(t, v.base + v.per * clutchCards(g, c)) });
   card('THE_SICKLE', { text: (v, f) => `Deal ${f.d(v.dmg)} damage. This card deals ${v.inc} more damage for good.`,
     play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); c.grow = (c.grow || 0) + v.inc; if (c.src) c.src.grow = (c.src.grow || 0) + v.inc; } });
@@ -168,7 +168,7 @@
 
   // ---------- ancient ----------
   card('BANNED_TOME', { text: () => 'At the end of combat, you may remove a card from your deck.', play: async (g) => g.addPw(g.p, 'bannedTome', 1) });
-  card('GUARDIAN_HAND', { text: (v, f, c, g) => `Clutch deals ${od(g, v.base + v.per * ostyMax(g))} damage. Deals additional damage equal to Clutch's Max HP.`,
+  card('GUARDIAN_HAND', { text: (v, f, c, g) => `Clutch deals ${od(g, c, v.base + v.per * ostyMax(g))} damage. Deals additional damage equal to Clutch's Max HP.`,
     play: (g, c, t, v) => g.ostyAttack(t, v.base + v.per * ostyMax(g)) });
 
   // ---------- co-op only ----------

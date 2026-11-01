@@ -721,7 +721,7 @@
       <h1>${won ? 'Victory' : 'You fell'}</h1>
       ${won && S.unlocked ? `<p class="unlock"><b>Ascension ${S.unlocked} unlocked</b> for ${esc(HD.charName(r.charId))}: ${esc(HD.ascName(S.unlocked))}.</p>` : ''}
       <p>${won ? `All three acts are behind you${r.asc ? ` on Ascension ${r.asc}` : ''}. The run is won.` : `${T('Depth')} ${r.floor}, ${S.g ? `against ${esc(HD.ENC[S.g.encId].name)}` : `at ${esc(S.deathBy || 'an event')}`}.`}</p>
-      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Time ${fmtTime(r.playMs)}. Deck ${r.deck.length} cards, ${r.relics.length} relics, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
+      <p class="fine">${r.asc ? `Ascension ${r.asc}. ` : ''}Time ${fmtTime(r.playMs)}. Deck ${r.deck.length} card${r.deck.length === 1 ? '' : 's'}, ${r.relics.length} relic${r.relics.length === 1 ? '' : 's'}, ${r.gold} gold. Seed ${esc(r.seed)}.</p>
       <button class="primary" data-act="title">New descent</button>
     </main>`;
   }
@@ -1105,7 +1105,7 @@
     liftCard();
     fitIncoming();
     flushFx();
-    if (S.screen === 'combat') { updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
+    if (S.screen === 'combat') { handHover(); updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
     if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
     showcase();
     if (tipAnchor) {
@@ -1152,14 +1152,14 @@
     } else S.prevHand = new Set();
     updateAim();
   }
-  // Phone hand cards are small; when a card's text doesn't fit, shrink it until it does (the lift scales it back up to read).
+  // Phone cards are small (the hand, and the shop and reward rows); when a card's text doesn't fit, shrink it until it
+  // does (a hand card's lift scales it back up to read).
   const textFit = new Map();
   function fitHandText() {
-    if (!compact()) return;
-    for (const t of document.querySelectorAll('.dock .card .ctext')) {
+    for (const t of document.querySelectorAll(compact() ? '.dock .card .ctext, .pickrow .card .ctext' : '.pickrow .card .ctext')) {
       const inner = t.firstElementChild;
       if (!inner) continue;
-      const key = `${t.closest('.card').dataset.cid}|${t.textContent.length}|${innerWidth}x${innerHeight}`;
+      const key = `${t.closest('.dock') ? 'hand' : 'row'}|${t.closest('.card').dataset.cid}|${t.textContent.length}|${innerWidth}x${innerHeight}`;
       if (textFit.has(key)) { t.style.fontSize = textFit.get(key); continue; }
       let size = parseFloat(getComputedStyle(t).fontSize);
       for (let i = 0; i < 12 && size > 5 && inner.getBoundingClientRect().height > t.getBoundingClientRect().height + 1; i++) { size = Math.round((size - 0.4) * 10) / 10; t.style.fontSize = `${size}px`; }
@@ -1938,13 +1938,20 @@
   }
 
   // ---------- input ----------
+  // A double click or a quick second tap must not also press what replaced the button (an event option can lead to a
+  // page with the same option in the same place): right after a click changes the page, clicks wait a moment.
+  const PAGE_SETTLE_MS = 350;
+  const pageKey = () => `${S.screen}|${S.overlay ? S.overlay.kind : ''}|${S.ev ? S.ev.page : ''}|${S.pickCards == null ? '' : S.pickCards}`;
+  let settleUntil = 0;
   document.addEventListener('click', (ev) => mine(() => {
     if (S.suppressClick) { S.suppressClick = false; return; }
     const el = ev.target.closest('[data-act]');
     if (!el && S.screen === 'combat' && S.sel && dragOnly() && !ev.target.closest('.card')) { S.sel = null; return render(); }
-    if (!el || el.disabled) return;
-    if (el.dataset.act === 'info') { S.overlay = { kind: 'info', title: el.dataset.title, body: el.dataset.body }; return render(); }
-    onAct(el.dataset.act, el.dataset.arg);
+    if (!el || el.disabled || performance.now() < settleUntil) return;
+    const page = pageKey();
+    if (el.dataset.act === 'info') { S.overlay = { kind: 'info', title: el.dataset.title, body: el.dataset.body }; render(); }
+    else onAct(el.dataset.act, el.dataset.arg);
+    if (pageKey() !== page) settleUntil = performance.now() + PAGE_SETTLE_MS;
   }));
   // Press and hold any card to read it up close with its keywords.
   let hold = null;
@@ -1987,6 +1994,30 @@
     const c = mine(() => S.g.hand.find((x) => `h${x.uid}` === el.dataset.key));
     if (c) drag = { c, el, x0: ev.clientX, y0: ev.clientY, on: false };
   });
+  // The hand card under the mouse is raised (class hov). It is picked from where the cards rest, not where the raised
+  // card is drawn, so straightening and lifting a card can never carry it out from under the mouse and drop it again.
+  // The raised card stays up while the mouse is inside its resting shape or on the raised card itself.
+  let hovEl = null;
+  function restHit(el, x, y) {
+    const op = (el.offsetParent || document.body).getBoundingClientRect();
+    const w = el.offsetWidth, h = el.offsetHeight, left = op.left + el.offsetLeft, top = op.top + el.offsetTop;
+    const r = (parseFloat(el.style.getPropertyValue('--r')) || 0) * Math.PI / 180, dy = parseFloat(el.style.getPropertyValue('--y')) || 0;
+    // Undo the fan (translateY(--y) rotate(--r) about 50% 115%, as in style.css), then test the plain box.
+    const ox = left + w / 2, oy = top + h * 1.15, px = x - ox, py = y - dy - oy;
+    const qx = ox + px * Math.cos(r) + py * Math.sin(r), qy = oy - px * Math.sin(r) + py * Math.cos(r);
+    return qx >= left && qx <= left + w && qy >= top && qy <= top + h;
+  }
+  function handHover() {
+    const m = S.mouse;
+    const cards = m && m.mouse && S.screen === 'combat' ? [...document.querySelectorAll('.hand .card:not(.ghost):not(.flying)')] : [];
+    const kept = hovEl && hovEl.isConnected && cards.includes(hovEl) ? hovEl : null;
+    let pick = kept && restHit(kept, m.x, m.y) ? kept : null;
+    for (let i = cards.length - 1; i >= 0 && !pick; i--) if (restHit(cards[i], m.x, m.y)) pick = cards[i];
+    if (!pick && kept) { const b = kept.getBoundingClientRect(); if (m.x >= b.left && m.x <= b.right && m.y >= b.top && m.y <= b.bottom) pick = kept; }
+    if (hovEl && hovEl !== pick) hovEl.classList.remove('hov');
+    hovEl = pick;
+    if (pick) pick.classList.add('hov');
+  }
   // Pointer moves can come faster than the screen redraws; dragging, aiming and the preview catch up once per frame.
   let pointerFrame = 0;
   function pointerWork() {
@@ -1994,12 +2025,13 @@
     const m = S.mouse;
     if (!m) return;
     if (drag && drag.on) moveDrag(m.x, m.y);
+    else handHover();
     updateAim();
     updatePreview();
     if (S.coop) S.coop.pointer(m.x, m.y, aimCard());
   }
   document.addEventListener('pointermove', (ev) => {
-    S.mouse = { x: ev.clientX, y: ev.clientY };
+    S.mouse = { x: ev.clientX, y: ev.clientY, mouse: ev.pointerType !== 'touch' };
     if (drag && !drag.on) {
       if (Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) < 12) return;
       if (S.busy || !mine(() => S.g.canPlay(drag.c))) { drag = null; return; }
@@ -2007,7 +2039,10 @@
     }
     if (!pointerFrame) pointerFrame = requestAnimationFrame(pointerWork);
   });
-  document.documentElement.addEventListener('pointerleave', () => { if (S.coop) S.coop.pointerOff(); });
+  document.documentElement.addEventListener('pointerleave', () => {
+    if (hovEl) { hovEl.classList.remove('hov'); hovEl = null; }
+    if (S.coop) S.coop.pointerOff();
+  });
   document.addEventListener('pointerup', (ev) => {
     if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
     drag = null;

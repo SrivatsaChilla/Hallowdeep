@@ -1,7 +1,9 @@
 /* HallowDeep styles. Tokens first, then layout, then components. */
 :root {
-  --bg: #d8d3c4; --bg2: #cfc8b6; --panel: #c6bea9; --ink: #2a221c; --ink2: #5a4d40; --line: #978a73;
+  --bg: #d8d3c4; --bg2: #cfc8b6; --panel: #c6bea9; --ink: #2a221c; --ink2: #554839; --line: #978a73;
   --blood: #8f1f2f; --lichen: #3f6b3a; --brass: #86620f; --focus: #1f4f8a;
+  /* red and gold for small text: they keep 4.5:1 on the bar and the page */
+  --blood-text: #8f1f2f; --brass-text: #5f4508;
   --parch: #efe5cf; --parch2: #e3d6b8; --pink: #2a221c;
   --wax: #8e2a22; --wax2: #b8433a;
   --atk: #8e3b2e; --skl: #2f6f68; --pow: #6a4d93; --sts: #6d675e; --tok: #8a7a52;
@@ -14,12 +16,14 @@
   :root:not([data-theme="light"]) {
     --bg: #221b16; --bg2: #2a221c; --panel: #332922; --ink: #ece2cc; --ink2: #b9ab92; --line: #5c4d3f;
     --blood: #d0485a; --lichen: #8fb08a; --brass: #d9a93e; --focus: #8fb8ff;
+    --blood-text: #ec6a76; --brass-text: #d9a93e;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #221b16; --bg2: #2a221c; --panel: #332922; --ink: #ece2cc; --ink2: #b9ab92; --line: #5c4d3f;
   --blood: #d0485a; --lichen: #8fb08a; --brass: #d9a93e; --focus: #8fb8ff;
+  --blood-text: #ec6a76; --brass-text: #d9a93e;
   color-scheme: dark;
 }
 :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -60,8 +64,8 @@ button.loot { display: block; width: 100%; max-width: 640px; text-align: left; m
   padding: .55rem 1rem; border-bottom: 1px solid var(--line); background: var(--panel);
 }
 .bar .who { font-family: var(--disp); font-size: 1.35rem; }
-.bar .hp { color: var(--blood); font-weight: 700; }
-.bar .gold { color: var(--brass); font-weight: 700; }
+.bar .hp { color: var(--blood-text); font-weight: 700; }
+.bar .gold { color: var(--brass-text); font-weight: 700; }
 .relics { display: flex; flex-wrap: wrap; gap: .3rem; }
 .relic { font-size: .8rem; padding: .1em .55em; border: 1px solid var(--line); border-radius: 999px; cursor: help; }
 
@@ -137,7 +141,7 @@ button.hero:hover { border-color: var(--wax); }
 .chip.debuff { border-color: var(--blood); color: var(--blood); }
 .intent { display: flex; align-items: center; gap: .2rem; min-height: 26px; font-weight: 700; font-size: 1.05rem; }
 .intent .ico { width: 20px; height: 20px; }
-.intent.k-attack { color: var(--blood); }
+.intent.k-attack { color: var(--blood-text); }
 .intent.k-defend { color: var(--lichen); }
 .intent.k-buff { color: var(--brass); }
 .intent.k-debuff, .intent.k-summon { color: var(--pow); }
@@ -298,16 +302,14 @@ button:active:not(:disabled) { transform: translateY(1px); }
   touch-action: none; /* cards are dragged to play; the hand never scrolls */
   user-select: none; -webkit-user-select: none;
 }
-.hand .card:hover, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
+.hand .card.hov, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
 .hand .card.sel { transform: translateY(-46px) rotate(0) scale(1.12); z-index: 6; }
-/* The lift straightens a tilted card and can carry its corner out from under the mouse, which ends the hover and drops
-   it back: a loop. While hovered, an invisible edge covers where the corners rested, so the card stays up. */
-.hand .card:hover::after { content: ''; position: absolute; inset: -14px -36px -50px; }
+/* ui.js (handHover) sets .hov on the card under the mouse, judged from where the cards rest, so the lift never drops it. */
 /* The same loop for anything else that lifts or nudges on hover: a strip over the edge it moves off keeps the hover. */
 .pickrow .card:hover::after, .grid .card[role="button"]:hover::after { content: ''; position: absolute; left: -4px; right: -4px; top: calc(100% - 2px); height: 16px; }
 button.choice.gift, button.loot.lootrow { position: relative; }
 button.choice.gift:hover::after, button.loot.lootrow:hover:not(:disabled)::after { content: ''; position: absolute; top: -2px; bottom: -2px; right: calc(100% - 2px); width: 12px; }
-.hand .card.playable:hover { box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 0 0 2px var(--frame, var(--sts)); }
+.hand .card.playable.hov { box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 0 0 2px var(--frame, var(--sts)); }
 /* The card being dragged leaves an empty slot (no faded copy), so a cancelled drag still flies back to its place. */
 .hand .card.ghost { visibility: hidden; }
 .hand .card.gone { visibility: hidden; }
@@ -390,7 +392,7 @@ button.choice.gift:hover::after, button.loot.lootrow:hover:not(:disabled)::after
   .intent { min-height: 20px; font-size: .9rem; }
   .combat > .hint { font-size: .85rem; }
   .hand .card { transform: none; }
-  .hand .card:hover, .hand .card:focus-visible { transform: translateY(-14px); }
+  .hand .card.hov, .hand .card:focus-visible { transform: translateY(-14px); }
   .hand .card.sel { transform: translateY(-22px); }
   .banner { padding: .4rem 3rem; }
 }
@@ -424,7 +426,7 @@ button.choice.gift:hover::after, button.loot.lootrow:hover:not(:disabled)::after
 button.choice.gift { flex-direction: row; align-items: center; gap: .9rem; width: 100%; padding: .7rem 1.1rem .7rem .8rem; border-left: 4px solid var(--brass); transition: transform .12s ease, border-color .12s ease; }
 button.choice.gift:hover, button.choice.gift:focus-visible { transform: translateX(4px); border-color: var(--brass); }
 button.choice.gift .gtext { display: flex; flex-direction: column; gap: .1rem; flex: 1; min-width: 0; }
-button.choice.gift b { font-size: 1.25rem; color: var(--brass); }
+button.choice.gift b { font-size: 1.25rem; color: var(--brass-text); }
 button.choice.gift.bane { border-style: dashed; border-color: var(--blood); border-left: 4px solid var(--blood); }
 @media (max-width: 760px) {
   .anc-plate h2 { font-size: 1.7rem; }
@@ -445,6 +447,7 @@ button.choice.gift.bane { border-style: dashed; border-color: var(--blood); bord
   width: 100%; padding: .12rem .35rem .12rem 1rem; border: 0; border-radius: 5px;
   background: var(--band, #d8caa8); color: var(--band-ink, #2a221c);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem;
+  overflow-x: clip; overflow-y: visible; /* clip the width for the ellipsis, never the descenders (g, y) */
   box-shadow: inset 0 -2px 0 rgba(0,0,0,.18);
 }
 .cname.n2 { font-size: .88rem; }
@@ -661,7 +664,7 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
   .dock .hand { overflow: visible; justify-content: center; padding-left: 0; }
   .hand .card { transform: none; touch-action: none; margin: 0; }
   .hand .card + .card { margin-left: calc(var(--m, 2px) * 2); }
-  .hand .card:hover, .hand .card:focus-visible { transform: translateY(-8px); }
+  .hand .card.hov, .hand .card:focus-visible { transform: translateY(-8px); }
   .hand .card.sel {
     transform: translate(var(--lx, 0px), var(--ly, -120px)) scale(var(--ls, 1.6)); transform-origin: 50% 50%; z-index: 40;
     box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 0 0 2px var(--focus);
@@ -712,7 +715,7 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
   .hand .card.sel:hover { transform: translate(var(--lx, 0px), var(--ly, -120px)) scale(var(--ls, 1.6)); z-index: 40; }
 }
 @media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
-  .hand .card:hover, .hand .card:focus-visible { z-index: auto; }
+  .hand .card.hov, .hand .card:focus-visible { z-index: auto; }
 }
 
 /* Each card is its own layer, so a card's labels can never sit over the next card in an overlapped hand. */
@@ -811,6 +814,10 @@ main.combat { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr) 
 }
 /* Wider screens: crowded enemies stay in one row (narrower HP bars) so a second row never lands on the hand. */
 @media (min-width: 761px) {
+  /* ...and the group never drops under the player (on a 1024x768 screen that put the hand over their HP). */
+  .arena:has(> .foes.crowd) { flex-wrap: nowrap; }
+  .foes.crowd { flex: 0 1 auto; min-width: 0; }
+  .foes.crowd .foe { flex: 0 1 auto; }
   .foes.crowd { flex-wrap: nowrap; gap: .5rem; }
   .foes.crowd .hpbar { width: 92px; }
   .foes.crowd .fname { font-size: .9rem; }
@@ -862,7 +869,7 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 .herobox .ascpick { margin: 0; gap: .25rem .4rem; }
 .herobox .ascpick .desc { font-size: .8rem; line-height: 1.3; }
 .herobox .ascpick .goal { display: block; margin-top: .15rem; font-style: italic; }
-.end .unlock { color: var(--gold, #c99a2e); }
+.end .unlock { color: var(--brass-text); }
 .herobox .hero { flex: 1 1 auto; width: 100%; }
 /* Cards share grid rows (subgrid) so every Ascension picker starts on the same line. */
 @supports (grid-template-rows: subgrid) {
