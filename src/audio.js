@@ -43,7 +43,7 @@
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     levels();
-    music.set(music.want, false);
+    music.set(music.want, false, music.wantAct);
     return ctx;
   }
   function gainTo(dest, v = 1) { const g = ctx.createGain(); g.gain.value = v; g.connect(dest); return g; }
@@ -159,18 +159,36 @@
     fight: { root: 40, scale: [0, 1, 3, 5, 7, 8, 10], chord: [6, 9], bell: [2.5, 5], beat: 1.7, drone: [28, 35], wind: 0.035, cut: 700 },
     boss: { root: 38, scale: [0, 1, 3, 6, 7, 8, 11], chord: [5, 8], bell: [2, 4], beat: 1.25, drone: [26, 33, 38], wind: 0.045, cut: 600 },
   };
+  // Each act colors its scenes: Act 1 is the base (earthy, low); Act 2 a little higher with a buzzing drone under
+  // a narrower wind (the Hive); Act 3 higher still, with brighter, more frequent bells (the Court).
+  const ACT_TONE = {
+    2: { shift: 2, buzz: 0.018, windHz: 760 },
+    3: { shift: 5, bellUp: 7, bellRate: 0.7, calmScale: [0, 2, 4, 5, 7, 9, 11] },
+  };
+  function moodFor(name, act) {
+    const m = MOODS[name], a = ACT_TONE[act];
+    if (!m || !a) return m;
+    const k = a.shift || 0;
+    return Object.assign({}, m, {
+      root: m.root + k, drone: m.drone.map((n) => n + k),
+      scale: a.calmScale && (name === 'calm' || name === 'title') ? a.calmScale : m.scale,
+      bell: a.bellRate ? m.bell.map((x) => x * a.bellRate) : m.bell,
+      bellUp: a.bellUp || 0, buzz: a.buzz || 0, windHz: a.windHz,
+    });
+  }
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
   const music = {
-    want: 'title', mood: null, layer: null, next: {},
+    want: 'title', wantAct: 0, mood: null, name: null, m: null, layer: null, next: {},
     // A scene's bed: the drone through a slowly moving filter, and wind. Fades in; the old one fades out.
-    set(name, sting = true) {
-      this.want = name;
-      if (!ctx || name === this.mood || !MOODS[name]) return;
-      const was = this.mood;
-      this.mood = name;
+    set(name, sting = true, act = this.wantAct) {
+      this.want = name; this.wantAct = act;
+      const key = `${name}:${act}`;
+      if (!ctx || key === this.mood || !MOODS[name]) return;
+      const was = this.name;
+      this.mood = key; this.name = name;
       if (sting && was && (name === 'fight' || name === 'boss') && was !== 'fight' && was !== 'boss') sfx(name === 'boss' ? 'boss' : 'battle');
-      const m = MOODS[name], t = ctx.currentTime;
+      const m = this.m = moodFor(name, act), t = ctx.currentTime;
       if (this.layer) { const old = this.layer; old.gain.gain.setTargetAtTime(0.0001, t, FADE_S / 3); setTimeout(() => old.stop(), FADE_S * 1500); }
       const out = gainTo(musicBus, 0.0001);
       const send = gainTo(musicEcho, 0.5); out.connect(send);
@@ -179,12 +197,12 @@
       const srcs = [];
       const lfo = ctx.createOscillator(), depth = ctx.createGain();
       lfo.frequency.value = 0.05; depth.gain.value = m.cut * 0.35; lfo.connect(depth); depth.connect(flt.frequency); srcs.push(lfo);
-      for (const note of m.drone) for (const [type, cents, v] of [['triangle', -6, 0.05], ['sine', 7, 0.06]]) {
+      for (const note of m.drone) for (const [type, cents, v] of [['triangle', -6, 0.05], ['sine', 7, 0.06], ...(m.buzz ? [['sawtooth', 3, m.buzz]] : [])]) {
         const o = ctx.createOscillator(), g = gainTo(flt, v);
         o.type = type; o.frequency.value = hz(note); o.detune.value = cents; o.connect(g); srcs.push(o);
       }
       const wind = ctx.createBufferSource(), wf = ctx.createBiquadFilter(), wg = gainTo(out, m.wind), wl = ctx.createOscillator(), wd = ctx.createGain();
-      wind.buffer = noiseBuf; wind.loop = true; wf.type = 'bandpass'; wf.frequency.value = 450; wf.Q.value = 0.6;
+      wind.buffer = noiseBuf; wind.loop = true; wf.type = 'bandpass'; wf.frequency.value = m.windHz || 450; wf.Q.value = m.windHz ? 1.1 : 0.6;
       wl.frequency.value = 0.07; wd.gain.value = 250; wl.connect(wd); wd.connect(wf.frequency);
       wind.connect(wf); wf.connect(wg); srcs.push(wind, wl);
       for (const s of srcs) s.start(t);
@@ -195,7 +213,7 @@
     // Notes for the next AHEAD_S seconds: chords, bells and (in fights) a heartbeat.
     tick() {
       if (!live() || !this.mood || !prefs.music) return;
-      const m = MOODS[this.mood], now = ctx.currentTime, end = now + AHEAD_S, nx = this.next;
+      const m = this.m, now = ctx.currentTime, end = now + AHEAD_S, nx = this.next;
       while (nx.chord < end) {
         const deg = Math.floor(Math.random() * m.scale.length);
         const chord = [0, 2, 4].map((k) => m.root + 12 + m.scale[(deg + k) % m.scale.length] + (deg + k >= m.scale.length ? 12 : 0));
@@ -203,7 +221,7 @@
         nx.chord += rand(m.chord[0], m.chord[1]);
       }
       while (nx.bell < end) {
-        tone({ f: hz(m.root + 24 + pick(m.scale) + (Math.random() < 0.3 ? 12 : 0)), at: nx.bell - now, att: 0.01, dur: 2.6, vol: 0.028, echo: 0.8, music: true });
+        tone({ f: hz(m.root + 24 + (m.bellUp || 0) + pick(m.scale) + (Math.random() < 0.3 ? 12 : 0)), at: nx.bell - now, att: 0.01, dur: 2.6, vol: 0.028, echo: 0.8, music: true });
         nx.bell += rand(m.bell[0], m.bell[1]);
       }
       while (m.beat && nx.beat < end) {
@@ -250,7 +268,7 @@
 
   HD.audio = {
     sfx,
-    mood: (name) => music.set(name),
+    mood: (name, act = 0) => music.set(name, true, act),
     // The top bar's sound button.
     button: () => `<button class="ghost soundbtn" data-act="sound" title="Sound" aria-label="Sound settings${prefs.muted ? ' (muted)' : ''}">${prefs.muted ? MUTED : SPEAKER}</button>`,
   };

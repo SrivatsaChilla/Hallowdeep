@@ -290,6 +290,25 @@ button.choice b { font-family: var(--disp); font-size: 1.6rem; font-weight: 500;
 #errbar .boot { padding: 1rem; max-width: none; }
 
 /* ---------- motion and interaction ---------- */
+/* Each act's scenery (src/scenery.js) sits under the drifting motes; ui.js sets <html data-act> to the act shown. */
+#scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#scene svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease; }
+:root[data-act="title"] #scene [data-scene="title"], :root[data-act="1"] #scene [data-scene="1"],
+:root[data-act="2"] #scene [data-scene="2"], :root[data-act="3"] #scene [data-scene="3"] { opacity: 1; }
+#scene [data-scene="title"] { --tint: #8a7656; }
+#scene [data-scene="1"] { --tint: #5f7a3e; }
+#scene [data-scene="2"] { --tint: #b07a26; }
+#scene [data-scene="3"] { --tint: #7a5fa6; --gild: #d9a93e; }
+/* Low contrast against the page, so enemies, cards and text read as before. */
+#scene .s-far { fill: color-mix(in srgb, var(--bg) 93%, var(--tint)); }
+#scene .s-mid { fill: color-mix(in srgb, var(--bg) 88%, var(--tint)); }
+#scene .s-near { fill: color-mix(in srgb, var(--bg) 83%, var(--tint)); }
+#scene .s-line { fill: none; stroke: color-mix(in srgb, var(--bg) 89%, var(--tint)); stroke-width: 4; stroke-linejoin: round; }
+#scene .s-gild { fill: none; stroke: color-mix(in srgb, var(--bg) 80%, var(--gild)); stroke-width: 3; stroke-linecap: round; }
+/* The motes: spores in the Rootworks, pollen in the Hive, gold glints at the Court; embers in fights. */
+:root { --mote-calm: #6f8f4e; --mote-fight: #c0503a; }
+:root[data-act="2"] { --mote-calm: #d29a3a; --mote-fight: #d96a2a; }
+:root[data-act="3"] { --mote-calm: #c9a24a; --mote-fight: #9a6ad0; }
 #bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 #app { position: relative; z-index: 1; }
 button:active:not(:disabled) { transform: translateY(1px); }

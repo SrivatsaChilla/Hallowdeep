@@ -41,6 +41,7 @@ Everything hangs off one global, `HD`. `build.py` joins the files in `src/` in a
     src/sigils.js      the heroes' emblems and the map icons
     src/foekit.js      the enemy art helpers
     src/foes1-3.js     the enemy drawings, one file per act
+    src/scenery.js     each act's background silhouettes (and the title's); colors come from #scene in style.css
     src/ui.js          every screen and all input
     src/audio.js       sound effects and ambient music, made with the Web Audio API (no sound files)
     src/coopui.js      the co-op screens: lobby, votes and the roulette, allies in a fight, chat, Mend
