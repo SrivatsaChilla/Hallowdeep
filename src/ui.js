@@ -1106,7 +1106,6 @@
     fitIncoming();
     flushFx();
     if (S.screen === 'combat') { handHover(); updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
-    if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
     showcase();
     if (tipAnchor) {
       const key = tipAnchor.dataset.key;
@@ -1621,6 +1620,7 @@
   // Cards played close together queue up behind the one in front, as in the original.
   const STAGE_MS = 1100;
   let staged = 0;
+  const REMOTE_SCALE = 0.85, REMOTE_OPACITY = 0.7; // a teammate's played card, held mid-fight
   function remoteCard(seat, c, t) {
     if (reduced()) return;
     const from = $(`[data-key="a${seat}"]`), arena = $('.arena');
@@ -1639,11 +1639,12 @@
     const to = t && !t.isPlayer ? destFor(c, t) : t ? rectOf(panel(t) || from) : CARDS[c.id].type === 'Power' ? r : destFor(c, null);
     const mid = { x: a.x - slot * 34 - r.x, y: a.top + a.h * 0.38 - slot * 12 - r.y };
     const end = { x: to.x - r.x, y: to.y - r.y };
-    const hold = `translate(${mid.x.toFixed(1)}px, ${mid.y.toFixed(1)}px) scale(${(1.15 - slot * 0.08).toFixed(2)})`; // further back, smaller
+    // Smaller and partly see-through, so a teammate's card reads without covering the fight; queued ones sit further back.
+    const hold = `translate(${mid.x.toFixed(1)}px, ${mid.y.toFixed(1)}px) scale(${(REMOTE_SCALE - slot * 0.06).toFixed(2)})`;
     const an = k.animate([
-      { transform: 'scale(.5)', opacity: 0.6 },
-      { transform: hold, opacity: 1, offset: 0.22 },
-      { transform: hold, opacity: 1, offset: 0.68 },
+      { transform: 'scale(.4)', opacity: 0.4 },
+      { transform: hold, opacity: REMOTE_OPACITY, offset: 0.22 },
+      { transform: hold, opacity: REMOTE_OPACITY, offset: 0.68 },
       { transform: `translate(${end.x.toFixed(1)}px, ${end.y.toFixed(1)}px) scale(.3)`, opacity: 0 },
     ], { duration: STAGE_MS, easing: 'ease-in-out', fill: 'both' });
     an.onfinish = an.oncancel = () => { k.remove(); staged = Math.max(0, staged - 1); };
@@ -2028,7 +2029,6 @@
     else handHover();
     updateAim();
     updatePreview();
-    if (S.coop) S.coop.pointer(m.x, m.y, aimCard());
   }
   document.addEventListener('pointermove', (ev) => {
     S.mouse = { x: ev.clientX, y: ev.clientY, mouse: ev.pointerType !== 'touch' };
@@ -2039,10 +2039,7 @@
     }
     if (!pointerFrame) pointerFrame = requestAnimationFrame(pointerWork);
   });
-  document.documentElement.addEventListener('pointerleave', () => {
-    if (hovEl) { hovEl.classList.remove('hov'); hovEl = null; }
-    if (S.coop) S.coop.pointerOff();
-  });
+  document.documentElement.addEventListener('pointerleave', () => { if (hovEl) { hovEl.classList.remove('hov'); hovEl = null; } });
   document.addEventListener('pointerup', (ev) => {
     if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
     drag = null;
