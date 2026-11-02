@@ -2,7 +2,7 @@
 import hashlib
 from pathlib import Path
 root = Path(__file__).parent
-order = ["core", "cards", "potions", "monsters", "relics", "versions", "combat", "run", "events", "act2", "act3", "colorless", "enchants", "events2", "ancients", "silent", "regent_data", "regent", "orbs", "defect_data", "defect", "osty", "necro_data", "necro", "coop", "neow2", "ascension_data", "ascension", "preview", "net", "rtc", "names", "naming", "art", "sigils", "foekit", "foes1", "foes2", "foes3", "ui", "audio", "coopui"]
+order = ["core", "cards", "potions", "monsters", "relics", "versions", "combat", "run", "events", "act2", "act3", "colorless", "enchants", "events2", "ancients", "silent", "regent_data", "regent", "orbs", "defect_data", "defect", "osty", "necro_data", "necro", "coop", "neow2", "ascension_data", "ascension", "preview", "net", "rtc", "names", "naming", "art", "sigils", "foekit", "foes1", "foes2", "foes3", "scenery", "ui", "audio", "coopui"]
 parts = {n: (root / "src" / f"{n}.js").read_text() for n in order}
 js = "\n".join(parts[n] for n in order)
 # A fingerprint of the rules: multiplayer only lets players with the same one play together. It covers the files that

@@ -14,8 +14,6 @@
   const STAT_MS = 800; // how often this player's HP is checked and, if it changed, shared
   const SPIN_STEPS = 14; // highlights the roulette shows before it rests (at least)
   const SPIN_REST = 0.35; // the share of the spin spent resting on the room it landed on
-  const AIM_SEND_MS = 90; // how often this player's pointer goes out in a fight
-  const AIM_FADE_MS = 3000; // a teammate's pointer that has not moved for this long fades out
   const CHAT_KEEP = 80; // chat messages kept on screen
   const CHAT_PEEK_MS = 5000; // a new message shows this long under the top bar while the chat is closed
   const savedName = () => { try { return HD.cleanName(localStorage.getItem(NAME_KEY)); } catch (e) { return ''; } };
@@ -122,20 +120,6 @@
       const n = C.chat.unread;
       return `<button class="ghost chatbtn" data-act="coop-chat" title="Chat (T)" aria-expanded="${C.chat.open}" aria-label="Chat${n ? `, ${n} new` : ''}">${CHAT_ICON}${n ? `<span class="unread">${n > 9 ? '9+' : n}</span>` : ''}</button>`;
     },
-    // ---------- pointers: every player sees where the others point, and what they aim at ----------
-    aims: {},
-    // This player's pointer: a fraction of the fight area, the enemy under it, and the card or potion being aimed.
-    pointer(px, py, card) {
-      const a = document.querySelector('.arena');
-      if (S.screen !== 'combat' || !a || !C.peer || !C.peer.g || C.peer.g.over) return;
-      const r = a.getBoundingClientRect();
-      const clamp = (v) => Math.max(0, Math.min(1, Math.round(v * 1000) / 1000));
-      const el = document.elementFromPoint(px, py);
-      const f = el && el.closest('.foe');
-      const on = f && /^e\d+$/.test(f.dataset.key) ? +f.dataset.key.slice(1) : null;
-      sendAim({ x: clamp((px - r.left) / r.width), y: clamp((py - r.top) / r.height), on, card: card || null });
-    },
-    pointerOff() { if (C.peer && S.screen === 'combat') sendAim({ off: true }); },
     combatNote(g) {
       if (S.me.dead) return 'You have fallen. If the party wins, you come back at 1 HP.';
       if (!S.me.ready) return '';
@@ -156,8 +140,8 @@
 
   // ---------- network events ----------
   function onPeer(e) {
-    // Pointers come many times a second: they move the pointer layer only, never redraw the screen.
-    if (e.t === 'aim') { if (Number.isInteger(e.s)) { C.aims[e.s] = Object.assign({ at: Date.now() }, e); drawAims(); } return; }
+    // Teammates' pointers are not shown (they read oddly across phones and computers); older builds may still send them.
+    if (e.t === 'aim') return;
     if (e.t === 'chat') return gotChat(e);
     if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; if (e.rejoined) restore(e); C.back = null; }
     if (e.t === 'reject') {
@@ -178,7 +162,6 @@
     if (e.t === 'go-fight') C.pendingFight = e;
     if (e.t === 'fight') fightStarts(e);
     if (e.t === 'acting') shown(e);
-    if (e.t === 'fight' || e.t === 'over') { C.aims = {}; aimSent = ''; drawAims(); }
     // Any screen: a move that lands after the fight ended must not leave the next screens busy (the map waits on it).
     if (e.t === 'applied' && (e.n === -1 || !C.peer.waiting)) { S.busy = false; S.hidden.clear(); S.dragUid = null; }
     if (e.t === 'over') { if (!e.g.won) forget(); C.peer.chain.then(() => setTimeout(() => A.afterCombat(), 0)); }
@@ -269,63 +252,6 @@
     if (ev.key === 't' || ev.key === 'T') { ev.preventDefault(); openChat(true); }
   });
   setInterval(drawChat, 1000); // follow the screen (hidden on the title screen and after leaving)
-  // At most one pointer message every AIM_SEND_MS; the latest one always goes out.
-  let aimNext = null, aimLast = 0, aimTimer = null, aimSent = '';
-  function sendAim(o) {
-    aimNext = o;
-    if (aimTimer) return;
-    const go = () => {
-      aimTimer = null;
-      const text = JSON.stringify(aimNext);
-      if (text === aimSent || !C.peer) return;
-      aimSent = text; aimLast = Date.now();
-      C.peer.aim(aimNext);
-    };
-    const wait = AIM_SEND_MS - (Date.now() - aimLast);
-    if (wait <= 0) go(); else aimTimer = setTimeout(go, wait);
-  }
-  // Teammates' pointers, drawn over the fight in each player's color: an arrow with their name, and while they aim
-  // a card or potion at an enemy, a beam from their panel to it with the card's name.
-  const ARROW = '<svg viewBox="0 0 20 24" aria-hidden="true"><path d="M2 2l16 9-7 2-3 8z"/></svg>';
-  function aimLayer() {
-    let el = document.getElementById('coopaim');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'coopaim';
-      el.setAttribute('aria-hidden', 'true');
-      el.innerHTML = '<svg class="beams"></svg>';
-      document.body.appendChild(el);
-    }
-    return el;
-  }
-  function drawAims() {
-    const layer = aimLayer();
-    const arena = document.querySelector('.arena');
-    const g = S.g, now = Date.now();
-    const live = S.screen === 'combat' && arena && g && !g.over ? Object.values(C.aims).filter((a) => !a.off && now - a.at < AIM_FADE_MS && g.seats[a.s] && !g.seats[a.s].dead) : [];
-    const keep = new Set(live.map((a) => `cur${a.s}`));
-    for (const el of layer.querySelectorAll('.ccur')) if (!keep.has(el.dataset.k)) el.remove();
-    const r = arena ? arena.getBoundingClientRect() : null;
-    const center = (el) => { const b = el.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; };
-    let beams = '';
-    for (const a of live) {
-      const foe = a.on != null ? document.querySelector(`.foe[data-key="e${a.on}"] .sigil`) : null;
-      const at = foe ? center(foe) : { x: r.left + a.x * r.width, y: r.top + a.y * r.height };
-      let el = layer.querySelector(`[data-k="cur${a.s}"]`);
-      if (!el) { el = document.createElement('div'); el.dataset.k = `cur${a.s}`; el.className = `ccur pc${a.s % 4}`; el.innerHTML = `${ARROW}<span></span>`; layer.appendChild(el); }
-      const what = a.card ? (HD.CARDS[a.card] || HD.POTIONS[a.card]).name : '';
-      el.querySelector('span').textContent = what ? `${C.nameOf(a.s)}: ${what}` : C.nameOf(a.s);
-      el.style.transform = `translate(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px)`;
-      el.style.opacity = String(Math.max(0.25, 1 - (now - a.at) / AIM_FADE_MS));
-      const from = a.card && foe ? document.querySelector(`[data-key="a${a.s}"] .sigil`) : null;
-      if (from) {
-        const p = center(from), lift = Math.min(p.y, at.y) - 60;
-        beams += `<path class="pc${a.s % 4}" d="M${p.x.toFixed(1)},${p.y.toFixed(1)} Q${((p.x + at.x) / 2).toFixed(1)},${lift.toFixed(1)} ${at.x.toFixed(1)},${at.y.toFixed(1)}"/>`;
-      }
-    }
-    layer.querySelector('.beams').innerHTML = beams;
-  }
-  setInterval(drawAims, 400); // fade old pointers, and follow the screen when it changes
   // A short message in the top bar.
   function note(msg) { C.toast = msg; A.scheduleRender(); clearTimeout(note.t); note.t = setTimeout(() => { C.toast = ''; A.scheduleRender(); }, 6000); }
   // Another player's move, just before it resolves: their card flies from their panel, their potion is named.

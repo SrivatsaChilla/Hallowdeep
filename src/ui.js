@@ -1106,7 +1106,6 @@
     fitIncoming();
     flushFx();
     if (S.screen === 'combat') { handHover(); updatePreview(); updateSurvival(); } else { S.preview = null; S.need = null; }
-    if (S.coop && S.mouse && S.screen === 'combat') S.coop.pointer(S.mouse.x, S.mouse.y, aimCard()); // a click can change what is aimed
     showcase();
     if (tipAnchor) {
       const key = tipAnchor.dataset.key;
@@ -1115,8 +1114,11 @@
       if (now && (now.dataset.tt != null || now.matches(GLOSSED))) showTip(now); else hideTip();
     }
     if (S.screen !== 'combat') persist();
-    BG.set(S.screen === 'combat' ? 'fight' : 'calm');
-    if (HD.audio) HD.audio.mood(S.screen === 'combat' ? (S.kind === 'boss' ? 'boss' : 'fight') : ['title', 'lobby', 'end'].includes(S.screen) ? 'title' : 'calm');
+    // The act sets the scenery, the motes and the music (the title, lobby and end screens use the title's).
+    const act = S.run && !['title', 'lobby', 'end'].includes(S.screen) ? String(S.run.act || 1) : 'title';
+    if (document.documentElement.dataset.act !== act) document.documentElement.dataset.act = act;
+    BG.set(S.screen === 'combat' ? 'fight' : 'calm', act);
+    if (HD.audio) HD.audio.mood(S.screen === 'combat' ? (S.kind === 'boss' ? 'boss' : 'fight') : act === 'title' ? 'title' : 'calm', act === 'title' ? 0 : +act);
     if (S.screen === 'map' && S.scrollMap) {
       S.scrollMap = false;
       scrollToRoom(document.getElementById('mapScroll'), $('.map .node.here') || $('.map .node.reach'));
@@ -1621,6 +1623,7 @@
   // Cards played close together queue up behind the one in front, as in the original.
   const STAGE_MS = 1100;
   let staged = 0;
+  const REMOTE_SCALE = 0.85, REMOTE_OPACITY = 0.7; // a teammate's played card, held mid-fight
   function remoteCard(seat, c, t) {
     if (reduced()) return;
     const from = $(`[data-key="a${seat}"]`), arena = $('.arena');
@@ -1639,11 +1642,12 @@
     const to = t && !t.isPlayer ? destFor(c, t) : t ? rectOf(panel(t) || from) : CARDS[c.id].type === 'Power' ? r : destFor(c, null);
     const mid = { x: a.x - slot * 34 - r.x, y: a.top + a.h * 0.38 - slot * 12 - r.y };
     const end = { x: to.x - r.x, y: to.y - r.y };
-    const hold = `translate(${mid.x.toFixed(1)}px, ${mid.y.toFixed(1)}px) scale(${(1.15 - slot * 0.08).toFixed(2)})`; // further back, smaller
+    // Smaller and partly see-through, so a teammate's card reads without covering the fight; queued ones sit further back.
+    const hold = `translate(${mid.x.toFixed(1)}px, ${mid.y.toFixed(1)}px) scale(${(REMOTE_SCALE - slot * 0.06).toFixed(2)})`;
     const an = k.animate([
-      { transform: 'scale(.5)', opacity: 0.6 },
-      { transform: hold, opacity: 1, offset: 0.22 },
-      { transform: hold, opacity: 1, offset: 0.68 },
+      { transform: 'scale(.4)', opacity: 0.4 },
+      { transform: hold, opacity: REMOTE_OPACITY, offset: 0.22 },
+      { transform: hold, opacity: REMOTE_OPACITY, offset: 0.68 },
       { transform: `translate(${end.x.toFixed(1)}px, ${end.y.toFixed(1)}px) scale(.3)`, opacity: 0 },
     ], { duration: STAGE_MS, easing: 'ease-in-out', fill: 'both' });
     an.onfinish = an.oncancel = () => { k.remove(); staged = Math.max(0, staged - 1); };
@@ -2028,7 +2032,6 @@
     else handHover();
     updateAim();
     updatePreview();
-    if (S.coop) S.coop.pointer(m.x, m.y, aimCard());
   }
   document.addEventListener('pointermove', (ev) => {
     S.mouse = { x: ev.clientX, y: ev.clientY, mouse: ev.pointerType !== 'touch' };
@@ -2039,10 +2042,7 @@
     }
     if (!pointerFrame) pointerFrame = requestAnimationFrame(pointerWork);
   });
-  document.documentElement.addEventListener('pointerleave', () => {
-    if (hovEl) { hovEl.classList.remove('hov'); hovEl = null; }
-    if (S.coop) S.coop.pointerOff();
-  });
+  document.documentElement.addEventListener('pointerleave', () => { if (hovEl) { hovEl.classList.remove('hov'); hovEl = null; } });
   document.addEventListener('pointerup', (ev) => {
     if (drag && drag.on) mine(() => endDrag(ev.clientX, ev.clientY));
     drag = null;
@@ -2077,12 +2077,14 @@
   }));
 
   // ---------- ambient background ----------
-  // Slow motes drifting up through the dark: spores between fights, embers during them.
+  // Slow motes drifting up through the dark: spores in the Rootworks, pollen in the Hive, gold glints at the Court,
+  // embers during fights. Colors come from --mote-calm and --mote-fight (style.css, per act).
+  const MOTE = { title: { speed: 1, twinkle: 0.35, rate: 800 }, 1: { speed: 1, twinkle: 0.35, rate: 800 }, 2: { speed: 0.6, twinkle: 0.25, rate: 1100 }, 3: { speed: 0.8, twinkle: 0.6, rate: 420 } };
   const BG = (() => {
     const cv = document.getElementById('bg');
     if (!cv || !cv.getContext) return { set() {} };
     const ctx = cv.getContext('2d');
-    let mode = null, col = '#888', motes = [], w = 0, h = 0, last = 0, raf = 0;
+    let mode = null, act = null, look = MOTE.title, col = '#888', motes = [], w = 0, h = 0, last = 0, raf = 0;
     const spawn = (any) => ({ x: Math.random() * w, y: any ? Math.random() * h : h + 8, r: 0.6 + Math.random() * 1.9, vy: 0.1 + Math.random() * 0.28, ph: Math.random() * 6.28, a: 0.12 + Math.random() * 0.3 });
     function size() {
       // Soft dust needs no retina pixels: a 1x canvas is a quarter of the work on a 2x screen.
@@ -2093,14 +2095,14 @@
     function paint(t) {
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = col;
-      const speed = mode === 'fight' ? 1.5 : 1;
+      const speed = (mode === 'fight' ? 1.5 : 1) * look.speed, tw = look.twinkle;
       for (const m of motes) {
         if (t != null) {
           m.y -= m.vy * speed;
           m.x += Math.sin(t / 1900 + m.ph) * 0.18;
           if (m.y < -8) Object.assign(m, spawn(false));
         }
-        ctx.globalAlpha = m.a * (0.65 + 0.35 * Math.sin((t || 0) / 800 + m.ph));
+        ctx.globalAlpha = m.a * (1 - tw + tw * Math.sin((t || 0) / look.rate + m.ph));
         ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, 6.283); ctx.fill();
       }
     }
@@ -2111,12 +2113,12 @@
       paint(t);
     }
     function start() { cancelAnimationFrame(raf); if (reduced()) paint(null); else raf = requestAnimationFrame(frame); }
-    function pickColor() { col = getComputedStyle(document.documentElement).getPropertyValue(mode === 'fight' ? '--wax2' : '--lichen').trim() || '#888'; }
+    function pickColor() { col = getComputedStyle(document.documentElement).getPropertyValue(mode === 'fight' ? '--mote-fight' : '--mote-calm').trim() || '#888'; }
     window.addEventListener('resize', () => { size(); if (reduced()) paint(null); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else start(); });
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', pickColor);
     size();
-    return { set(m) { if (m === mode) return; mode = m; pickColor(); start(); } };
+    return { set(m, a = 'title') { if (m === mode && a === act) return; mode = m; act = a; look = MOTE[a] || MOTE.title; pickColor(); start(); } };
   })();
 
   // If something breaks, say so (with a way out) instead of leaving a blank or frozen screen.
