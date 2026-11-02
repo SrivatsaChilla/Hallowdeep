@@ -107,10 +107,12 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   order. It works in the lobby, on the map and in fights, and is not part of any fight. The screen shows messages as
   text only. The chat button (top bar, lobby) counts unread messages; T opens the chat, Esc closes it, and a new
   message peeks in under the top bar while the chat is closed.
-- Pointers are not shown: a teammate's arrow read oddly when players were on different devices (a phone and a
-  computer). The screen no longer sends `aim` and ignores any that arrive; the host still checks and passes it on
-  (rate limited to one per 50 ms), so older builds keep working.
-- Other players' cards come to the middle of the fight, smaller and partly see-through, before they go on to their target;
+- Pointers (as in the original): each peer sends `aim` (its pointer as a fraction of the fight area, the enemy under
+  it, and the card or potion it is aiming) at most every 90 ms; the host checks it, drops it if it comes sooner than
+  50 ms after the last, and passes it on to the others. It is not part of the fight (not numbered, no effect on the
+  hash). The screen draws each teammate's arrow and name in their color, and while they aim at an enemy, a beam from
+  their panel with the card's name. Pointers fade after 3 s without moving.
+- Other players' cards come to the middle of the fight, big enough to read, before they go on to their target;
   cards played close together queue up behind one another. Each teammate's panel shows their Energy left and cards
   in hand, and End turn shows the turn number.
 - Damage preview (src/preview.js): the move is played on a deep copy of the fight with a silent UI. The copy numbers

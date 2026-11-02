@@ -38,7 +38,8 @@ Bring up to three friends, each on their own device. One player hosts and shares
 else joins with it. No accounts, nothing to install.
 
 - **Pick the path together.** Everyone votes on the next room, and a split vote spins a roulette over the picks.
-- **Fight side by side.** See your teammates' HP, Energy and cards in hand, and every card they play.
+- **Fight side by side.** See your teammates' HP, Energy and cards in hand, where they are pointing, what they are
+  aiming at, and every card they play.
 - **Look out for each other.** Chat with T, Mend a teammate at a rest site, throw them a potion, and find 37 cards
   made for co-op.
 - **Dropped out? Jump back in.** Refresh or reopen the game and pick **Rejoin your co-op game** to take your seat
