@@ -994,6 +994,11 @@
     if (a.tagName !== 'INPUT') morphKids(a, b);
   }
   function morphKids(a, b) {
+    // Drop the keyed nodes that are gone first, so the ones after them stay put: moving a node re-inserts it, which
+    // restarts its animations (a debuff chip would pop again as if it had just been applied).
+    const want = new Set();
+    for (const n of b.childNodes) { const key = keyOf(n); if (key) want.add(key); }
+    for (const k of [...a.childNodes]) { const key = keyOf(k); if (key && !want.has(key)) a.removeChild(k); }
     const pool = new Map();
     for (const k of a.childNodes) { const key = keyOf(k); if (key) pool.set(key, k); }
     let i = 0;
