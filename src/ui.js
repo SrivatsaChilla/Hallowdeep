@@ -1116,7 +1116,7 @@
     if (S.screen !== 'combat') persist();
     // The act sets the scenery, the motes and the music (the title, lobby and end screens use the title's).
     const act = S.run && !['title', 'lobby', 'end'].includes(S.screen) ? String(S.run.act || 1) : 'title';
-    if (document.documentElement.dataset.act !== act) document.documentElement.dataset.act = act;
+    if (document.documentElement.dataset.scenery !== act) document.documentElement.dataset.scenery = act;
     BG.set(S.screen === 'combat' ? 'fight' : 'calm', act);
     if (HD.audio) HD.audio.mood(S.screen === 'combat' ? (S.kind === 'boss' ? 'boss' : 'fight') : act === 'title' ? 'title' : 'calm', act === 'title' ? 0 : +act);
     if (S.screen === 'map' && S.scrollMap) {
