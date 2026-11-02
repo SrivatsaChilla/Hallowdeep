@@ -147,7 +147,7 @@
   relic('VAKUU', 'TUNE_BOX', { name: 'Tune Box', text: 'Create a Fleeting copy of the first Attack you play each turn.',
     afterPlay: async (g, r, c, d) => { if (d.type !== 'Attack' || g.t.tuneBox) return; g.t.tuneBox = true; const x = g.makeCard(c.id, c.up); x.addKw = ['Fleeting']; g.addToHand(x); } });
   relic('VAKUU', 'KEPT_FOG', { name: 'Kept Fog', text: 'On pickup, remove 3 cards from your deck. Add Foolishness to your deck.',
-    onPickup: (run) => { for (let i = 0; i < 3; i++) run.pending.push({ kind: 'remove' }); run.addCard('FOOLISHNESS'); } });
+    onPickup: (run) => { for (let i = 0; i < 3; i++) run.pending.push({ kind: 'remove' }); run.gainLater('FOOLISHNESS'); } });
   relic('VAKUU', 'DRY_TALON', { name: 'Dry Talon', text: 'On pickup, add 2 random Curses and 3 Hopes to your deck.',
     onPickup: (run) => { for (let i = 0; i < 2; i++) run.addCard(run.rng.misc.pick(HD.RANDOM_CURSES)); for (let i = 0; i < 3; i++) run.addCard('HOPE_CARD'); } });
   relic('VAKUU', 'WHISPER_EARRING', { name: 'Whisper Earring', text: 'Gain 1 Energy at the start of each turn. The Whisperer plays your first turn for you.', battleStart: energy });

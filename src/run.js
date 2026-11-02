@@ -177,6 +177,9 @@
       return n;
     }
     goldPreview(n) { return this.hasRelic('TALL_HAT') ? Math.floor(n * 1.25) : n; }
+    // A card an option gives along with card picks (Remove, Transform, Enchant...): it joins the deck once those picks
+    // are done, so they can never take it (it is the option's price).
+    gainLater(id, up) { this.pending.push({ kind: 'gain', id, up: !!up }); }
     addCard(id, up, ench, extra) {
       const egg = Object.values(HD.RELICS).find((d) => d.eggType === CARDS[id].type && this.hasRelic(d.id));
       const c = this.newCard(id, up || !!egg);

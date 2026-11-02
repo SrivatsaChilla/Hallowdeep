@@ -287,7 +287,15 @@
     const left = lost ? pct(pv.hp) : now;
     const guard = pv && pv.block !== t.block ? pv.block : null;
     const shown = guard != null ? guard : t.block;
-    return `<div class="hpbar${lost ? ' pv' : ''}${lost && pv.hp <= 0 ? ' lethal' : ''}"><span class="lag" style="width:${now}%"></span><span class="fill" style="width:${left}%"></span>${lost ? `<span class="loss" style="left:${left}%;width:${(now - left).toFixed(1)}%"></span>` : ''}<span class="hptxt">${t.hp}/${t.maxHp}</span>${t.block || guard ? `<span class="gbadge${guard != null ? ' pv' : ''}" data-key="gb">${shown}</span>` : ''}</div>`;
+    // Toxin's next tick (with Quickening's extra ticks on enemies) at the end of the fill; Knell as a band from the
+    // left, up to its amount. Either one turns the bar's outline violet when it will kill.
+    const g = S.g, tox = t.pw && t.pw.toxin ? t.pw.toxin : 0, doom = t.pw && t.pw.doom ? t.pw.doom : 0;
+    let burn = 0;
+    if (tox) { const ticks = !t.isPlayer && g ? 1 + g.seats.reduce((a, x) => a + (x.p.pw.quickening || 0), 0) : 1; for (let i = 0; i < ticks && tox - i > 0; i++) burn += tox - i; }
+    burn = Math.min(burn, t.hp);
+    const fatal = t.hp > 0 && (burn >= t.hp || doom >= t.hp);
+    const marks = `${burn ? `<span class="tox" style="left:${pct(t.hp - burn)}%;width:${pct(burn)}%"></span>` : ''}${doom ? `<span class="doom" style="width:${pct(Math.min(doom, t.maxHp))}%"></span>` : ''}`;
+    return `<div class="hpbar${lost ? ' pv' : ''}${lost && pv.hp <= 0 ? ' lethal' : ''}${fatal ? ' fated' : ''}"><span class="lag" style="width:${now}%"></span><span class="fill" style="width:${left}%"></span>${lost ? `<span class="loss" style="left:${left}%;width:${(now - left).toFixed(1)}%"></span>` : ''}${marks}<span class="hptxt">${t.hp}/${t.maxHp}</span>${t.block || guard ? `<span class="gbadge${guard != null ? ' pv' : ''}" data-key="gb">${shown}</span>` : ''}</div>`;
   };
 
   // Reward lists are shared by the spoils screen and bonus pickups.
@@ -1474,6 +1482,7 @@
     const r = S.run;
     if (!r || S.overlay || !r.pending.length) return;
     const it = r.pending.shift();
+    if (it.kind === 'gain') { r.addCard(it.id, it.up); return checkPending(); }
     if (it.kind === 'choice') { if (!it.opts.length) return checkPending(); S.activePick = it; S.overlay = { kind: 'choice', title: it.title, it }; return; }
     const PICKS = {
       mirror: ['Choose a card to copy', () => r.deck.slice(), false, (c) => r.addCard(c.id, c.up)],
@@ -1495,7 +1504,7 @@
       return;
     }
     const batch = [it];
-    while (r.pending.length && !PICKS[r.pending[0].kind]) batch.push(r.pending.shift());
+    while (r.pending.length && !PICKS[r.pending[0].kind] && r.pending[0].kind !== 'gain') batch.push(r.pending.shift());
     S.overlay = { kind: 'bonus', title: 'Something extra', items: batch };
   }
   const SAVE_KEY = 'hollowdeep.run';

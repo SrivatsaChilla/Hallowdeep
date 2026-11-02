@@ -99,7 +99,7 @@
     INITIAL: { text: 'Pale mushrooms hum in a ring, a low and lovely chord. At the centre, something soft pulses like a heart.',
       options: [
         { id: 'REACH', label: 'Reach into the flesh', desc: () => 'Remove 2 cards from your deck. Add Spore Haze to your deck.',
-          go: (run) => { run.pending.push({ kind: 'remove' }, { kind: 'remove' }); run.addCard('SPORE_HAZE'); return 'REACH'; } },
+          go: (run) => { run.pending.push({ kind: 'remove' }, { kind: 'remove' }); run.gainLater('SPORE_HAZE'); return 'REACH'; } },
         { id: 'TRIBUTE', label: 'Offer tribute', desc: (v) => `Pay ${v.cost} Gold. Obtain a random Relic.`, lock: (run, v) => (run.gold < v.cost ? `Requires ${v.cost} Gold.` : null),
           go: (run, v) => { loseGold(run, v.cost); run.addRelic(run.rollRelic()); return 'TRIBUTE'; } },
       ] },
@@ -176,7 +176,7 @@
     INITIAL: { text: 'A rumble leads you to a spring of bright green water, full of drifting motes of light. It looks inviting.',
       options: [
         { id: 'BOTTLE', label: 'Bottle some', desc: () => 'Procure 1 random Potion.', go: (run) => { potion(run); return 'BOTTLE'; } },
-        { id: 'BATHE', label: 'Bathe', desc: () => 'Remove 1 card from your deck. Add 1 Guilt to your deck.', go: (run) => { run.pending.push({ kind: 'remove' }); run.addCard('GUILT'); return 'BATHE'; } },
+        { id: 'BATHE', label: 'Bathe', desc: () => 'Remove 1 card from your deck. Add 1 Guilt to your deck.', go: (run) => { run.pending.push({ kind: 'remove' }); run.gainLater('GUILT'); return 'BATHE'; } },
       ] },
     BOTTLE: { text: 'Too good to be true, you decide, and fill a vial instead.' },
     BATHE: { text: 'You climb out lighter and oddly uneasy, as if you took something that was not yours.' },

@@ -372,5 +372,29 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
     eq('Below A10: no second boss', (() => { const r = new HD.Run('a9b', 'OATHBURNER', 9); r.startAct(2); r.startAct(3); return r.secondBossFor(); })(), null);
     const sv = HD.Run.fromSave(JSON.parse(JSON.stringify(new HD.Run('sv', 'VEILED', 7).toSave()))); eq('Ascension level survives save and load', sv.asc, 7);
   }
+  // A card an option gives along with picks joins the deck after them, so the picks can never take it.
+  {
+    const takeable = (r, it) => (it.kind === 'enchant' ? r.enchantable(it.id) : r.removable());
+    const through = (r, id) => { // work through the picks; true if the given card was ever offered to one
+      let offered = false;
+      while (r.pending.length) {
+        const it = r.pending.shift();
+        if (it.kind === 'gain') { r.addCard(it.id, it.up); continue; }
+        const xs = takeable(r, it); if (xs.some((c) => c.id === id)) offered = true;
+        const c = xs.find((x) => x.id !== id) || xs[0]; if (!c) continue;
+        if (it.kind === 'remove') r.removeCard(c); else if (it.kind === 'transform') r.transform(c); else if (it.kind === 'enchant') r.enchant(c, it.id, it.n || 0);
+      }
+      return offered;
+    };
+    const burnCard = Object.values(HD.CARDS).find((d) => d.color === 'oathburner' && (d.kw || []).includes('Burn')).id;
+    for (const [ev, opt, id] of [['GLOW_CHORUS', 'REACH', 'SPORE_HAZE'], ['GREEN_SPRING', 'BATHE', 'GUILT'], ['FIELD_OF_HOLES', 'RESIST', 'ROUTINE'], ['FORGOTTEN_GRAVE', 'CONFRONT', 'MILDEW']]) {
+      const r = new HD.Run('gain-' + ev); r.gold = 300; r.addCard(burnCard, false); r.pending.length = 0;
+      const st = r.startEvent(ev); r.eventChoose(st, opt);
+      const before = r.deck.filter((c) => c.id === id).length, offered = through(r, id);
+      eq(`${ev} ${opt}: ${id} is never offered to its own picks, and joins the deck after`, [before, offered, r.deck.filter((c) => c.id === id).length], [0, false, 1]);
+    }
+    const rK = new HD.Run('gain-fog'); rK.addRelic('KEPT_FOG');
+    eq('Kept Fog: Foolishness is never offered to its 3 removals, and joins the deck after', [through(rK, 'FOOLISHNESS'), rK.deck.filter((c) => c.id === 'FOOLISHNESS').length], [false, 1]);
+  }
   console.log(fails? `${fails} FAILED` : 'all checks passed');
 })();

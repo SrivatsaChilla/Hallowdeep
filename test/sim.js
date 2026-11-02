@@ -17,6 +17,7 @@ const allRelics = Object.keys(HD.RELICS).filter((id) => HD.RELICS[id].rarity !==
 function takeItems(run, items) {
   for (const it of items) {
     if (it.kind === 'gold') run.gainGold(it.n);
+    if (it.kind === 'gain') run.addCard(it.id, it.up);
     if (it.kind === 'potion') run.addPotion(it.id);
     if (it.kind === 'relic') run.addRelic(it.id);
     if (it.kind === 'cards') for (const c of run.rng.misc.shuffle(it.cards.slice()).slice(0, it.n || 1)) run.addCard(c.id, c.up);

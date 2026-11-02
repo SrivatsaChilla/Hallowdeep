@@ -50,7 +50,7 @@
   ev('FIELD_OF_HOLES', { name: 'Field of Holes', pages: {
     INITIAL: { text: 'A field pocked with holes, each one exactly your shape. One of them seems to be calling you.',
       options: [
-        { id: 'RESIST', label: 'Resist', desc: () => 'Remove 2 cards from your deck. Add Routine to your deck.', go: (run) => { run.pending.push({ kind: 'remove' }, { kind: 'remove' }); run.addCard('ROUTINE'); return 'RESIST'; } },
+        { id: 'RESIST', label: 'Resist', desc: () => 'Remove 2 cards from your deck. Add Routine to your deck.', go: (run) => { run.pending.push({ kind: 'remove' }, { kind: 'remove' }); run.gainLater('ROUTINE'); return 'RESIST'; } },
         { id: 'ENTER', label: 'Climb into your hole', desc: () => 'Enchant a card with Perfect Fit.', lock: (run) => (run.enchantable('PERFECT_FIT').length ? null : 'No card can be Enchanted.'),
           go: (run) => { run.pending.push({ kind: 'enchant', id: 'PERFECT_FIT' }); return 'ENTER'; } },
       ] },
@@ -118,7 +118,7 @@
       options: [
         { id: 'CONFRONT', label: 'Tell it the truth', desc: () => "Add Mildew to your deck. Enchant a card that Burns with Soul's Power.",
           lock: (run) => (run.enchantable('SOULS_POWER').length ? null : 'You have no cards that Burn that can be Enchanted.'),
-          go: (run) => { run.addCard('MILDEW'); run.pending.push({ kind: 'enchant', id: 'SOULS_POWER' }); return 'DONE'; } },
+          go: (run) => { run.pending.push({ kind: 'enchant', id: 'SOULS_POWER' }); run.gainLater('MILDEW'); return 'DONE'; } },
         { id: 'ACCEPT', label: 'Take it with you', desc: () => 'Obtain the Lost Soul.', go: (run) => { run.addRelic('LOST_SOUL'); return 'DONE'; } },
       ] },
     DONE: { text: 'The grave is quiet now.' },
@@ -174,7 +174,7 @@
       ['Innocent', 'Add Disgrace to your deck. Upgrade 2 cards.', (run) => { run.addCard('DISGRACE'); run.pending.push({ kind: 'upgrade' }, { kind: 'upgrade' }); }]],
     NOBLE: [['Guilty', 'Heal 10 HP.', (run) => run.heal(10)], ['Innocent', 'Add Remorse to your deck. Gain 300 Gold.', (run) => { run.addCard('REMORSE'); run.gainGold(300); }]],
     NONDESCRIPT: [['Guilty', 'Add Misgiving to your deck. Gain 2 card rewards.', (run) => { run.addCard('MISGIVING'); run.pending.push({ kind: 'cards', cards: run.cardReward('monster') }, { kind: 'cards', cards: run.cardReward('monster') }); }],
-      ['Innocent', 'Add Misgiving to your deck. Transform 2 cards.', (run) => { run.addCard('MISGIVING'); run.pending.push({ kind: 'transform' }, { kind: 'transform' }); }]],
+      ['Innocent', 'Add Misgiving to your deck. Transform 2 cards.', (run) => { run.pending.push({ kind: 'transform' }, { kind: 'transform' }); run.gainLater('MISGIVING'); }]],
   })[cs];
   ev('HEARING', { name: 'The Hearing', act: 3, roll: (run, r) => ({ case: r.pick(CASES) }), pages: {
     INITIAL: { text: 'A courtroom with no judge. Everyone turns to look at you. "Ah, today\'s decider has arrived."',
