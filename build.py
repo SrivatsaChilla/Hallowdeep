@@ -3,9 +3,13 @@ import hashlib
 from pathlib import Path
 root = Path(__file__).parent
 order = ["core", "cards", "potions", "monsters", "relics", "versions", "combat", "run", "events", "act2", "act3", "colorless", "enchants", "events2", "ancients", "silent", "regent_data", "regent", "orbs", "defect_data", "defect", "osty", "necro_data", "necro", "coop", "neow2", "ascension_data", "ascension", "preview", "net", "rtc", "names", "naming", "art", "sigils", "foekit", "foes1", "foes2", "foes3", "ui", "audio", "coopui"]
-js = "\n".join((root / "src" / f"{n}.js").read_text() for n in order)
-# A fingerprint of this build: multiplayer only lets players with the same build play together.
-js += f"\nHD.BUILD = '{hashlib.sha1(js.encode()).hexdigest()[:12]}';\n"
+parts = {n: (root / "src" / f"{n}.js").read_text() for n in order}
+js = "\n".join(parts[n] for n in order)
+# A fingerprint of the rules: multiplayer only lets players with the same one play together. It covers the files that
+# must match for every player's copy of a fight to stay in step (the engine, content and network code, up to rtc);
+# names, art, screens and sound can differ, so a visual update never stops friends on an older page from joining.
+sync = order[:order.index("rtc") + 1]
+js += f"\nHD.BUILD = '{hashlib.sha1(chr(10).join(parts[n] for n in sync).encode()).hexdigest()[:12]}';\n"
 css = (root / "src" / "style.css").read_text()
 html = (root / "src" / "index.html").read_text().replace("/*CSS*/", css).replace("/*JS*/", js)
 out = root / "dist" / "hallowdeep.html"

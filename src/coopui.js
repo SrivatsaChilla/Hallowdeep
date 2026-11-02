@@ -6,7 +6,7 @@
   const { S, esc } = A;
   const MIN_PLAYERS = 2;
   const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
-  const REJECTED = { version: 'That game runs a different version of HallowDeep. Both players should reload the page.', full: 'That game is full.', 'already playing': 'That game has already started.', rejoin: 'Your seat could not be taken back: the game has ended, or you are already in it on another screen.' };
+  const REJECTED = { version: 'That game is on a different version of HallowDeep. Reload this page, ask the host to reload theirs, then join again.', full: 'That game is full.', 'already playing': 'That game has already started.', rejoin: 'Your seat could not be taken back: the game has ended, or you are already in it on another screen.' };
   const render = () => A.render();
   const NAME_KEY = 'hollowdeep.name';
   const BOSS_KEY = 'hollowdeep.coopBosses'; // bosses this device met lately as host, so the next runs mix them up
@@ -45,7 +45,7 @@
     reset() {
       if (C.room) C.room.close();
       if (C.peer) C.peer.link.close();
-      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', aims: {}, chat: { log: [], open: false, unread: 0 }, back: null });
+      Object.assign(C, { stage: 'choose', error: '', code: '', host: null, room: null, peer: null, players: [], at: [], votes: [], warn: '', toast: '', pendingFight: null, myAsk: null, giving: false, stats: [], spin: null, sent: '', outdated: false, chat: { log: [], open: false, unread: 0 }, back: null });
       drawChat();
       sleep();
     },
@@ -160,7 +160,12 @@
     if (e.t === 'aim') { if (Number.isInteger(e.s)) { C.aims[e.s] = Object.assign({ at: Date.now() }, e); drawAims(); } return; }
     if (e.t === 'chat') return gotChat(e);
     if (e.t === 'welcome') { C.stage = 'room'; C.error = ''; if (e.rejoined) restore(e); C.back = null; }
-    if (e.t === 'reject') { const msg = REJECTED[e.reason] || 'The host turned the connection down.'; if (e.reason === 'rejoin' || e.reason === 'version') forget(); C.reset(); C.error = msg; }
+    if (e.t === 'reject') {
+      const msg = REJECTED[e.reason] || 'The host turned the connection down.', code = C.code;
+      if (e.reason === 'rejoin' || e.reason === 'version') forget();
+      C.reset(); C.error = msg;
+      if (e.reason === 'version') { C.outdated = true; C.retryCode = code; }
+    }
     if (e.t === 'lobby') {
       if (S.coop === C) e.players.forEach((p, i) => { const was = C.players[i]; if (was && was.live !== p.live) note(`${p.name || C.nameOf(i)} ${p.live ? 'is back' : 'left the game'}.`); });
       C.players = e.players;
@@ -367,6 +372,7 @@
   }
   function hostEvent(e) {
     if (e.t === 'left') A.scheduleRender(); // everyone hears it from the party list (see 'lobby')
+    if (e.t === 'turned-away') { C.error = 'Someone tried to join on a different version of HallowDeep. Reload this page (you get a new room code), and ask them to reload theirs.'; A.scheduleRender(); }
   }
   // The run starts: this player's own run (its map shared with the party), then the Rootmother's gift.
   function runStarts() {
@@ -407,6 +413,7 @@
   async function hostGame() {
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
     nameFromBox();
+    try { sessionStorage.removeItem(RETRY_KEY); } catch (e) { /* storage unavailable */ }
     C.reset(); forget(); C.stage = 'connecting'; render();
     C.host = new HD.NetHost({ authority: () => C.peer && C.peer.run, onEvent: hostEvent, recentBosses: recentBosses() });
     const [a, b] = HD.loopPair();
@@ -422,6 +429,7 @@
     if (code.length !== 5) { C.error = 'Enter the 5-letter room code.'; return render(); }
     if (!HD.rtcSupported()) { C.error = 'This browser cannot play online.'; return render(); }
     nameFromBox();
+    try { sessionStorage.removeItem(RETRY_KEY); } catch (e) { /* storage unavailable */ }
     C.reset(); forget(); C.stage = 'connecting'; render();
     try { const link = await HD.joinRoom(code); C.code = code; join(link); }
     catch (err) { C.reset(); C.error = err.message; }
@@ -431,7 +439,7 @@
   // ---------- coming back after a drop ----------
   // A ticket in the browser: the room, this player's seat and its secret, and their run as of the last time they were
   // outside a fight. The host also keeps the whole game (NetHost.toSave), so a reloaded host can open the room again.
-  const TICKET_KEY = 'hollowdeep.coopTicket', HOST_KEY = 'hollowdeep.coopHost';
+  const TICKET_KEY = 'hollowdeep.coopTicket', HOST_KEY = 'hollowdeep.coopHost', RETRY_KEY = 'hollowdeep.coopRetry';
   const TICKET_MS = 12 * 3600 * 1000; // older tickets are forgotten
   const KEEP_MS = 1000;
   const REHOST_TRIES = 10; // the meeting server can hold a reloaded host's room code for a few seconds
@@ -507,7 +515,8 @@
 
   // ---------- the lobby ----------
   HD.UI_SCREENS.lobby = () => {
-    const err = C.error ? `<p class="err" role="alert">${esc(C.error)}</p>` : '';
+    const err = C.error ? `<p class="err" role="alert">${esc(C.error)}</p>${C.outdated ? '<div class="lobbyrow"><button class="primary" data-act="coop-reload">Reload the page</button></div>' : ''}` : '';
+    const typed = (() => { try { return sessionStorage.getItem(RETRY_KEY) || ''; } catch (e) { return ''; } })();
     if (C.stage === 'connecting') return `<main class="panel lobby" data-key="scr-lobby"><h1>Play together</h1><p>Connecting...</p>${err}</main>`;
     if (C.stage === 'choose') return `<main class="panel lobby" data-key="scr-lobby">
       <h1>Play together</h1>
@@ -515,7 +524,7 @@
       ${HD.coopRejoinHTML()}
       <div class="lobbyrow"><label class="namerow">Your name <input id="coopname" data-key="coopname" maxlength="16" placeholder="Nickname" autocomplete="nickname" value="${esc(C.name)}"></label></div>
       <div class="lobbyrow"><button class="primary" data-act="coop-host">Host a game</button></div>
-      <div class="lobbyrow"><input id="coopcode" data-key="coopcode" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" aria-label="Room code"><button class="primary" data-act="coop-join">Join</button></div>
+      <div class="lobbyrow"><input id="coopcode" data-key="coopcode" maxlength="5" placeholder="Room code" autocomplete="off" autocapitalize="characters" aria-label="Room code" value="${esc(typed)}"><button class="primary" data-act="coop-join">Join</button></div>
       ${err}
       <p class="fine">Players connect directly; a free public server only introduces them${HD.rtcRelay ? ', and a relay helps when a network blocks direct connections' : ''}. Enemies have more HP the more players there are.</p>
       <button class="ghost" data-act="coop-back">Back</button>
@@ -546,6 +555,8 @@
 
   Object.assign(HD.UI_ACTS, {
     'coop-open': () => { C.reset(); S.screen = 'lobby'; render(); HD.rtcCheckRelay().then(render); },
+    // After a version mismatch: reload to the newest page, keeping the room code to try again.
+    'coop-reload': () => { try { sessionStorage.setItem(RETRY_KEY, C.retryCode || ''); } catch (e) { /* storage unavailable */ } location.reload(); },
     'coop-back': () => { C.leave(); S.screen = 'title'; render(); },
     'coop-host': hostGame,
     'coop-join': joinGame,

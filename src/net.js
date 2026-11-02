@@ -158,7 +158,7 @@
       this.seats.forEach((x, i) => { if (x.live && i !== seat) x.link.send(out); });
     }
     hello(link, m) {
-      if (m.build !== this.build) return this.send(link, { t: 'reject', reason: 'version', build: this.build });
+      if (m.build !== this.build) { this.onEvent({ t: 'turned-away', reason: 'version' }); return this.send(link, { t: 'reject', reason: 'version', build: this.build }); }
       let seat, back = false;
       if (isInt(m.rejoin)) {
         // Coming back: the seat must be empty and the secret must match.
