@@ -756,7 +756,13 @@
       body = `<div class="grid">${o.from.map((c) => cardHTML(c, { g: S.g, act: 'choose', dkey: `ch${c.uid}`, cls: o.picked.includes(c) ? 'sel' : 'playable' })).join('')}</div>
         ${o.n > 1 || min === 0 ? `<button class="primary" data-act="confirm" ${ok ? '' : 'disabled'}>Confirm${min === 0 ? ` (${o.picked.length})` : ''}</button>` : ''}`;
     }
-    if (o.kind === 'pick') { closable = !o.required; body = `<div class="grid">${o.cards.map((c) => cardHTML(o.preview ? { uid: c.uid, id: c.id, up: true } : c, { act: 'pick', arg: c.uid, cls: 'playable' })).join('')}</div>`; }
+    if (o.kind === 'pick') {
+      closable = !o.required;
+      // An upgrade pick shows each card as it is now (no +); Show upgrades draws what it becomes, as in the deck view.
+      const toggle = o.preview ? `<div class="upview"><button class="seg ${S.showUps ? 'on' : ''}" data-act="pile-ups" aria-pressed="${!!S.showUps}">Show upgrades</button></div>` : '';
+      const shown = (c) => (o.preview && S.showUps ? Object.assign({}, c, { up: true }) : c);
+      body = `${toggle}<div class="grid">${o.cards.map((c) => cardHTML(shown(c), { act: 'pick', arg: c.uid, cls: 'playable' })).join('')}</div>`;
+    }
     if (o.kind === 'bonus') { closable = false; body = `${itemsHTML(o.items, 'bn')}<button class="primary" data-act="bonus-done">Done</button>`; }
     if (o.kind === 'info') { const g = glossIn(o.body, o.title); body = `<div class="infotext">${o.body.split('\n').map((l) => `<p>${esc(l)}</p>`).join('')}${g.length ? `<div class="glossary">${glossRows(g, true)}</div>` : ''}</div>`; }
     if (o.kind === 'cardinfo') {
@@ -1492,7 +1498,7 @@
     const PICKS = {
       mirror: ['Choose a card to copy', () => r.deck.slice(), false, (c) => r.addCard(c.id, c.up)],
       transform: [`Choose a card to Transform${it.up ? ' (it will be Upgraded)' : ''}`, () => r.removable(), false, (c) => { const n = r.transform(c); if (it.up && n && !['Curse', 'Status'].includes(CARDS[n.id].type)) n.up = true; }],
-      upgrade: ['Choose a card to Upgrade (shown upgraded)', () => r.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type)), true, (c) => { r.upgrade(c); }],
+      upgrade: ['Choose a card to Upgrade', () => r.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type)), true, (c) => { r.upgrade(c); }],
       remove: ['Choose a card to remove', () => r.removable(), false, (c) => { r.removeCard(c); if (it.stashTo) { const st = r.relic(it.stashTo); if (st) (st.stash = st.stash || []).push(c.id); } }],
       carveAny: [`Choose a card to Transform into ${it.into ? CARDS[it.into].name : ''} (or close to stop)`, () => r.removable().filter((c) => c.id !== it.into), false, (c) => { r.removeCard(c); r.addCard(it.into, false); }],
       enchant: [`Choose a card to Enchant with ${it.kind === 'enchant' ? T(HD.ENCH[it.id].name) : ''}${it.n && it.id !== 'SOWN' ? ' ' + it.n : ''}${it.optional ? ' (or close to skip)' : ''}`,
@@ -1817,7 +1823,7 @@
     if (o === 'smith') {
       const ups = r.deck.filter((c) => !c.up && ['Attack', 'Skill', 'Power'].includes(CARDS[c.id].type));
       if (!ups.length) { mark(); return; }
-      return pickDeck('Choose a card to upgrade (shown upgraded)', ups, true, (c) => { r.upgrade(c); mark(); });
+      return pickDeck('Choose a card to upgrade', ups, true, (c) => { r.upgrade(c); mark(); });
     }
     checkPending();
   }
