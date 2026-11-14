@@ -5,7 +5,7 @@
   const A = HD.uiApi;
   const { S, esc } = A;
   const MIN_PLAYERS = 2;
-  const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
+  const ROSTER = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND', 'MINSTREL'];
   const REJECTED = { version: 'That game is on a different version of HallowDeep. Reload this page, ask the host to reload theirs, then join again.', full: 'That game is full.', 'already playing': 'That game has already started.', rejoin: 'Your seat could not be taken back: the game has ended, or you are already in it on another screen.' };
   const render = () => A.render();
   const NAME_KEY = 'hollowdeep.name';

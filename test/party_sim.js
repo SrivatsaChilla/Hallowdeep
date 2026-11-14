@@ -5,11 +5,11 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'coop', 'neow2', 'ascension_data', 'ascension', 'net'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'fool_data', 'fool', 'coop', 'neow2', 'ascension_data', 'ascension', 'net'];
 const SRC = FILES.map((f) => [f, fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8')]);
 const RUNS = +process.argv[2] || 6;
 const FLOORS = +process.argv[3] || 18;
-const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
+const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND', 'MINSTREL'];
 const RUN_MS = +(process.env.RUN_MS || 240000);
 const SPIN_MS = +(process.env.SPIN_MS || 0); // the split-vote roulette's wait (the game's is a few seconds)
 const LEAVE = !!process.env.LEAVE; // the last player drops out partway (at the map or in a fight); the rest go on

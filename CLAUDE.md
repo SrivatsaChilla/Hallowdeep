@@ -20,6 +20,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
 - Mechanics and numbers come from the v0.111 data (Spire Codex export). Data wins over wikis and guides.
 - The game follows v0.111 only (the stable/beta switch was removed). Cards first written from older data get their
   v0.111 changes in src/versions.js, applied once at load.
+- One exception: the Fool (the Minstrel) first appears in the v0.113 beta, so that character alone is built from the
+  v0.113.0 export (src/fool_data.js). Nothing else reads it.
 - HallowDeep names and text are original. dev/namemap.json maps original IDs to ours; src/names.js (generated) holds the
   original names and term swaps used by the "Original names" mode.
 - Any guess or approximation goes in FIDELITY.md.
@@ -34,7 +36,8 @@ One self-contained HTML file, no framework, no runtime dependencies.
   - core.js: RNG, glossary terms, power definitions, HD.onEngine hook registry
   - cards.js (Ironclad, called the Oathburner), silent.js (Silent, the Veiled), regent.js (Regent, the Crowned; numbers
     from the generated regent_data.js), defect.js (Defect, the Wirebound; defect_data.js; Orbs in orbs.js), necro.js (Necrobinder, the
-    Unburied; necro_data.js; Osty and Doom in osty.js), colorless.js, potions.js, relics.js
+    Unburied; necro_data.js; Osty and Doom in osty.js), fool.js (Fool, the Minstrel; fool_data.js, generated from the
+    v0.113 beta), colorless.js, potions.js, relics.js
   - monsters.js, act2.js, act3.js: monsters and encounters; events.js, events2.js; ancients.js, neow2.js
   - combat.js: the Combat class (turns, damage, piles, Stars, Forge, card creation, hooks)
   - run.js: the Run class (map, rewards, shop, saves); ascension.js + ascension_data.js (generated)
@@ -63,11 +66,12 @@ One self-contained HTML file, no framework, no runtime dependencies.
     node test/regent_cards.js                # the Regent's real cards, relics and potions
     node test/defect_cards.js                # Cells (Orbs) and the Defect's cards, relics and potions
     node test/necro_cards.js                 # Clutch (Osty), Knell (Doom) and the Necrobinder's cards
-    node test/sim.js 100                     # headless random runs; CHAR=VEILED, CROWNED, WIREBOUND or UNBURIED, ASC=10 env vars
+    node test/fool_cards.js                  # Reeds (Arrows), Sight (Aim), Refrains (Melodies) and the Fool's cards
+    node test/sim.js 100                     # headless random runs; CHAR=VEILED, CROWNED, WIREBOUND, UNBURIED or MINSTREL, ASC=10 env vars
     node test/extra/invariants.js 300        # fuzzing for state invariants
     node test/mp_checks.js                   # multiplayer combat rules (scaling, shared enemy turns, falling, theft)
     node test/mp_sim.js 300                  # random 2 to 4 player fights, each replayed from its action log; ASC=10
-    node test/coop_cards.js                  # the 37 co-op cards, co-op card pools, potions thrown to an ally
+    node test/coop_cards.js                  # the 43 co-op cards, co-op card pools, potions thrown to an ally
     node test/net_sim.js 24                  # networked fights: a copy of the game per player, rejoins, tamper and bad-message checks
     node test/party_sim.js 6 30              # whole co-op runs over the network (votes, rooms, Mend, events, bosses)
     node dev/verify.js ../spire-codex/data-beta/v0.111.0/eng          # number parity, expect 0 mismatches
@@ -79,11 +83,12 @@ One self-contained HTML file, no framework, no runtime dependencies.
     python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent, "crown" the Regent, "wire" the Defect, "necro" the Necrobinder
 
 Generators: dev/gen_names.py (names.js), dev/gen_ascension.py (ascension_data.js), dev/gen_regent.py (regent_data.js),
-dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js); the character generators share dev/charlib.py.
+dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js), dev/gen_fool.py (fool_data.js, from the v0.113 export); the character generators
+share dev/charlib.py.
 
 ## Before committing
 
-Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, necro_cards.js, mp_checks.js, coop_cards.js, a short mp_sim, net_sim and party_sim, a short sim for each character, and the browser tests that
+Build, then run checks.js, triggers.js, regent_engine.js, regent_cards.js, defect_cards.js, necro_cards.js, fool_cards.js, mp_checks.js, coop_cards.js, a short mp_sim, net_sim and party_sim, a short sim for each character, and the browser tests that
 touch what changed (any layout change: qa_devices on a few sizes plus qa_resize). Keep commits focused.
 
 Commit messages: imperative summary line under about 60 characters, blank line, then a body explaining what changed
@@ -126,12 +131,32 @@ dev/gen_necro.py.
   Approximations in FIDELITY.md ("The Unburied").
 - Next: the browser suites once Playwright is installed (qa_devices has an UNBURIED fight; bot.py takes "necro" seeds).
 
+## The Fool (sixth roster slot)
+
+Research is in dev/FOOL.md. The Fool arrived in the v0.113 beta, so this one character is built from the v0.113.0 export
+while everything else stays on v0.111. HallowDeep names: the Fool is "The Minstrel" (id MINSTREL, color minstrel);
+Arrow is "Reed", Shoot "Loose", Impaled "Transfixed", Dislodge "Wrench", Aim "Sight", Stretch "Limber", Melody
+"Refrain", Wah, Cho and Ki "Fa", "Sol" and "La", Sadness "Woe", Joy "Glee", Tarot "Omen". All names are in
+dev/gen_fool.py.
+- Built on main (not pushed until Sri says): src/fool.js (Reeds, Refrains, all 84 solo cards, 6 co-op stubs, Woe, Glee,
+  The One Reed, the 22 Omens, 9 relics, 3 potions, every power), the 6 co-op cards in src/coop.js, roster slot 6 with a
+  leaf and bow sigil, a Reed and Refrain row under the portrait (ui.js reedRow, in the Cell row's style), card art,
+  names.js. test/fool_cards.js has 67 checks; sims run with CHAR=MINSTREL.
+- combat.js gained hook points for it: HD.ATK_MULT, HD.PLAY_MODS, HD.REPLAY_MODS, the `playing` and `hitEnemy` hooks,
+  Limber in blockPreview and gainBlock, and a seat's starting Reeds (rs.reedMax). The other five characters' sim
+  fingerprints are unchanged.
+- Other characters do not get Fool cards (HD.CHARS.MINSTREL.guest keeps Prism Glass on v0.111).
+- Guesses are in FIDELITY.md ("The Minstrel"). The keyword rules are thin in the data, and the character will change
+  while it is in beta: regenerate with dev/gen_fool.py against a newer export and rerun test/fool_cards.js.
+- Not done: dev/verify.js and dev/audit.js compare against v0.111 only, so they do not cover the Fool; the Python
+  browser suites (qa_devices, bot.py) have no Fool fight or seed yet.
+
 ## Multiplayer (co-op, in progress)
 
 Rules, design and status are in dev/MULTIPLAYER.md. Built on the `multiplayer` branch. The combat engine has seats:
 per-player state lives on `g.seat` and the old names (`g.p`, `g.hand`, `g.run`...) point at the active seat, so a new
 field the engine keeps on the Combat must go in `Combat.SEAT_KEYS` (per player) or `Combat.SHARED_KEYS` (test/sim.js
-fails otherwise). Enemy moves use `each` for what they do to every player and `fx` for what they do once. The 37 co-op cards are in
+fails otherwise). Enemy moves use `each` for what they do to every player and `fx` for what they do once. The 43 co-op cards are in
 src/coop.js (loaded after necro everywhere); `run.party` above 1 puts them in the card pools. Networking is in
 src/net.js (a host that numbers actions, peers that replay them in order); a choice in the middle of a card must never
 use the fight's RNG on one machine only. The party run (lobby, votes, rooms) is in src/net.js too, internet links in

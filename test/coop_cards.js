@@ -1,10 +1,10 @@
-// The 37 co-op only cards, each played in a small party, plus co-op card pools and potions thrown to an ally.
+// The 43 co-op only cards, each played in a small party, plus co-op card pools and potions thrown to an ally.
 // Usage: node test/coop_cards.js
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const ctx = vm.createContext({ console, setTimeout, Math, Promise });
-for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'coop', 'neow2', 'ascension_data', 'ascension']) {
+for (const f of ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'fool_data', 'fool', 'coop', 'neow2', 'ascension_data', 'ascension']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 }
 const HD = ctx.HD;
@@ -42,7 +42,7 @@ const count = (pile, id) => pile.filter((c) => c.id === id).length;
     const solo = r.pool().filter((d) => d.coop).length;
     r.party = 2;
     eq('co-op cards join the pools only in a party', [solo, r.pool().filter((d) => d.coop).map((d) => d.id).sort(), r.pool('colorless').filter((d) => d.coop).length], [0, ['BREW_SHARE', 'FADE_OUT', 'FLANK_HELP', 'KNIFE_CHORUS', 'LURK'], 12]);
-    eq('all 37 co-op cards are built', Object.values(HD.CARDS).filter((d) => d.coop && !/^Co-op only/.test(d.text({}, { d: String, b: String }, {}, null))).length, 37);
+    eq('all 43 co-op cards are built (37 from v0.111 plus the Fool\'s 6)', Object.values(HD.CARDS).filter((d) => d.coop && !/^Co-op only/.test(d.text({}, { d: String, b: String }, {}, null))).length, 43);
     const { g, a } = await party([OB]);
     const c = g.makeCard('BOOST', false); a.hand.push(c);
     eq('an ally card cannot be played alone', g.canPlay(c), false);
@@ -103,6 +103,13 @@ const count = (pile, id) => pile.filter((c) => c.id === id).length;
     const before = g.asSeat(b, () => g.atkDmg(4, e, sl)); await play(g, a, 'ALL_HANDS');
     eq('All Hands: everyone\'s 0-cost Attacks deal 3 more', g.asSeat(b, () => g.atkDmg(4, e, sl)) - before, 3);
   }
+  // ---------- the Minstrel (the Fool) ----------
+  { const { g, e, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'MULCH'); const en = g.seats.map((s) => s.energy); e.hp = 1; await play(g, b, 'CUT', { at: e }); eq('Compost: every player gains 1 Energy when an enemy dies', g.seats.map((s, i) => s.energy - en[i]), [1, 1 - 1]); }
+  { const { g, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'ENTHRALL', { ally: b }); eq('Enrapture: another player gains 6 Vigor and 6 Stretch', [b.p.pw.vigor, b.p.pw.stretch, a.p.pw.stretch], [6, 6, undefined]); }
+  { const { g, a } = await party(['MINSTREL', OB, OB]); await play(g, a, 'MORNING_BENDS'); eq('Yoga: every player gains 6 Stretch', g.seats.map((s) => s.p.pw.stretch), [6, 6, 6]); }
+  { const { g, e, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'COVERING_FLIGHT'); await play(g, a, 'CARELESS_REED', { at: e }); eq('Covering Fire: Shooting gives the other players 8 Block', [a.p.block, b.p.block], [0, 8]); }
+  { const { g, e, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'FULL_BAND'); const en = b.energy; await play(g, b, 'CUT', { at: e }); eq('Ensemble: the next 4 cards other players play are free', [b.energy - en, a.p.pw.ensemble], [0, 3]); }
+  { const { g, a, b } = await party(['MINSTREL', OB]); a.hand = []; b.hand = []; await play(g, a, 'SELF_MOCKERY'); eq('Self Deprecate: a Sadness for you, 2 Joy for every other player', [ids(a.hand), ids(b.hand)], [['WOE'], ['GLEE', 'GLEE']]); }
   // ---------- colorless ----------
   { const { g, a, b } = await party([OB, OB]); await play(g, a, 'HOPE_BEACON'); await g.withSeat(a, () => g.gainBlock(10, false)); eq('Hope Beacon: others gain half your Guard on your turn', b.p.block, 5); }
   { const { g, a, b } = await party([OB, OB]); const en = b.energy; await play(g, a, 'OWN_BELIEF', { ally: b }); eq('Belief: another player gains 2 Energy', b.energy - en, 2); }

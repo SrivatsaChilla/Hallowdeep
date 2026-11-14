@@ -54,6 +54,17 @@
       <circle cx="50" cy="50" r="4.6" fill="#0d2a40"/><circle cx="45.5" cy="45.5" r="2.4" fill="#fff" opacity=".85"/>
       ${[[31, 31], [69, 31], [31, 69], [69, 69]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#9fb4c6" stroke="#0b1218" stroke-width="1"/>`).join('')}
       ${shine('M30 34C34 28 41 24 48 23', 2, 0.4)}`,
+    // a leaf with a drawn bow of living wood and a reed on the string
+    MINSTREL: `<defs>${lg('mn-leaf', [[0, '#86b352'], [1, '#243d1d']])}${lg('mn-wood', [[0, '#f0d79a'], [1, '#96642a']])}${rg('mn-glow', [[0, '#fff6c8'], [0.6, '#f0c85a'], [1, 'rgba(240,200,90,0)']])}</defs>
+      <path d="M50 4C77 14 92 37 90 62 88 81 72 94 50 97 28 94 12 81 10 62 8 37 23 14 50 4z" fill="url(#mn-leaf)" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M50 11V92M50 32 31 45M50 48 27 63M50 64 35 77M50 32 69 45M50 48 73 63M50 64 65 77" fill="none" stroke="#1b2e15" stroke-width="1.6" stroke-linecap="round" opacity=".65"/>
+      <circle cx="52" cy="50" r="22" fill="url(#mn-glow)" opacity=".6"/>
+      <path d="M32 19C68 27 68 73 32 81" fill="none" stroke="${INK}" stroke-width="9.5" stroke-linecap="round"/><path d="M32 19C68 27 68 73 32 81" fill="none" stroke="url(#mn-wood)" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M32 19V81" stroke="#f6eed8" stroke-width="1.5"/>
+      <path d="M21 50H76" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/><path d="M21 50H76" stroke="#f6eed8" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M86 50 73 43V57z" fill="#f6eed8" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M21 50l-6-5M21 50l-6 5M27 50l-6-5M27 50l-6 5" stroke="#f2b5d6" stroke-width="2.2" stroke-linecap="round"/>
+      ${shine('M22 26C31 17 41 11 50 8', 2, 0.35)}`,
   };
 
   // ---------- map node icons (about -12..12; the boss icon is larger) ----------

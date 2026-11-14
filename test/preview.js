@@ -7,14 +7,14 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'coop', 'neow2', 'ascension_data', 'ascension', 'net', 'preview'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'fool_data', 'fool', 'coop', 'neow2', 'ascension_data', 'ascension', 'net', 'preview'];
 const ctx = vm.createContext({ console, setTimeout, clearTimeout, Promise, Math });
 for (const f of FILES) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 const HD = ctx.HD;
 HD.setVersion();
 const FIGHTS = +process.argv[2] || 60;
 const MAX_STEPS = 80;
-const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
+const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND', 'MINSTREL'];
 const POTIONS = ['FLAME_FLASK', 'BLASTING_VIAL', 'TOXIN_FLASK', 'EXPOSING_VIAL', 'BARK_DRAUGHT', 'KNELL_DRAUGHT', 'STONE_FLASK'];
 // The real fight answers prompts the way the preview's copy does, so the two can be compared exactly.
 const FIRST = { choose: async (g, o) => o.from.slice(0, o.min != null ? o.min : o.n) };

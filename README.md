@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/fc7d242a-5cc0-4c75-8c43-d5fa91c7af9a
 Build a deck, climb three acts, and see how far you get. HallowDeep is a faithful clone of Slay the Spire 2: every
 card, relic, potion, monster and number comes from the game's v0.111 data, with its own card art and interface.
 
-Play as the Ironclad, Silent, Regent, Necrobinder or Defect, then push your favorite through Ascension 1 to 10. Cards
+Play as the Ironclad, Silent, Regent, Necrobinder, Defect or the Fool (the new archer from the v0.113 beta), then push your favorite through Ascension 1 to 10. Cards
 and monsters use their original names, or flip a switch for HallowDeep's own. It plays on desktops, tablets and
 phones, and your run saves as you go.
 

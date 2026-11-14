@@ -74,6 +74,16 @@
     play: async (g, c, t, v) => { const im = (g.p.imitate = g.p.imitate || {}); im[t.seat.index] = (im[t.seat.index] || 0) + v.imitationLearning; g.addPw(g.p, 'imitate', v.imitationLearning); } });
   coop('ALL_HANDS', 'wirebound', { text: (v) => `EVERY player's 0-cost Attacks deal ${v.oneForAll} more damage.`, play: async (g, c, t, v) => { g.addPw(g.p, 'oneForAll', v.oneForAll); } });
 
+  // ---------- the Minstrel ----------
+  coop('MULCH', 'minstrel', { text: (v) => `Whenever an enemy dies, EVERY player gains ${v.en} Energy.`, play: async (g, c, t, v) => { g.addPw(g.p, 'compost', v.en); } });
+  coop('ENTHRALL', 'minstrel', { target: 'ally', text: (v) => `Give another player ${v.vigor} Vigor and ${v.stretch} Limber.`,
+    play: (g, c, t, v) => g.asAlly(t, () => { g.addPw(g.p, 'vigor', v.vigor); g.addPw(g.p, 'stretch', v.stretch); }) });
+  coop('MORNING_BENDS', 'minstrel', { text: (v) => `EVERY player gains ${v.stretch} Limber.`, play: (g, c, t, v) => g.everyone(() => g.addPw(g.p, 'stretch', v.stretch)) });
+  coop('COVERING_FLIGHT', 'minstrel', { text: (v) => `Whenever you Loose, the other players gain ${v.coveringFire} Guard.`, play: async (g, c, t, v) => { g.addPw(g.p, 'coveringFire', v.coveringFire); } });
+  coop('FULL_BAND', 'minstrel', { text: (v) => `The next ${v.draw} cards played by other players are free to play.`, play: async (g, c, t, v) => { g.addPw(g.p, 'ensemble', v.draw); } });
+  coop('SELF_MOCKERY', 'minstrel', { text: (v) => `Add a Woe to your hand. Add ${v.joy} Glee to every other player's hand.`,
+    play: async (g, c, t, v) => { await g.addWoe(v.sadness); for (const x of g.allies()) await g.withSeat(x, async () => { for (let i = 0; i < v.joy; i++) await g.create(g.makeCard('GLEE', false), 'hand'); }); } });
+
   // ---------- colorless ----------
   coop('HOPE_BEACON', 'colorless', { cost: 2, upKw: ['Opening'], text: () => 'Whenever you gain Guard on your turn, the other players gain half that much Guard.',
     play: async (g) => { g.addPw(g.p, 'beacon', 1); } });
@@ -124,6 +134,9 @@
     flanked: { n: 'Flanked', t: 'debuff', d: () => 'Takes double attack damage from the other players this turn.' },
     knocked: { n: 'Knocked Over', t: 'debuff', d: (a) => `Takes ${a} times the damage from the other players this turn.` },
     tagTeam: { n: 'Double Team', t: 'debuff', d: () => 'The next Attack another player plays on it is played an extra time.' },
+    compost: { n: 'Mulch', t: 'buff', d: (a) => `Whenever an enemy dies, every player gains ${a} Energy.` },
+    coveringFire: { n: 'Covering Flight', t: 'buff', d: (a) => `Whenever you Loose, the other players gain ${a} Guard.` },
+    ensemble: { n: 'Full Band', t: 'buff', d: (a) => `The next ${a} card(s) played by other players are free to play.` },
   });
   for (const k of ['flanked', 'knocked', 'tagTeam']) HD.DEBUFFS.add(k);
 
@@ -182,6 +195,13 @@
       if (g.over) return;
     }
   });
+  // Mulch: an enemy died (this runs once as each player, so each Mulch pays out once).
+  HD.onEngine('onEnemyDeath', async (g) => { const n = g.p.pw.compost; if (n) for (const x of g.living()) g.asSeat(x, () => g.gainEnergy(n)); });
+  // Covering Flight: Loosing a Reed shields the other players.
+  HD.onEngine('loosed', async (g) => { const n = g.p.pw.coveringFire; if (n) for (const x of g.allies()) await g.withSeat(x, () => g.gainBlock(n, false)); });
+  // Full Band: the other players' next cards are free.
+  HD.COST_MODS = (HD.COST_MODS || []).concat([(g, c, k) => (g.multi && g.allies().some((x) => x.p.pw.ensemble) ? 0 : k)]);
+  HD.onEngine('afterPlay', async (g) => { if (!g.multi) return; const x = g.allies().find((y) => y.p.pw.ensemble); if (x) g.addPw(x.p, 'ensemble', -1); });
   // Deep Sleep lasts until your next turn starts.
   HD.onEngine('turnStart', async (g) => { if (g.p.pw.hibernate) g.addPw(g.p, 'hibernate', -1); });
 })();

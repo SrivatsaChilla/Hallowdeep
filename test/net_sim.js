@@ -5,10 +5,10 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'coop', 'neow2', 'ascension_data', 'ascension', 'net'];
+const FILES = ['core', 'cards', 'potions', 'monsters', 'relics', 'versions', 'combat', 'run', 'events', 'act2', 'act3', 'colorless', 'enchants', 'events2', 'ancients', 'silent', 'regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro', 'fool_data', 'fool', 'coop', 'neow2', 'ascension_data', 'ascension', 'net'];
 const SRC = FILES.map((f) => [f, fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8')]);
 const N = +process.argv[2] || 24;
-const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND'];
+const CHARS = ['OATHBURNER', 'VEILED', 'CROWNED', 'UNBURIED', 'WIREBOUND', 'MINSTREL'];
 const KINDS = ['monster', 'monster', 'elite', 'boss'];
 const TRIAL_MS = 60000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -129,6 +129,29 @@ Approximations:
 - Sacrifice's Block is not changed by Dexterity.
 - Bookmark and Ivory Tile use the current cost or the Energy actually paid; Wide Brim picks Ethereal cards from the character's pool.
 
+## The Minstrel (the Fool)
+
+Built from the v0.113.0 beta data (Spire Codex, fetched Nov 13 2026), the first version with the Fool. Every other character stays on v0.111. 77 HP, 99 Gold, 3 Energy, 1 Arrow, 5 Strikes, 4 Defends, Foolish Shot, Song Bow. All 84 solo cards and 6 co-op cards, Sadness, Joy, The Shot, the 22 Tarot cards, 9 relics and 3 potions, with every cost, number, keyword, target and type from the generated src/fool_data.js (dev/gen_fool.py). The character is in beta and its makers have said it will change. The data gives the keywords only one line of hover text each, so more of this section is judgment than for the other characters.
+
+From the data and its hover text: Shoot cards fire an Arrow that Impales the target; the Arrow is Dislodged after you hit that enemy 3 more times; Aim makes the next Arrow deal more; Stretch adds to the next Block a card gives; a Melody is active if you played a card with that word this turn.
+
+Approximations (guesses):
+- With no Arrow in hand, a Shoot card cannot be played (the data only has a "You have no Arrows" warning). A Shoot card that plays itself or is replayed with no Arrow does nothing.
+- The Arrow comes back at once when the Impaled enemy dies or leaves the fight. That is not a Dislodge (no Twine, no Yah!), and a Shot that kills does not Impale (no Explosive Arrows).
+- The Shoot card's own hits do not count toward the 3. Blocked hits count. Only Attack hits by the Arrow's owner count (not Osty's, not other players'). With Quiver, each Arrow in an enemy counts hits on its own.
+- Aim is added to every hit of the Shot (Rapid Shot, Repeat Shot, Melodic Shot), then all of it is spent. Heavy Shot adds it twice.
+- Honing, Dislike You and Quietus multiply a Shot's damage; Serrated Arrows multiplies every Attack hit on an enemy holding your Arrow. A second Quietus does not stack.
+- Stretch is added like Dexterity (before Frail), shows in card text, and is spent whole by the first Block a card gives, so Cho Limbs' second Block gets none. Cho Ki's "regain any spent Stretch" gives back all the Stretch spent this turn, its own included. Co-op cards that hand Block to another player show Stretch in the amount without spending it.
+- A Melody starts as the card begins to take effect, before the card's own effect, for played and self-played cards alike, and ends with the turn. "If the enemy is Impaled" (Bow Smack, Ki Hop) is checked before the card's damage.
+- "Damage dealt" (Rain Shot, Blossom Shot) is the HP the target lost.
+- Mourning Blow counts as creating a Sadness. Each Ennui played adds its own Sadness per turn. Anguish+ raises both its base and its bonus to 7, as the upgrade data says, though the data's upgraded text still prints 6.
+- Temporary Thorns (Cho Barbs) last until the start of your next turn. Dislike You and Quietus end at the end of your turn.
+- Simpleton and The Fool (the Tarot card) skip X-cost cards, cards aimed at another player, Unplayable cards and Shoot cards with no Arrow. Simpleton takes the leftmost of equally cheap cards. Tune makes the next card cost 0 (an X card still spends your Energy).
+- Florescence Exhausts Shoot cards in the hand, draw pile and discard pile. Blot out the Sky, Ocarina and Bottled Song pick from the Fool's reward pool (Common, Uncommon and Rare cards).
+- Tarot: Judgement kills outright, like a Doom death; The Lovers draws from the other five characters' reward pools; The Hierophant's cards cost 1 less for the turn.
+- Other characters have no Arrow, so they cannot Shoot unless Quiver gives them one, and Prism Glass does not offer them Fool cards. Their runs are unchanged from v0.111 (the sim fingerprints of all five match the build before the Fool).
+- Co-op: Compost, Covering Fire, Enrapture, Ensemble, Self Deprecate and Yoga are the Fool's multiplayer-only cards. Ensemble makes other players' next cards cost 0 Energy.
+
 ## Audit fixes (v0.111)
 
 Midnight and Outrage are multiplayer-only in the v0.111 data (they count cards Exhausted by anyone, or copy into everyone's discard pile), so they are defined but never offered in solo; dev/audit.js now flags any multiplayer-only card that is not marked co-op.

@@ -12,7 +12,7 @@
     } });
   relic('PRISM_GLASS', { name: 'Prism Glass', text: 'On pickup, obtain 2 card rewards from other characters.',
     onPickup: (run) => {
-      const others = Object.values(HD.CHARS).filter((ch) => ch.id !== run.charId).map((ch) => ch.color);
+      const others = Object.values(HD.CHARS).filter((ch) => ch.id !== run.charId && !ch.guest).map((ch) => ch.color);
       for (let i = 0; i < 2; i++) {
         const color = run.rng.cards.pick(others);
         const out = [];

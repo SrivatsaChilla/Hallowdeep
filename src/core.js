@@ -189,7 +189,8 @@
   };
   // Enchantment of a card instance, or null (filled in by enchants.js).
   // Engine hooks other modules register into: HD.onEngine('starsSpent', async (g, n) => ...).
-  // Names: starsGained, starsSpent, created, forged, energySpent, afterPlay, turnStart, afterDraw, turnEnd, combatWon.
+  // Names: starsGained, starsSpent, created, forged, energySpent, afterPlay, turnStart, afterDraw, turnEnd, combatWon,
+  // playing (a card is about to take effect), hitEnemy (each Attack hit on an enemy).
   HD.ENGINE_HOOKS = HD.ENGINE_HOOKS || {};
   HD.onEngine = (name, fn) => { (HD.ENGINE_HOOKS[name] = HD.ENGINE_HOOKS[name] || []).push(fn); };
   HD.charName = (id) => (HD.CHAR_NAMES && HD.CHAR_NAMES[id || 'OATHBURNER']) || (HD.CHARS && HD.CHARS[id] ? HD.CHARS[id].name : 'Oathburner');

@@ -109,6 +109,17 @@
     egg: `<ellipse cx="50" cy="54" rx="30" ry="38" fill="#efe4cc" ${st(2.5)}/><circle cx="40" cy="40" r="4" fill="#a38a6a"/><circle cx="60" cy="58" r="5" fill="#a38a6a"/><circle cx="46" cy="72" r="3" fill="#a38a6a"/><path d="M34 34C38 26 44 22 50 21" fill="none" stroke="${W}" stroke-width="3"/>`,
     moon: `<path d="M62 8C40 12 26 30 26 52 26 74 42 92 64 94 48 84 40 70 40 52 40 32 50 16 62 8Z" fill="url(#glowfill)" ${st(2.5)}/><circle cx="74" cy="30" r="3" fill="#fffbe8"/><circle cx="82" cy="54" r="2" fill="#fffbe8"/><circle cx="70" cy="74" r="2.5" fill="#fffbe8"/>`,
     shards: `<path d="M50 6 58 36 44 34Z" fill="${M}" ${st(2)}/><path d="M60 42 90 34 72 58Z" fill="${M}" ${st(2)}/><path d="M42 44 12 38 30 60Z" fill="${M}" ${st(2)}/><path d="M50 60 60 94 40 90Z" fill="${M}" ${st(2)}/><circle cx="50" cy="48" r="7" fill="#fffbe8"/>`,
+    bow: `<path d="M34 8C80 22 80 78 34 92" fill="none" stroke="${S}" stroke-width="12" stroke-linecap="round"/><path d="M34 8C80 22 80 78 34 92" fill="none" stroke="${L}" stroke-width="7" stroke-linecap="round"/>
+      <path d="M34 8V92" stroke="#efe4cc" stroke-width="2"/><path d="M16 50H84" stroke="${S}" stroke-width="7" stroke-linecap="round"/><path d="M16 50H84" stroke="#d9c58a" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M96 50 80 41V59Z" fill="${M}" ${st(2)}/><path d="M16 50 8 43M16 50 8 57M24 50 16 43M24 50 16 57" stroke="${B}" stroke-width="3" stroke-linecap="round"/>`,
+    reed: `<path d="M16 84 76 24" stroke="${S}" stroke-width="9" stroke-linecap="round"/><path d="M16 84 76 24" stroke="#d9c58a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M92 8 66 18 82 34Z" fill="${M}" ${st(2.5)}/><path d="M16 84 8 70M16 84 30 92M25 75 17 61M25 75 39 83" stroke="${B}" stroke-width="4" stroke-linecap="round"/>`,
+    note: `<path d="M38 78a13 10 0 1 1-6-8V20l44-10v54a13 10 0 1 1-6-8V26l-32 7z" fill="${G}" ${st(2.5)}/>`,
+    lute: `<path d="M56 42 86 10" stroke="${S}" stroke-width="13" stroke-linecap="round"/><path d="M56 42 86 10" stroke="${L}" stroke-width="8" stroke-linecap="round"/><path d="M78 4 94 14" stroke="${K}" stroke-width="6" stroke-linecap="round"/>
+      <ellipse cx="42" cy="64" rx="27" ry="30" fill="${L}" ${st(2.5)} transform="rotate(40 42 64)"/><circle cx="43" cy="62" r="9" fill="${K}"/><path d="M34 76 82 16M42 82 86 22" stroke="${W}" stroke-width="1.6"/>`,
+    leaf: `<path d="M50 6C82 24 88 60 50 94 12 60 18 24 50 6Z" fill="#6f9a48" ${st(2.5)}/><path d="M50 12V90M50 34 32 46M50 50 30 64M50 34 68 46M50 50 70 64" fill="none" stroke="${K}" stroke-width="2.5" opacity=".6"/>`,
+    tarot: `<rect x="24" y="8" width="52" height="84" rx="6" fill="#e8dcc2" ${st(3)}/><rect x="31" y="15" width="38" height="70" rx="3" fill="none" stroke="${K}" stroke-width="2" opacity=".6"/>
+      <path d="M50 30 55 45 70 46 58 55 62 70 50 61 38 70 42 55 30 46 45 45Z" fill="url(#gold)" ${st(1.5)}/>`,
   };
 
   // Overlay effects drawn on top of the motif.
@@ -304,6 +315,37 @@
     BONE_LEGION: ['bone', 'skull', ['ash', 'quake'], 0], WRAITHBOUND: ['chains', 'skull', ['aura'], 0], NETHERWORLD: ['roots', 'skull', ['ash'], 0],
     SKY_CHART: ['scroll', 'crown', ['sparks'], 0], SHARED_ANVIL: ['anvil', 'hammer', ['sparks', 'ring'], 0], ROYAL_GIFT: ['crown', 'cards', ['aura'], 0],
     WAR_COUNCIL: ['banner', 'scroll', ['ring'], 0], COUNSEL: ['scroll', 'eye', ['aura'], 0],
+    // the Minstrel
+    PLUCK: ['lute', null, ['slash'], 0], BARK_WARD: ['shield', 'leaf', ['ring'], 0], CARELESS_REED: ['bow', null, ['speed'], 0],
+    WOE: ['tear', null, ['ash'], 0], GLEE: ['note', 'burst', ['sparks', 'aura'], 0], THE_ONE_REED: ['reed', 'burst', ['speed', 'sparks'], 0],
+    REED_JAB: ['reed', null, ['slash'], -20], BOW_SWAT: ['bow', 'burst', ['quake'], 30], SOL_BRISTLES: ['shield', 'roots', ['ring'], 0], SOL_STAND: ['shield', 'reed', ['ring'], 0],
+    SOL_STEADY: ['shield', 'eye', ['aura'], 0], LONG_REACH: ['leaf', 'uparrow', ['aura'], 0], HEAVY_REED: ['bow', 'anvil', ['quake'], 0], JAPE: ['mask', 'shield', ['ring'], 0],
+    LA_HYMN: ['note', 'cards', ['aura'], 0], LA_SKIP: ['note', 'uparrow', ['speed'], 0], LA_LASH: ['note', 'tentacle', ['slash'], 0], GRIEVING_BLOW: ['fist', 'tear', ['ash'], 0],
+    NOTCH: ['reed', 'eye', ['aura'], 0], QUICK_REED: ['reed', null, ['speed'], 0], RAINING_REED: ['reed', 'reed', ['speed'], 0], CALL_BACK: ['reed', 'swirl', ['ring'], 0],
+    WOEFUL_PLUCK: ['lute', 'tear', ['slash', 'ash'], 0], FA_MALLET: ['hammer', 'note', ['quake'], 0], FA_SWING: ['note', 'burst', ['slash', 'speed'], 0], FA_TAP: ['note', 'fist', ['speed'], 0],
+    ALL_IS_FINE: ['mask', 'heart', ['aura'], 0], HEARTACHE: ['heart', 'cracked', ['ash'], 0], BOWCRAFT: ['bow', 'scroll', ['aura'], 0], BLOSSOM_REED: ['bow', 'leaf', ['speed', 'aura'], 0],
+    DARKEN_THE_SKY: ['reed', 'moon', ['speed', 'ash'], 0], DRAW_TAUT: ['bow', 'uparrow', ['aura'], 0], SOL_LA: ['note', 'shield', ['ring'], 0], SOL_BOUGHS: ['roots', 'shield', ['ring'], 0],
+    MULCH: ['spores', 'leaf', ['aura'], 0], NO_LOVE_LOST: ['mask', 'cracked', ['ash'], 0], ENTHRALL: ['note', 'eye', ['aura'], 0], HEROIC_FETCH: ['fist', 'reed', ['speed', 'sparks'], 0],
+    SPROUT: ['leaf', 'tear', ['aura'], 0], CHORD_WALL: ['wall', 'note', ['ring'], 0], DEEP_ROOTS: ['roots', null, ['aura'], 0], HOBBLING_REED: ['bow', 'chains', ['speed'], 0],
+    LA_PAUSE: ['note', 'hourglass', ['aura'], 0], DEAD_SET: ['eye', 'reed', ['ring'], 0], THEME: ['note', 'scroll', ['aura'], 0], FIST_OF_GLEE: ['fist', 'note', ['sparks'], 0],
+    RAPID_REEDS: ['reed', 'reed', ['speed', 'sparks'], 0], RHYTHM_PLUCK: ['lute', 'note', ['slash', 'speed'], 0], ROOT_AROUND: ['roots', 'cards', ['ash'], 0], BARBED_REEDS: ['reed', 'blood', ['drops'], 0],
+    SONG_TRAIL: ['note', 'shield', ['aura'], 0], EVEN_TEMPO: ['clock', 'note', ['speed'], 0], FELLING: ['axe', 'roots', ['quake', 'slash'], -20], TRICK_REED: ['bow', 'swirl', ['speed'], 0],
+    IN_TUNE: ['lute', 'note', ['aura'], 0], TEAR_OUT: ['claw', 'reed', ['slash'], 0], HARSH_CHORD: ['note', 'bolt', ['quake', 'sparks'], 0], SPITE: ['mask', 'spores', ['ash'], 0],
+    FA_BLARE: ['warhorn', 'note', ['ring', 'quake'], 0], FA_SOL: ['note', 'shield', ['speed'], 0], FA_LA: ['note', 'note', ['speed'], 0], WHISTLING_REEDS: ['reed', 'swirl', ['speed', 'ring'], 0],
+    YANK: ['fist', 'reed', ['speed'], 0], MORNING_BENDS: ['leaf', 'heart', ['aura'], 0], SPRING_BACK: ['leaf', 'swirl', ['ring'], 0], LIGHTEN_UP: ['mask', 'note', ['sparks', 'aura'], 0],
+    SOL_CHOIR: ['note', 'note', ['ring', 'aura'], 0], FINALE: ['lute', 'burst', ['quake', 'sparks'], 0], COVERING_FLIGHT: ['bow', 'shield', ['speed'], 0], RAPTURE: ['heart', 'note', ['aura', 'sparks'], 0],
+    ONE_MORE_SONG: ['lute', 'uparrow', ['aura'], 0], LISTLESS: ['mask', 'hourglass', ['ash'], 0], FULL_BAND: ['lute', 'warhorn', ['aura'], 0], BURSTING_REEDS: ['reed', 'fireball', ['sparks', 'quake'], 0],
+    FULL_BLOOM: ['leaf', 'burst', ['aura', 'sparks'], 0], WHETTING: ['reed', 'anvil', ['sparks'], 0], LA_STANZA: ['scroll', 'note', ['aura'], 0], CRADLE_SONG: ['moon', 'note', ['aura'], 0],
+    SINGING_REED: ['bow', 'note', ['speed', 'aura'], 0], FABLED_FORM: ['tarot', 'crown', ['aura', 'sparks'], 0], NAIL_DOWN: ['hammer', 'reed', ['quake'], 0], LAST_REST: ['reed', 'skull', ['ash'], 0],
+    SPARE_REED: ['reed', 'reed', ['aura'], 0], REED_AFTER_REED: ['bow', 'bow', ['speed'], 0], SELF_MOCKERY: ['mask', 'tear', ['aura'], 0], FLAUNT: ['bow', 'crown', ['sparks'], 0],
+    DULLARD: ['mask', 'question', ['ash'], 0], SKYWARD_REED: ['bow', 'moon', ['speed', 'aura'], -20], FA_SOL_LA: ['lute', 'shield', ['aura', 'speed'], 0], FA_OPUS: ['note', 'burst', ['ring', 'quake'], 0],
+    HUP: ['fist', 'uparrow', ['sparks'], 0], HALLOWED_REED: ['bow', 'crown', ['aura', 'speed'], 0], LOST_LYRE: ['lute', 'crown', ['aura'], 0],
+    THE_REAPER: ['tarot', 'skull', ['aura'], 0], THE_RECKONING: ['tarot', 'warhorn', ['aura'], 0], THE_SCALES: ['tarot', 'sword', ['aura'], 0], THE_LION: ['tarot', 'fist', ['aura'], 0],
+    THE_VESSEL: ['tarot', 'tear', ['aura'], 0], THE_CART: ['tarot', 'banner', ['aura'], 0], THE_HORNED_ONE: ['tarot', 'horns', ['aura'], 0], THE_THRONE: ['tarot', 'crown', ['aura'], 0],
+    THE_GARDEN: ['tarot', 'leaf', ['aura'], 0], THE_WANDERER: ['tarot', 'question', ['aura'], 0], THE_HANGED_ONE: ['tarot', 'chains', ['aura'], 0], THE_LANTERN: ['tarot', 'flame', ['aura'], 0],
+    THE_KEEPER_OF_KEYS: ['tarot', 'rune', ['aura'], 0], THE_VEIL: ['tarot', 'cloak', ['aura'], 0], THE_PAIR: ['tarot', 'heart', ['aura'], 0], THE_CONJURER: ['tarot', 'orbs', ['aura'], 0],
+    THE_PALE_MOON: ['tarot', 'moon', ['aura'], 0], THE_LODESTAR: ['tarot', 'burst', ['aura'], 0], THE_DAYSTAR: ['tarot', 'fireball', ['aura'], 0], THE_RUIN: ['tarot', 'tower', ['aura'], 0],
+    THE_WREATH: ['tarot', 'roots', ['aura'], 0], THE_WHEEL: ['tarot', 'swirl', ['aura'], 0],
   };
 
   const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
@@ -389,7 +431,8 @@ ${over}
     ['AXE', 'axe'], ['HAMMER', 'hammer'], ['ANVIL', 'anvil'], ['FAN', 'cards'], ['DIE', 'cards'], ['PIECE', 'cards'], ['RUG', 'scroll'], ['CAGE', 'chains'], ['FROG', 'slime'],
     ['TAIL', 'tentacle'], ['MIRROR', 'eye'], ['IDOL', 'mask'], ['BANNER', 'banner'], ['WHEEL', 'swirl'], ['TOP', 'swirl'], ['BOOTS', 'uparrow'], ['FEATHER', 'uparrow'],
     ['SEAL', 'crown'], ['MALLET', 'hammer'], ['TAGS', 'scroll'], ['LIGHTER', 'flame'], ['CHARM', 'rune'], ['LOCK', 'chains'],
-    ['FUNNEL', 'tear'], ['CRANE', 'scroll'], ['BELLS', 'clock'], ['WRAPS', 'shield'], ['DART', 'dagger'], ['JAR', 'tear']];
+    ['FUNNEL', 'tear'], ['CRANE', 'scroll'], ['BELLS', 'clock'], ['WRAPS', 'shield'], ['DART', 'dagger'], ['JAR', 'tear'],
+    ['SINGING_BOW', 'bow'], ['TALESPINNER', 'scroll'], ['WOVEN_MAT', 'leaf'], ['CLAY_WHISTLE', 'note'], ['MAESTROS_WAND', 'note'], ['CATGUT', 'lute'], ['STRANGE_LANTERN', 'flame']];
   const ICON_POOL = ['orbs', 'rune', 'crown', 'eye', 'flame', 'heart', 'shield', 'coins', 'hourglass', 'scroll', 'burst', 'boulder', 'mask', 'chains'];
   const iconMotif = (id) => (RELIC_WORDS.find(([w]) => id.includes(w)) || [null, ICON_POOL[HD.hashSeed(id) % ICON_POOL.length]])[1];
   HD.relicIcon = (id, cls = 'ricon') => `<svg class="${cls}" viewBox="-6 -6 112 112" aria-hidden="true">${ICON_DEFS}<circle cx="50" cy="50" r="54" fill="#2a1e17" stroke="#c79a3a" stroke-width="5"/>${MOTIF[iconMotif(id)] || ''}</svg>`;

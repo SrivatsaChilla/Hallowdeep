@@ -144,8 +144,26 @@
     return `<div class="cellrow" data-key="cells" aria-label="${T('Cells')}">${out}</div>`;
   }
 
+  // ---------- Reeds and Refrains (the Fool's Arrows and Melodies): Reeds in hand are lit, then the three Refrains ----------
+  const REED_ICON = '<path d="M3.5 16.5 14 6" fill="none" stroke-width="2" stroke-linecap="round"/><path d="M17 3l-5.2 1.4 3.8 3.8z"/><path d="M3.5 16.5l-.6-3.4M3.5 16.5l3.4.6" fill="none" stroke-width="1.6" stroke-linecap="round"/>';
+  function reedRow(g) {
+    const mine = S.run.charId === 'MINSTREL';
+    if (!g.reeds || (!mine && !g.rs.reedMax)) return '';
+    const held = g.reeds(), max = Math.max(g.rs.reedMax || 0, mine ? 1 : 0);
+    let out = '';
+    for (let i = 0; i < max; i++) {
+      const has = i < held;
+      out += `<span class="cell k-reed ${has ? '' : 'empty'}" data-key="reed-${i}" tabindex="0" ${tip(T('Reed'), HD.TERMS[T('Reed')] || '', has ? 'In hand' : 'Not in hand')} aria-label="${esc(T('Reed'))}: ${has ? 'in hand' : 'not in hand'}"><svg viewBox="0 0 20 20" aria-hidden="true">${REED_ICON}</svg></span>`;
+    }
+    for (const k of ['Fa', 'Sol', 'La']) {
+      const on = g.hasRefrain(k);
+      out += `<span class="cell k-note ${on ? '' : 'empty'}" data-key="ref-${k}" tabindex="0" ${tip(`${T(k)} ${T('Refrain')}`, HD.TERMS[T('Refrain')] || '', on ? 'Playing this turn' : 'Not playing')} aria-label="${esc(T(k))} ${esc(T('Refrain'))}: ${on ? 'playing' : 'not playing'}">${esc(T(k))}</span>`;
+    }
+    return `<div class="cellrow reedrow" data-key="reeds" aria-label="${esc(T('Reeds'))} and ${esc(T('Refrains'))}">${out}</div>`;
+  }
+
   // ---------- Clutch (the Necrobinder's Osty) ----------
-  const HAND = '<path d="M6.5 19V11L4.2 7.4a1.3 1.3 0 0 1 2.2-1.4L8 8.4V3a1.3 1.3 0 0 1 2.6 0v5V2a1.3 1.3 0 0 1 2.6 0v6V3.2a1.3 1.3 0 0 1 2.6 0V11c0 5-2 8-5.8 8z"/>';
+  const HAND ='<path d="M6.5 19V11L4.2 7.4a1.3 1.3 0 0 1 2.2-1.4L8 8.4V3a1.3 1.3 0 0 1 2.6 0v5V2a1.3 1.3 0 0 1 2.6 0v6V3.2a1.3 1.3 0 0 1 2.6 0V11c0 5-2 8-5.8 8z"/>';
   function clutchBox(g) {
     if (!g.osty && S.run.charId !== 'UNBURIED') return '';
     const o = g.osty, up = !!(o && o.alive);
@@ -407,7 +425,7 @@
       ${readSave() ? `<button class="primary continue" data-act="resume">Continue your run (${T('Depth')} ${readSave().run.data.floor})</button>` : ''}
       ${HD.coopRejoinHTML ? HD.coopRejoinHTML() : ''}
       <div class="roster">
-        ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}
+        ${hero('OATHBURNER')}${hero('VEILED')}${hero('CROWNED')}${hero('UNBURIED')}${hero('WIREBOUND')}${hero('MINSTREL')}
       </div>
       ${HD.UI_ACTS['coop-open'] ? '<button class="ghost coopbtn" data-act="coop-open">Play together (2 to 4 players)</button>' : ''}
       <div class="toggles">${namesToggle()}${HD.audio ? HD.audio.button() : ''}</div>
@@ -560,7 +578,7 @@
           <div class="fname">${esc(HD.charName(S.run.charId))}</div>
           ${hpBar(p)}
           <div class="chips">${chips(p)}</div>
-          ${cellRow(g)}${clutchBox(g)}
+          ${cellRow(g)}${clutchBox(g)}${reedRow(g)}
         </div>
         ${S.coop ? S.coop.alliesHTML(g) : ''}
         <div class="foes ${g.alive().length >= 4 ? 'crowd' : ''} ${g.alive().length >= 5 ? 'crowd5' : ''}">${incoming}${foes}</div>

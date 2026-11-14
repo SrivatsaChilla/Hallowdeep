@@ -46,6 +46,7 @@
         orbs: [], // the Defect's Cells (orbs.js); index 0 is the rightmost
         orbSlots: (ch && ch.orbSlots) || 0 };
       s.hadOrbSlots = s.orbSlots > 0;
+      if (ch && ch.reeds) s.rs.reedMax = ch.reeds; // the Minstrel's Reeds (Arrows, fool.js)
       Object.defineProperty(s.p, 'seat', { value: s }); // hidden, so saves and copies of the player never loop
       this.seats.push(s);
       return s;
@@ -252,6 +253,7 @@
       if (this.t.cards >= 6 && this.has('VELVET_COLLAR')) return false;
       if (c.bound && this.t.boundPlayed) return false;
       if (d.playIf && !d.playIf(this, c)) return false;
+      for (const f of HD.PLAY_MODS) if (!f(this, c, d)) return false;
       if (c.id !== 'SPELLBOUND' && this.hand.some((x) => x.id === 'SPELLBOUND')) return false;
       const sc = this.starCostOf(c);
       if (sc !== 'X' && sc > this.stars) return false;
@@ -286,6 +288,7 @@
       if (isAtk && this.p.pw.giga) d *= 3;
       // Lethality: the first Attack each turn (in hand: none played yet; resolving: it is the first).
       if (isAtk && c && this.p.pw.lethality && (this.t ? this.t.attacks : 0) <= (this.hand.includes(c) ? 0 : 1)) d *= 1 + this.p.pw.lethality / 100;
+      for (const f of HD.ATK_MULT) d *= f(this, c, t, isAtk);
       if (d0 && d0.dmgMult) d *= d0.dmgMult(this, t, c);
       if (en && en.mult) d *= en.mult;
       if (isAtk && this.p.pw.doubleAtk) d *= 2;
@@ -309,7 +312,7 @@
     poise() { return (this.p.pw.poise || 0) + (this.p.pw.poiseTemp || 0) + (this.has('BUCKLE') && this.noPotions() ? 2 : 0); }
     blockPreview(n, c) {
       const en = HD.enchOf(c);
-      let b = n + this.poise() + (en && en.blockAdd ? en.blockAdd(c.ench.n) : 0);
+      let b = n + this.poise() + (this.p.pw.stretch || 0) + (en && en.blockAdd ? en.blockAdd(c.ench.n) : 0); // stretch: Limber (fool.js)
       if (this.p.pw.brittle) b *= 0.75;
       const d0 = c && CARDS[c.id];
       if (d0 && d0.blockMult) b *= d0.blockMult(this, c);
@@ -395,6 +398,8 @@
         if (t.pw.personalHive) this.addStatus({ id: 'REELING', n: t.pw.personalHive, to: 'draw' });
         if (t.pw.spines && this.p.hp > 0) await this.damage(this.p, t.pw.spines, {});
       }
+      // Every hit of the active player's Attacks on an enemy, blocked or not (a Transfixed enemy counts them).
+      if (!t.isPlayer && o.attack && o.src === this.p && !this.over) await this.hook('hitEnemy', t, dmg);
       if (t.isPlayer && o.attack && o.src && o.src.alive && !this.over) {
         if (this.p.pw.spines) await this.damage(o.src, this.p.pw.spines, {});
         if (this.p.pw.fireWall && o.src.alive) await this.damage(o.src, this.p.pw.fireWall, {});
@@ -523,6 +528,8 @@
         if (this.p.pw.standFirm && !this.t.blockFromCard) b *= 2;
         if (this.has('ARM_GUARD') && !this.rs.armGuard) { this.rs.armGuard = true; b *= 2; }
         this.t.blockFromCard = true;
+        // Limber is spent by the first Guard a card gives (Sol La gives back what was spent this turn).
+        if (this.p.pw.stretch) { this.t.stretchSpent = (this.t.stretchSpent || 0) + this.p.pw.stretch; delete this.p.pw.stretch; }
       }
       if (b <= 0) return;
       this.p.block = Math.min(999, this.p.block + b);
@@ -748,6 +755,10 @@
       if (this.p.pw.echoForm && (this.t.echoed || 0) < this.p.pw.echoForm) { times++; this.t.echoed = (this.t.echoed || 0) + 1; }
       if (d.type === 'Power' && this.p.pw.signalBoost) { times++; this.addPw(this.p, 'signalBoost', -1); }
       if (d.type === 'Attack' && tg && !tg.isPlayer && this.marked(tg, 'tagTeam')) { times++; this.addPw(tg, 'tagTeam', -1); }
+      for (const f of HD.REPLAY_MODS) times += f(this, c, d);
+      // A card is about to take effect, whether played or playing itself (Refrains start here).
+      await this.hook('playing', c, d);
+      if (this.over) return;
       const prev = this.current;
       this.current = c;
       for (let i = 0; i < times; i++) {
@@ -1210,9 +1221,13 @@
     }
   }
   // Damage modifiers other modules register (co-op cards): ATK_ADD adds to a player's attack, TAKEN_MODS changes what an
-  // enemy deals to the active player.
+  // enemy deals to the active player. ATK_MULT multiplies a player's attack, PLAY_MODS can forbid a card, REPLAY_MODS
+  // add extra plays of a card (fool.js uses all three).
   HD.ATK_ADD = HD.ATK_ADD || [];
   HD.TAKEN_MODS = HD.TAKEN_MODS || [];
+  HD.ATK_MULT = HD.ATK_MULT || [];
+  HD.PLAY_MODS = HD.PLAY_MODS || [];
+  HD.REPLAY_MODS = HD.REPLAY_MODS || [];
   for (const k of SEAT_KEYS) Object.defineProperty(Combat.prototype, k, { get() { return this.seat[k]; }, set(v) { this.seat[k] = v; }, configurable: true });
   Combat.SEAT_KEYS = SEAT_KEYS;
   Combat.SHARED_KEYS = SHARED_KEYS;

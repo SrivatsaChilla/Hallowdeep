@@ -30,7 +30,8 @@ Everything hangs off one global, `HD`. `build.py` joins the files in `src/` in a
     src/defect.js      the Wirebound: cards, relics, potions, powers
     src/osty.js        Clutch (Osty), Knell (Doom) and Wraiths (Souls)
     src/necro.js       the Unburied: cards, relics, potions, powers
-    src/coop.js        the 37 co-op only cards and the powers and hooks they need
+    src/fool.js        the Minstrel (the Fool, from the v0.113 beta): Reeds, Refrains, cards, relics, potions, powers
+    src/coop.js        the 43 co-op only cards and the powers and hooks they need
     src/preview.js     the damage preview: plays a move on a throwaway copy of the fight
     src/net.js         multiplayer networking: the host that numbers actions, the players that replay them;
                        the party outside fights (votes, rooms, bosses, HP) and chat
@@ -94,10 +95,11 @@ node test/regent_engine.js       # Glint, Temper and card creation
 node test/regent_cards.js        # the Crowned's cards, relics and potions
 node test/defect_cards.js        # Cells and the Wirebound's cards
 node test/necro_cards.js         # Clutch, Knell and the Unburied's cards
+node test/fool_cards.js          # Reeds, Sight, Refrains and the Minstrel's cards
 node test/mp_checks.js           # multiplayer rules: scaling, shared enemy turns, falling, theft
-node test/sim.js 100             # random runs; CHAR=VEILED, CROWNED, UNBURIED or WIREBOUND, ASC=10
+node test/sim.js 100             # random runs; CHAR=VEILED, CROWNED, UNBURIED, WIREBOUND or MINSTREL, ASC=10
 node test/mp_sim.js 300          # random 2 to 4 player fights, each replayed from its action log
-node test/coop_cards.js          # the 37 co-op cards, co-op card pools, potions thrown to an ally
+node test/coop_cards.js          # the 43 co-op cards, co-op card pools, potions thrown to an ally
 node test/net_sim.js 24          # networked fights, a copy of the game per player: rejoins, tampering, bad messages
 node test/party_sim.js 6 30      # whole co-op runs over the network: votes, rooms, Mend, events, bosses
                                  # LEAVE=1 drops a player; REJOIN=1 drops one and brings them back; HOSTCRASH=1

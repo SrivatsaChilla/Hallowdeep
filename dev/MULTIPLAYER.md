@@ -26,7 +26,7 @@ cards; the Intercept, Covered, Tank and Flanking powers; the Imbalanced and Atta
   Winged Boots (Massive Scroll instead).
 - Treasure: one unique relic per player; each picks; clashes go to rock-paper-scissors and the loser gets a leftover.
 - Merchants are separate per player. Relics only affect their owner and cannot be traded.
-- Cards: the 37 multiplayer-only cards (5 per character, 12 colorless) join the pools. Some cards never affect other
+- Cards: the 37 multiplayer-only cards (5 per character, 12 colorless) join the pools, plus the Fool's 6 from v0.113. Some cards never affect other
   players even if they sound like it: Cruelty, Accuracy, Tracking, Shadow Step, Lethality, Reaper Form, Claw, Maul.
 
 ## How HallowDeep does it

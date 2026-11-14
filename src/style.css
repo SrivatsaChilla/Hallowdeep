@@ -893,7 +893,9 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
 .herobox .hero { flex: 1 1 auto; width: 100%; }
 /* Cards share grid rows (subgrid) so every Ascension picker starts on the same line. */
 @supports (grid-template-rows: subgrid) {
-  .roster { display: grid; grid-template-columns: repeat(auto-fit, 190px); justify-content: center; align-items: stretch; width: 100%; max-width: 1100px; column-gap: .8rem; }
+  .roster { display: grid; grid-template-columns: repeat(auto-fit, 190px); justify-content: center; align-items: stretch; width: 100%; max-width: 1210px; column-gap: .8rem; }
+  /* Six characters: one row when it fits, otherwise two rows of three (never five and one). */
+  @media (min-width: 640px) and (max-width: 1279px) { .roster { max-width: 620px; } }
   .herobox { display: grid; grid-row: span 2; grid-template-rows: subgrid; justify-items: stretch; width: auto; }
   .herobox .hero { align-self: stretch; height: 100%; box-sizing: border-box; }
   .herobox .ascpick { align-self: start; }
@@ -959,6 +961,15 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .cell { width: 22px; height: 22px; }
   .cell svg { width: 12px; height: 12px; }
   .cell b, .cell i { min-width: 12px; height: 12px; font-size: .58rem; padding: 0 2px; }
+}
+
+/* ---------- the Minstrel: Reeds (Arrows) and Refrains (Melodies) under the portrait, in the Cell row's style ---------- */
+.cell.k-reed { color: #f0dfa8; border-color: #a58a45; }
+.cell.k-note { color: #f6c3df; border-color: #a8648a; font-size: .66rem; font-weight: 700; line-height: 1; }
+/* Unlit ones sit on the page itself, so they take the ink color and stay readable in both themes. */
+.cell.k-reed.empty, .cell.k-note.empty { color: var(--ink2); border-color: var(--ink2); opacity: .8; }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .cell.k-note { font-size: .54rem; }
 }
 
 /* ---------- the Unburied: sigil and Clutch (Osty) under the portrait ---------- */
