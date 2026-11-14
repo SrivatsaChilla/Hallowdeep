@@ -321,6 +321,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
   transition: transform .16s ease-out, margin .2s ease-out, opacity .15s, filter .15s;
   touch-action: none; /* cards are dragged to play; the hand never scrolls */
   user-select: none; -webkit-user-select: none;
+  will-change: transform; /* own layer: lifting a card no longer repaints the whole screen (a third of the raster work) */
 }
 .hand .card.hov, .hand .card:focus-visible { transform: translateY(-34px) rotate(0) scale(1.1); z-index: 5; }
 .hand .card.sel { transform: translateY(-46px) rotate(0) scale(1.12); z-index: 6; }
@@ -740,6 +741,8 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
 
 /* Each card is its own layer, so a card's labels can never sit over the next card in an overlapped hand. */
 .card { isolation: isolate; }
+/* So a card's tooltip, which lives inside that layer, opens over its neighbours (the hand layers its own cards). */
+:not(.hand) > .card:hover, :not(.hand) > .card:focus-visible { z-index: 10; }
 /* Phones: less room above the hand (nothing lifts on hover), and a single compact row of buttons. */
 @media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   .hand { padding: 10px 0 4px; min-height: calc(var(--ch) + 14px); }
@@ -961,6 +964,15 @@ main.combat { grid-template-columns: minmax(0, 1fr); }
   .cell { width: 22px; height: 22px; }
   .cell svg { width: 12px; height: 12px; }
   .cell b, .cell i { min-width: 12px; height: 12px; font-size: .58rem; padding: 0 2px; }
+}
+
+/* An Impaled enemy has the Arrow drawn straight through its portrait, a little wider than the portrait itself. */
+.sigbox { position: relative; display: inline-block; line-height: 0; }
+.sigbox .pinned { position: absolute; left: -22%; width: 144%; height: auto; top: calc(46% + var(--k, 0) * 14%); transform: rotate(-8deg); pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+@media (prefers-reduced-motion: no-preference) {
+  .sigbox .pinned { animation: pin .22s ease-out; }
+  @keyframes pin { from { transform: translateX(-30%) rotate(-8deg); opacity: 0; } }
 }
 
 /* ---------- the Minstrel: Reeds (Arrows) and Refrains (Melodies) under the portrait, in the Cell row's style ---------- */

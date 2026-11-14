@@ -162,6 +162,12 @@
     return `<div class="cellrow reedrow" data-key="reeds" aria-label="${esc(T('Reeds'))} and ${esc(T('Refrains'))}">${out}</div>`;
   }
 
+  // An Arrow stuck through an Impaled enemy: fletching on the left, head out the right. More Arrows sit a little lower.
+  const pinned = (i) => `<svg class="pinned" viewBox="0 0 140 40" style="--k:${i}" aria-hidden="true">
+    <path d="M14 20H118" stroke="#1a0f0a" stroke-width="7" stroke-linecap="round"/><path d="M14 20H118" stroke="#e8d6a2" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M136 20 114 10V30z" fill="#c9c6bd" stroke="#1a0f0a" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M16 20 4 8H18l10 12-10 12H4z" fill="#c0503a" stroke="#1a0f0a" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
+
   // ---------- Clutch (the Necrobinder's Osty) ----------
   const HAND ='<path d="M6.5 19V11L4.2 7.4a1.3 1.3 0 0 1 2.2-1.4L8 8.4V3a1.3 1.3 0 0 1 2.6 0v5V2a1.3 1.3 0 0 1 2.6 0v6V3.2a1.3 1.3 0 0 1 2.6 0V11c0 5-2 8-5.8 8z"/>';
   function clutchBox(g) {
@@ -510,7 +516,7 @@
     const acts = targeting ? `data-act="foe" data-arg="${e.uid}" role="button" tabindex="0"` : live ? `${info(e.def.name, about)} role="button" tabindex="0"` : '';
     return `<div class="foe ${targeting ? 'targetable' : ''} ${S.acting === e.uid ? 'acting' : ''} ${state}" data-key="e${e.uid}" data-ent="${e.uid}" ${acts} aria-label="${esc(e.def.name)}, ${e.hp} of ${e.maxHp} HP.${live ? ` Intends: ${esc(tip)}` : ''}">
       <div class="intent k-${it.kind}" title="${esc(tip)}">${intent}</div>
-      ${sigil(e.id, size)}
+      <span class="sigbox">${sigil(e.id, size)}${live && e.reeds ? e.reeds.map((r, i) => pinned(i)).join('') : ''}</span>
       <div class="fname">${targeting ? `<span class="tkey">${idx + 1}</span>` : ''}${esc(e.def.name)}</div>
       ${hpBar(e)}
       <div class="chips">${live ? chips(e, true) : ''}</div>
