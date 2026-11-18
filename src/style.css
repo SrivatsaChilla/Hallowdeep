@@ -207,6 +207,8 @@ button.hero:hover { border-color: var(--wax); }
 .tips span { display: block; margin-bottom: .25rem; }
 .card:hover .tips, .card:focus-visible .tips { display: block; }
 .grid .card:hover .tips, .pickrow .card:hover .tips { bottom: auto; top: calc(100% + 6px); }
+/* ui.js sets .tipup where the tooltip would run past the bottom of its panel. */
+.grid .card.tipup:hover .tips, .pickrow .card.tipup:hover .tips { top: auto; bottom: calc(100% + 6px); }
 
 /* ---------- panels ---------- */
 .panel { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 1.6rem 1rem 3rem; }
@@ -806,6 +808,9 @@ input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text;
 /* Combat always fits the screen height: the fight area shrinks, the hand and controls stay put. */
 #app:has(> main.combat) { height: 100dvh; min-height: 0; overflow: hidden; }
 main.combat { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr) auto auto; }
+/* The host's badge (Netlify's free plan adds one) is fixed over the bottom right corner and takes clicks: End turn sat
+   under it on short phones. While it is there, its height stays free at the bottom of every screen. */
+body:has(> #nl-badge-frame) #app { box-sizing: border-box; padding-bottom: 64px; }
 @media (min-width: 761px) and (max-height: 820px) {
   .me .sigil { width: 96px; height: 96px; }
   .foe .sigil { max-width: 112px; max-height: 112px; }

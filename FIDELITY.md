@@ -144,7 +144,7 @@ Approximations (guesses):
 - Stretch is added like Dexterity (before Frail), shows in card text, and is spent whole by the first Block a card gives, so Cho Limbs' second Block gets none. Cho Ki's "regain any spent Stretch" gives back all the Stretch spent this turn, its own included. Co-op cards that hand Block to another player show Stretch in the amount without spending it.
 - A Melody starts as the card begins to take effect, before the card's own effect, for played and self-played cards alike, and ends with the turn. "If the enemy is Impaled" (Bow Smack, Ki Hop) is checked before the card's damage.
 - "Damage dealt" (Rain Shot, Blossom Shot) is the HP the target lost.
-- Mourning Blow counts as creating a Sadness. Each Ennui played adds its own Sadness per turn. Anguish+ raises both its base and its bonus to 7, as the upgrade data says, though the data's upgraded text still prints 6.
+- Mourning Blow counts as creating a Sadness. Each Ennui played adds its own Sadness per turn. Anguish+ raises both its base and its bonus to 7, as the upgrade data says (the data's upgraded text prints 6; sts2.untapped.gg shows 7 and 7, checked Nov 17 2026 against v0.113.1).
 - Temporary Thorns (Cho Barbs) last until the start of your next turn. Dislike You and Quietus end at the end of your turn.
 - Simpleton and The Fool (the Tarot card) skip X-cost cards, cards aimed at another player, Unplayable cards and Shoot cards with no Arrow. Simpleton takes the leftmost of equally cheap cards. Tune makes the next card cost 0 (an X card still spends your Energy).
 - Florescence Exhausts Shoot cards in the hand, draw pile and discard pile. Blot out the Sky, Ocarina and Bottled Song pick from the Fool's reward pool (Common, Uncommon and Rare cards).

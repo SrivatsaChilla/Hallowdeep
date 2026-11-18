@@ -1204,8 +1204,10 @@
     for (const t of document.querySelectorAll(compact() ? '.dock .card .ctext, .pickrow .card .ctext' : '.pickrow .card .ctext')) {
       const inner = t.firstElementChild;
       if (!inner) continue;
-      const key = `${t.closest('.dock') ? 'hand' : 'row'}|${t.closest('.card').dataset.cid}|${t.textContent.length}|${innerWidth}x${innerHeight}`;
+      // The room for text is part of the key: a shop card (price inside) has less of it than the same card in a reward.
+      const key = `${t.closest('.dock') ? 'hand' : 'row'}|${t.closest('.card').dataset.cid}|${t.textContent.length}|${Math.round(t.clientHeight)}|${innerWidth}x${innerHeight}`;
       if (textFit.has(key)) { t.style.fontSize = textFit.get(key); continue; }
+      t.style.fontSize = ''; // measure from the full size, not from a size shrunk for a tighter spot
       let size = parseFloat(getComputedStyle(t).fontSize);
       for (let i = 0; i < 12 && size > 5 && inner.getBoundingClientRect().height > t.getBoundingClientRect().height + 1; i++) { size = Math.round((size - 0.4) * 10) / 10; t.style.fontSize = `${size}px`; }
       textFit.set(key, t.style.fontSize);
@@ -2001,6 +2003,17 @@
     else onAct(el.dataset.act, el.dataset.arg);
     if (pageKey() !== page) settleUntil = performance.now() + PAGE_SETTLE_MS;
   }));
+  // A card's tooltip opens below it in grids and rewards. Where that would run past the bottom of its scrolling panel
+  // (the last row of a pile), it opens above the card instead, if there is more room there.
+  document.addEventListener('mouseover', (ev) => {
+    const card = ev.target.closest ? ev.target.closest('.grid .card, .pickrow .card') : null;
+    const tips = card && card.querySelector('.tips');
+    if (!tips) return;
+    card.classList.remove('tipup');
+    const box = (card.closest('.sheet') || document.documentElement).getBoundingClientRect();
+    const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, innerHeight), c = card.getBoundingClientRect();
+    if (tips.getBoundingClientRect().bottom > bottom - 4 && c.top - top > bottom - c.bottom) card.classList.add('tipup');
+  });
   // Press and hold any card to read it up close with its keywords.
   let hold = null;
   const cancelHold = () => { if (hold) { clearTimeout(hold.t); hold = null; } };
