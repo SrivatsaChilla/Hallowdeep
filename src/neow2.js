@@ -40,8 +40,8 @@
     };
   }
 
-  // Dowsing: a quest card that turns into Abundance after 5 more ? rooms.
-  CARDS.DIVINING = { id: 'DIVINING', name: 'Divining', type: 'Quest', rarity: 'Quest', color: 'quest', cost: null, target: 'self', kw: ['Unplayable'], tags: [], v: { rooms: 5 }, up: {}, lifetimeRooms: 5,
+  // Dowsing: a quest card that turns into Abundance after 4 more ? rooms (5 before v0.113). The ? room that transforms it is never a fight.
+  CARDS.DIVINING = { id: 'DIVINING', name: 'Divining', type: 'Quest', rarity: 'Quest', color: 'quest', cost: null, target: 'self', kw: ['Unplayable'], tags: [], v: { rooms: 4 }, up: {}, lifetimeRooms: 4,
     text: (v, f, c) => `After entering ${c && c.left != null ? c.left : v.rooms} more ? rooms, Transforms into Abundance.` };
   CARDS.ABUNDANCE = { id: 'ABUNDANCE', name: 'Abundance', type: 'Skill', rarity: 'Ancient', color: 'event', cost: 1, upCost: 0, target: 'self', kw: ['Burn'], tags: [], v: {}, up: {},
     text: () => 'Choose 1 of 3 Upgraded Powers to add to your hand. It is free to play this turn.',
@@ -51,11 +51,11 @@
       if (x) { x.freeTurn = true; g.addToHand(x); }
     } };
   const add = HD.Run.prototype.addCard;
-  HD.Run.prototype.addCard = function (id, ...rest) { const c = add.call(this, id, ...rest); if (c && id === 'DIVINING') c.left = 5; return c; };
+  HD.Run.prototype.addCard = function (id, ...rest) { const c = add.call(this, id, ...rest); if (c && id === 'DIVINING') c.left = 4; return c; };
   const hook = HD.Run.prototype.hook;
   HD.Run.prototype.hook = function (name, ...args) {
     const out = hook.call(this, name, ...args);
-    if (name === 'onUnknown') for (const c of this.deck.filter((x) => x.id === 'DIVINING')) { c.left = (c.left == null ? 5 : c.left) - 1; if (c.left <= 0) { this.removeCard(c); this.addCard('ABUNDANCE'); } }
+    if (name === 'onUnknown') for (const c of this.deck.filter((x) => x.id === 'DIVINING')) { c.left = (c.left == null ? 4 : c.left) - 1; if (c.left <= 0) { this.removeCard(c); this.addCard('ABUNDANCE'); this.noFightRoll = true; } }
     return out;
   };
 

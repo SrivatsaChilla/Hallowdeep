@@ -1,9 +1,9 @@
-// The game follows the v0.111 data. Cards and monsters first written from the older data get the v0.111 changes here.
+// The game follows the v0.111 data, and its cards follow the newest beta (v0.113.1). Cards and monsters first written from
+// older data get those changes here.
 (function () {
   const HD = globalThis.HD;
   const CARDS = HD.CARDS;
   const card = (id, o) => { CARDS[id] = Object.assign({ id, color: 'oathburner', target: 'self', v: {}, up: {}, kw: [], tags: [] }, o); };
-  const mightNow = (g) => (g ? (g.p.pw.might || 0) + (g.p.pw.mightTemp || 0) : 0);
 
   // Cards that only exist from v0.111 on.
   card('DEEP_NIGHT', { name: 'Deep Night', only: '0.111', coop: true, type: 'Attack', rarity: 'Rare', cost: 12, target: 'enemy', v: { dmg: 60 }, up: { dmg: 12 },
@@ -24,10 +24,13 @@
     MERCILESS: { rarity: 'Uncommon' },
     HELLBOUND: { v: { str: 3 } },
     LOOM_OVER: { rarity: 'Rare' },
-    ROLL_UP_SLEEVES: { cost: 3, upCost: null, v: { base: 15, per: 5 }, up: { base: 1, per: 3 },
-      text: (v, f, c, g) => `Gain ${f.b(v.base)} Guard. Gains ${v.per} additional Guard for each Might you have.${g ? ` (${mightNow(g)})` : ''}`,
-      play: async (g, c, t, v) => g.gainBlock(v.base + v.per * mightNow(g), true) },
-    OLD_RITE: { text: (v) => `Gain ${v.en} Energy.`, play: async (g, c, t, v) => g.gainEnergy(v.en) },
+    // v0.113 rework. ribbon is the engine's "costs less until played" counter (refunded in afterPlay).
+    ROLL_UP_SLEEVES: { cost: 3, upCost: null, v: { blk: 15 }, up: { blk: 5 },
+      text: (v, f) => `Gain ${f.b(v.blk)} Guard. Attacks in your hand cost 1 less Energy until played.`,
+      play: async (g, c, t, v) => {
+        await g.gainBlock(v.blk, true);
+        for (const x of g.hand) if (CARDS[x.id].type === 'Attack' && typeof CARDS[x.id].cost === 'number') { x.bonusCost = (x.bonusCost || 0) - 1; x.ribbon = (x.ribbon || 0) + 1; }
+      } },
     ASH_WAIL: { v: { dmg: 18 }, up: { dmg: 6 } },
     MAIM: { v: { dmg: 20 }, up: { dmg: 6 } },
     FINAL_EMBER: { v: { dmg: 18 } },
@@ -40,7 +43,17 @@
     BEAST_CALL: { cost: 2 },
     WHITE_FLAME: { v: { hp: 2 } },
     TEAR_OPEN: { cost: 1, v: { base: 10 }, up: { base: 2 } },
-    BARRAGE: { rarity: 'Uncommon' },
+    BARRAGE: { rarity: 'Uncommon', v: { dmg: 10 } },
+    // v0.113 beta card changes (Old Rite's v0.111 change was reverted, so it keeps its original text).
+    PRACTICED: { text: (v) => `Draw ${v.draw} cards. Retain your hand this turn.`, play: async (g, c, t, v) => { await g.drawCards(v.draw); g.t.keepHand = true; } },
+    LAST_RITES: { cost: 3, kw: ['Furtive'], target: 'random', v: { dmg: 19 }, up: { dmg: 4 },
+      text: (v, f) => `Deal ${f.d(v.dmg)} damage to the enemy with the lowest HP.`,
+      play: async (g, c, t, v) => { const e = g.alive().reduce((a, x) => (!a || x.hp < a.hp ? x : a), null); if (e) await g.attack(e, v.dmg, 1, c); } },
+    QUICKSILVER: { v: { amt: 3 } },
+    GHOST_KNIVES: { v: { amt: 8 } },
+    THRALL_PLUNGE: { v: { dmg: 11 }, up: { dmg: 2 } },
+    CLARITY: { kw: [] },
+    HUNTERS_MARK: { text: () => `Sapped enemies take ${HD.trackingMult === 2 ? 'double' : '50% more'} damage from your Attacks.` },
     HOPE_BEACON: { cost: 2 },
   };
   // v0.111 changes to monster moves.

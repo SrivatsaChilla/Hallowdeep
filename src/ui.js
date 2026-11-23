@@ -725,7 +725,7 @@
     const line = voice.lines[HD.hashSeed(`${r.seed}:${r.act}`) % voice.lines.length];
     const rows = S.offer.map((rid) => {
       const d = HD.RELICS[rid];
-      return `<button class="choice gift ${d.bane ? 'bane' : ''}" data-key="gift-${rid}" data-act="gift" data-arg="${rid}">${HD.relicIcon(rid, 'medal')}<span class="gtext"><b>${esc(d.name)}</b><span>${esc(d.text)}</span></span></button>`;
+      return `<button class="choice gift" data-key="gift-${rid}" data-act="gift" data-arg="${rid}">${HD.relicIcon(rid, 'medal')}<span class="gtext"><b>${esc(d.name)}</b><span>${esc(d.text)}</span></span></button>`;
     }).join('');
     return `${bar()}<main class="panel ancient" data-key="scr-ancient">
       <header class="anc-plate"><h2>${esc(who)}</h2>${voice.epithet ? `<small>${esc(T(voice.epithet))}</small>` : ''}</header>

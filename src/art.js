@@ -220,7 +220,7 @@
     CONCUSSION: ['burst', 'eye', ['quake'], 0], FUSE_BOMB: ['fireball', 'hourglass', ['sparks'], 0], PLAN_AHEAD: ['scroll', 'eye', ['aura'], 0],
     FINAL_BRACE: ['tower', null, ['aura', 'ring'], 0], WEIGHTED_CORD: ['orbs', 'chains', ['speed'], 0], GILDED_AXE: ['axe', 'coins', ['sparks'], 25],
     GRASPING_HAND: ['fist', 'coins', ['sparks'], 0], WINDFALL: ['coins', 'cards', ['sparks', 'aura'], 0], TEAR_OPEN: ['claw', 'eye', ['drops'], 0],
-    BARRAGE: ['dagger', 'cards', ['speed'], 20], CHAOS_ENGINE: ['swirl', 'sword', ['sparks', 'aura'], 0], UNRAVEL: ['swirl', 'question', ['ash'], 0],
+    BARRAGE: ['dagger', 'cards', ['speed'], 20], COIN_HOARD: ['coins', 'fist', ['sparks'], 0], CHAOS_ENGINE: ['swirl', 'sword', ['sparks', 'aura'], 0], UNRAVEL: ['swirl', 'question', ['ash'], 0],
     AGELESS_MAIL: ['helmet', 'hourglass', ['ring'], 0], FRENZIED_HANDS: ['fist', 'cards', ['sparks', 'speed'], 0], OLD_HABITS: ['hourglass', 'cards', ['ash'], 0],
     LANDSLIDE: ['boulder', 'boulder', ['quake', 'speed'], 0], BREW_UP: ['tear', 'flame', ['sparks'], 0], CHOSEN_FEW: ['crown', 'cards', ['aura'], 0],
     PUMMEL_SPREE: ['fist', 'fist', ['speed', 'sparks'], 0], BURIED_GEM: ['orbs', 'cracked', ['sparks'], 0], GRAND_PLAN: ['scroll', 'crown', ['aura'], 0],

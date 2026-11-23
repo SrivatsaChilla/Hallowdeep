@@ -66,7 +66,7 @@ Ancients between acts: Act 2 meets Orobas, Pael or Tezcatara and Act 3 meets Non
 
 ## Colorless cards
 
-52 of the 53 solo colorless cards, with every number checked against the data (and the v0.111 changes to Rend and Salvo in the beta set). Splash waits for the other characters, whose Attacks it offers. The 11 multiplayer-only colorless cards are defined but never offered in solo, as in the original. Alchemize, Hand of Greed and Hidden Gem are never generated mid-combat, per the data. The shop sells 1 Uncommon and 1 Rare colorless card at a 15% markup; Dingy Rug mixes colorless cards into card rewards; Toolbox, Lead Paperweight, the Colorless Potion and Brain Leech's Rip option all work. Approximation: colorless card rewards (Lead Paperweight, Brain Leech) roll Rare 3% of the time, otherwise Uncommon.
+53 of the 54 solo colorless cards (My Shinies is from the v0.113 beta), with every number checked against the data (and the v0.111 changes to Rend and Salvo in the beta set). Splash waits for the other characters, whose Attacks it offers. The 11 multiplayer-only colorless cards are defined but never offered in solo, as in the original. Alchemize, Hand of Greed and Hidden Gem are never generated mid-combat, per the data. The shop sells 1 Uncommon and 1 Rare colorless card at a 15% markup; Dingy Rug mixes colorless cards into card rewards; Toolbox, Lead Paperweight, the Colorless Potion and Brain Leech's Rip option all work. Approximation: colorless card rewards (Lead Paperweight, Brain Leech) roll Rare 3% of the time, otherwise Uncommon.
 
 ## Enchantments
 
@@ -74,7 +74,7 @@ All 22 enchantments, one per card, saved with the deck and shown on the card (na
 
 ## The Veiled (the Silent)
 
-Built from the v0.111 data: 70 HP, 99 Gold, 3 Energy, 5 Strikes, 5 Defends, Neutralize and Survivor, Ring of the Snake. All 86 solo cards (80 in the reward pool, plus 4 Basic and 2 Ancient), the Shiv token, 9 relics and 3 potions, with every cost, number, keyword, target and type checked against v0.111 (668 entries).111 changed (Outbreak back to a Power, Well-Laid Plans back to retaining 1 card, Expertise back to drawing up to 6, Tracking back to double damage, Haze, Flick-Flack, Mirage, Anticipate and three rarities), removes Sidestep and adds back Scare. The 5 multiplayer-only Silent cards are defined but never offered. Built mechanics: Poison (ticks at the start of each creature's turn, ignores Block), Accelerant, Shivs (with Accuracy, Phantom Blades, Fan of Knives, Knife Trap, Helical Dart), Sly (a card discarded from your hand during your turn plays itself for free), discard effects (Tingsha, Tough Bandages, Memento Mori), and every power.
+Built from the v0.111 data: 70 HP, 99 Gold, 3 Energy, 5 Strikes, 5 Defends, Neutralize and Survivor, Ring of the Snake. All 86 solo cards (80 in the reward pool, plus 4 Basic and 2 Ancient), the Shiv token, 9 relics and 3 potions, with every cost, number, keyword, target and type checked against v0.111 (668 entries).111 changed (Outbreak back to a Power, Well-Laid Plans back to retaining 1 card, Expertise back to drawing up to 6, Tracking back to double damage, Haze, Flick-Flack, Mirage, Anticipate and three rarities), removes Sidestep and adds back Scare. The 5 multiplayer-only Silent cards are defined but never offered. Built mechanics: Poison (ticks at the start of each creature's turn, ignores Block), Accelerant, Shivs (with Accuracy, Phantom Blades, Fan of Knives, Knife Trap, Helical Dart), Sly (a card discarded from your hand during your turn plays itself for free), discard effects (Tingsha, Tough Bandages), and every power.
 
 Ancient relics follow the character: Archaic Tooth turns Neutralize into Suppress, Touch of Orobas turns Ring of the Snake into Ring of the Drake, and Dusty Tome offers the Silent's Ancient cards.
 
@@ -149,8 +149,14 @@ Approximations (guesses):
 - Simpleton and The Fool (the Tarot card) skip X-cost cards, cards aimed at another player, Unplayable cards and Shoot cards with no Arrow. Simpleton takes the leftmost of equally cheap cards. Tune makes the next card cost 0 (an X card still spends your Energy).
 - Florescence Exhausts Shoot cards in the hand, draw pile and discard pile. Blot out the Sky, Ocarina and Bottled Song pick from the Fool's reward pool (Common, Uncommon and Rare cards).
 - Tarot: Judgement kills outright, like a Doom death; The Lovers draws from the other five characters' reward pools; The Hierophant's cards cost 1 less for the turn.
-- Other characters have no Arrow, so they cannot Shoot unless Quiver gives them one, and Prism Glass does not offer them Fool cards. Their runs are unchanged from v0.111 (the sim fingerprints of all five match the build before the Fool).
+- Other characters have no Arrow, so they cannot Shoot unless Quiver gives them one, and Prism Glass does not offer them Fool cards. Adding the Fool left their runs unchanged (the sim fingerprints of all five matched the build before the Fool); the v0.113 card update below changed them on purpose.
 - Co-op: Compost, Covering Fire, Enrapture, Ensemble, Self Deprecate and Yoga are the Fool's multiplayer-only cards. Ensemble makes other players' next cards cost 0 Energy.
+
+## Beta card update (v0.113.1)
+
+Cards follow the newest beta, v0.113.1 (its data is identical to v0.113.0 for cards; the hotfix only reworded Show Off+). Monsters, relics and events stay on v0.111. Changed from v0.111, all checked against the v0.113.1 data (dev/verify.js: 0 card mismatches, Original-names text matches): Expect a Fight (cost 3, 15(20) Block, Attacks in your hand cost 1 less until played), Forgotten Ritual (back to needing an Exhaust this turn), Expertise (Retain your whole hand this turn), Memento Mori (cost 3, Sly, 19(23) damage to the enemy with the lowest HP), Speedster 3, Phantom Blades 8(11), Minion Dive Bomb 11(13), Salvo 10(14), Enlightenment (no Exhaust), Tracking (your Attacks), Dowsing (4 ? rooms, and the ? room that transforms it is never a fight). New: My Shinies (colorless Rare, 1 damage per 20 Gold, 10 upgraded).
+
+Judgment: Memento Mori hits the first of several enemies tied for lowest HP. Not built: the new event cards (Dingy Dagger, Mighty Weapon, Mighty Shield, God Byrd) and Amnesia, since their events and modes are not in the game; the v0.113 monster, relic and event changes (Tunneler, Infested Prism, Axebot, Roc Chick, Brilliant Scarf, Zen Weaver and others); the One for All autoplay fix.
 
 ## Audit fixes (v0.111)
 

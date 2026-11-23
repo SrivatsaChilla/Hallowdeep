@@ -102,8 +102,22 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   // ----- v0.111 card set -----
   HD.setVersion('0.111');
   eq('v0.111: Rampage 10 +5, upgraded +5', [HD.vals({id:'ESCALATE'}).dmg, HD.vals({id:'ESCALATE'}).inc, HD.vals({id:'ESCALATE',up:true}).inc], [10, 5, 10]);
-  let gv = await mk('RIPJAW', []); gv.p.pw.might = 2; const ef = gv.makeCard('ROLL_UP_SLEEVES', false); gv.hand.push(ef); gv.energy = 3; gv.p.block = 0;
-  await gv.playCard(ef, null); eq('v0.111: Expect a Fight = 15 + 5 per Strength', gv.p.block, 25);
+  let gv = await mk('RIPJAW', []); const ef = gv.makeCard('ROLL_UP_SLEEVES', false), ab = gv.makeCard('ANVIL_DROP', false); gv.hand.push(ef, ab); gv.energy = 3; gv.p.block = 0;
+  await gv.playCard(ef, null); eq('v0.113: Expect a Fight = 15 Block, Attacks in hand cost 1 less until played', [gv.p.block, gv.costOf(ab)], [15, HD.CARDS.ANVIL_DROP.cost - 1]);
+  gv.energy = 9; await gv.playCard(ab, gv.enemies[0]); eq('v0.113: Expect a Fight discount ends once the Attack is played', gv.costOf(ab), HD.CARDS.ANVIL_DROP.cost);
+  { const g = await mk('RIPJAW', []); g.run.gold = 105; g.energy = 9; const e = g.enemies[0], hp0 = e.hp; e.block = 0;
+    const c = g.makeCard('COIN_HOARD', false), cu = g.makeCard('COIN_HOARD', true); g.hand.push(c, cu);
+    await g.playCard(c, e); await g.playCard(cu, e);
+    eq('v0.113: My Shinies deals 1 per 20 Gold (1 per 10 upgraded)', hp0 - e.hp, 5 + 10); }
+  { const g = await mk('RIPJAW', []); const c = g.makeCard('PRACTICED', false); g.hand.push(c); g.energy = 3; await g.playCard(c, null);
+    eq('v0.113: Expertise retains the whole hand this turn', g.handKept(), true); }
+  { const g = await mk('RIPJAW', []); const c = g.makeCard('OLD_RITE', false); g.hand.push(c); g.energy = 1; g.t.burned = 0; await g.playCard(c, null);
+    eq('v0.113: Forgotten Ritual gives no Energy unless a card Burned this turn', g.energy, 0); }
+  { const r = new HD.Run({ char: 'OATHBURNER', seed: 7 }); const d = r.addCard('DIVINING');
+    for (let i = 0; i < 3; i++) r.hook('onUnknown');
+    eq('v0.113: Dowsing still waits after 3 ? rooms', [d.left, r.deck.includes(d)], [1, true]);
+    r.unknownOdds = { monster: 1, elite: -1, treasure: 0, shop: 0 }; r.hook('onUnknown');
+    eq('v0.113: Dowsing becomes Abundance on the 4th ? room, which is never a fight', [r.deck.some((x) => x.id === 'ABUNDANCE'), r.rollUnknown() !== 'monster'], [true, true]); }
   gv = await mk('RIPJAW', []); const mid = gv.makeCard('DEEP_NIGHT', false); gv.hand.push(mid); gv.burnedCount = 5;
   eq('v0.111: Midnight costs 12 minus cards exhausted', gv.costOf(mid), 7);
   eq('v0.111: co-op cards stay out of the pool (Midnight and Outrage count ANYONE / EVERYONE)', ['DEEP_NIGHT', 'SPREADING_RAGE', 'KINDLE_ALLY'].map((id) => HD.POOL('oathburner').some((d) => d.id === id)), [false, false, false]);
@@ -174,7 +188,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   gC = await mk3('GUNNER_WEAK'); gC.hand.length = 0; await gC.endTurn(); eq('Rampart: the gunner starts your turn with 25 Guard', gC.enemies[1].block >= 25, true);
   gC = await mk3('OWL_JUDGE'); const owlE = gC.enemies[0]; owlE.pw.soar = 1; eq('Soar halves Attack damage', gC.atkDmg(10, owlE, gC.makeCard('CUT')), 5);
   // ----- colorless cards -----
-  eq('Colorless: 52 solo cards (Splash waits for other characters), 12 co-op only kept out', [HD.POOL('colorless').length, Object.values(HD.CARDS).filter((d) => d.color === 'colorless' && d.coop).length], [52, 12]);
+  eq('Colorless: 53 solo cards (Splash waits for other characters; My Shinies is new in v0.113), 12 co-op only kept out', [HD.POOL('colorless').length, Object.values(HD.CARDS).filter((d) => d.color === 'colorless' && d.coop).length], [53, 12]);
   const rS = new HD.Run('cshop'); const shC = rS.makeShop(); eq('Shop: 1 Uncommon and 1 Rare colorless card at a 15% markup', [shC.colorless.map((x) => HD.CARDS[x.id].rarity), shC.colorless.every((x) => x.base >= Math.round((x.rar === 'Rare' ? 150 : 75) * 1.15 * 0.95))], [['Uncommon', 'Rare'], true]);
   const rRug = new HD.Run('rug'); rRug.addRelic('WORN_RUG'); let sawCl = false; for (let i = 0; i < 300 && !sawCl; i++) sawCl = rRug.cardReward('elite').some((x) => HD.CARDS[x.id].color === 'colorless'); eq('Dingy Rug lets colorless cards into rewards', sawCl, true);
   const mkC = async (relics) => { const r = new HD.Run('cl' + relics.join()); relics.forEach((x) => r.addRelic(x)); const g = new HD.Combat(r, 'RIPJAW', HD.autoUI, 'monster'); await g.start(); return g; };

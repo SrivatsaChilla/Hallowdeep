@@ -55,7 +55,7 @@ for key, e in ours['enc'].items():
         if mine <= theirs and x['is_weak'] == weak and (best is None or len(theirs) < len(best[1])): best = (x, theirs)
     if e['kind'] == 'event' or not best:
         # Event fights and fights the data lists without an act: match on monsters alone.
-        loose = [z for z in E if not z['act'] and mine <= {m['id'] if isinstance(m, dict) else m for m in z['monsters']}]
+        loose = [z for z in E if not z['act'] and mine <= {m['id'] if isinstance(m, dict) else m for m in z['monsters'] or []}]
         if loose: out['encounters'][key] = loose[0]['name']
         elif best: out['encounters'][key] = best[0]['name']
         else: print('no encounter match for', key, e['mons'])

@@ -13,7 +13,8 @@
   HD.Run.prototype.rollUnknown = function () {
     if (!this.unknownOdds) this.resetUnknownOdds();
     const odds = this.unknownOdds;
-    const banned = new Set(this.hasRelic('BEAD_BRACELET') ? ['monster'] : []);
+    const banned = new Set(this.hasRelic('BEAD_BRACELET') || this.noFightRoll ? ['monster'] : []);
+    this.noFightRoll = false; // set by Divining when this ? room transforms it
     const roll = this.rng.event.next();
     let acc = 0, hit = 'event';
     for (const k of ['monster', 'elite', 'treasure', 'shop']) {

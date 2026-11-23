@@ -72,9 +72,10 @@ const play = async (g, id, t) => { const c = g.hand.find((x) => x.id === id); aw
     eq('Sly given by Master Planner or Hand Trick also triggers (Defend plays itself)', g.p.block, 8 + 5);
   }
   {
-    const g = await fight('VEILED', { hand: ['ENDURE', 'JAB', 'LAST_RITES'], prefer: ['JAB'] });
-    await play(g, 'ENDURE');
-    eq('Memento Mori counts discards this turn', HD.CARDS.LAST_RITES.text(HD.vals({ id: 'LAST_RITES', up: false }), { d: (x) => x, b: (x) => x }, g.hand[0], g).includes('13'), true);
+    const g = await fight('VEILED', { hand: ['LAST_RITES'] });
+    g.energy = 3; g.enemies[1].hp = 300;
+    await play(g, 'LAST_RITES');
+    eq('Memento Mori (v0.113): 19 damage to the enemy with the lowest HP', hp(g), [0, 219, 0]);
   }
 
   // ---------- Exhaust triggers ----------
@@ -116,7 +117,7 @@ const play = async (g, id, t) => { const c = g.hand.find((x) => x.id === id); aw
   {
     const g = await fight('VEILED', { hand: ['QUICKSILVER'], draw: ['JAB', 'JAB'] });
     await play(g, 'QUICKSILVER'); await g.drawCards(2);
-    eq('Speedster: each card drawn on your turn deals 2 to ALL', hp(g), [4, 4, 4]);
+    eq('Speedster (v0.113): each card drawn on your turn deals 3 to ALL', hp(g), [6, 6, 6]);
   }
   {
     const g = await fight('OATHBURNER', { hand: ['ENDLESS_CUTS'], draw: ['CUT', 'BRACE'] });

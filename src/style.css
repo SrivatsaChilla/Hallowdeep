@@ -450,7 +450,6 @@ button.choice.gift { flex-direction: row; align-items: center; gap: .9rem; width
 button.choice.gift:hover, button.choice.gift:focus-visible { transform: translateX(4px); border-color: var(--brass); }
 button.choice.gift .gtext { display: flex; flex-direction: column; gap: .1rem; flex: 1; min-width: 0; }
 button.choice.gift b { font-size: 1.25rem; color: var(--brass-text); }
-button.choice.gift.bane { border-style: dashed; border-color: var(--blood); border-left: 4px solid var(--blood); }
 @media (max-width: 760px) {
   .anc-plate h2 { font-size: 1.7rem; }
   .anc-face { width: 56px; height: 56px; }
@@ -667,6 +666,10 @@ button.choice.loot > span b { display: block; font-size: 1.15rem; margin-bottom:
 
 /* ---------- phones: touch comfort ---------- */
 html, body { overscroll-behavior: none; }
+/* No double-tap zoom when tapping fast on a phone; a two-finger pinch still zooms. */
+html { touch-action: manipulation; }
+/* iPhones zoom into any text field under 16px when it gets focus. */
+@media (pointer: coarse) { input, textarea, select { font-size: max(16px, 1em); } }
 body { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 input, textarea, .log, .infotext { user-select: text; -webkit-user-select: text; }
 /* Small controls get a 44px tap area without changing how they look. */

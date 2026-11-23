@@ -116,6 +116,9 @@
   card('TEAR_OPEN', { name: 'Tear Open', type: 'Attack', rarity: 'Rare', cost: 2, target: 'enemy', v: { base: 15, per: 5 }, up: { base: 3, per: 3 },
     text: (v, f) => `Deal ${f.d(v.base)} damage, plus ${v.per} for each different debuff on the enemy.`,
     play: (g, c, t, v) => g.attack(t, v.base + v.per * Object.keys(t.pw).filter((k) => HD.DEBUFFS.has(k) && t.pw[k] > 0).length, 1, c) });
+  card('COIN_HOARD', { name: 'Coin Hoard', type: 'Attack', rarity: 'Rare', cost: 1, target: 'enemy', v: { gold: 20 }, up: { gold: -10 },
+    text: (v, f, c, g) => `Deal 1 damage for every ${v.gold} Gold you have.${g && g.run ? ` (${f.d(Math.floor(g.run.gold / v.gold))})` : ''}`,
+    play: (g, c, t, v) => g.attack(t, Math.floor(g.run.gold / v.gold), 1, c) });
   card('BARRAGE', { name: 'Barrage', type: 'Attack', rarity: 'Rare', cost: 1, target: 'enemy', v: { dmg: 12 }, up: { dmg: 4 },
     text: (v, f) => `Deal ${f.d(v.dmg)} damage. Retain your hand this turn.`, play: async (g, c, t, v) => { await g.attack(t, v.dmg, 1, c); g.t.keepHand = true; } });
 

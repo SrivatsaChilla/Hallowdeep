@@ -1,6 +1,6 @@
 # HallowDeep
 
-A browser deckbuilding roguelike that mirrors Slay the Spire 2 (v0.111) mechanically: every number, rule and monster
+A browser deckbuilding roguelike that mirrors Slay the Spire 2 (v0.111, cards on the v0.113.1 beta) mechanically: every number, rule and monster
 pattern matches the game data, while names, text, art and UI are original. A toggle shows the original game's names.
 One self-contained HTML file, no framework, no runtime dependencies.
 
@@ -20,8 +20,10 @@ One self-contained HTML file, no framework, no runtime dependencies.
 - Mechanics and numbers come from the v0.111 data (Spire Codex export). Data wins over wikis and guides.
 - The game follows v0.111 only (the stable/beta switch was removed). Cards first written from older data get their
   v0.111 changes in src/versions.js, applied once at load.
-- One exception: the Fool (the Minstrel) first appears in the v0.113 beta, so that character alone is built from the
-  v0.113.0 export (src/fool_data.js). Nothing else reads it.
+- Cards follow the newest beta (v0.113.1, Nov 2026): its card changes (Expect a Fight, Forgotten Ritual, Expertise,
+  Memento Mori, Speedster, Phantom Blades, Minion Dive Bomb, Salvo, Enlightenment, Tracking, Dowsing) are in
+  src/versions.js beside the v0.111 ones, and My Shinies is in colorless.js. Monsters, relics and events stay on v0.111.
+- The Fool (the Minstrel) first appears in the v0.113 beta and is built from the v0.113.0 export (src/fool_data.js).
 - HallowDeep names and text are original. dev/namemap.json maps original IDs to ours; src/names.js (generated) holds the
   original names and term swaps used by the "Original names" mode.
 - Any guess or approximation goes in FIDELITY.md.
@@ -74,7 +76,7 @@ One self-contained HTML file, no framework, no runtime dependencies.
     node test/coop_cards.js                  # the 43 co-op cards, co-op card pools, potions thrown to an ally
     node test/net_sim.js 24                  # networked fights: a copy of the game per player, rejoins, tamper and bad-message checks
     node test/party_sim.js 6 30              # whole co-op runs over the network (votes, rooms, Mend, events, bosses)
-    node dev/verify.js ../spire-codex/data-beta/v0.111.0/eng          # number parity, expect 0 mismatches
+    node dev/verify.js ../spire-codex/data-beta/v0.113.1/eng          # number parity: 0 card mismatches (5 v0.113 monster/relic changes not built)
     node dev/audit.js ../spire-codex/data/eng ../spire-codex/data-beta/v0.111.0/eng   # 7 audit sections, all ok
     python3 dev/qa_devices.py [device...]    # real fights through the UI at 16 screen sizes (slow; run in batches)
     python3 dev/qa_resize.py                 # resizing and rotating mid-fight
