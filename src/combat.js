@@ -621,7 +621,8 @@
     async choose(o) {
       const n = Math.min(o.n, o.from.length);
       const min = Math.min(o.min != null ? o.min : n, n);
-      const got = await this.ui.choose(this, o);
+      // The screen gets the clamped counts: asking for more picks than there are cards left leaves no Confirm to press.
+      const got = await this.ui.choose(this, { ...o, n, min });
       const picks = [...new Set(got || [])].filter((c) => o.from.includes(c)).slice(0, n);
       for (const c of o.from) { if (picks.length >= min) break; if (!picks.includes(c)) picks.push(c); }
       return picks;

@@ -1545,7 +1545,16 @@
     S.overlay = { kind: 'bonus', title: 'Something extra', items: batch };
   }
   const SAVE_KEY = 'hollowdeep.run';
-  const readSave = () => { try { const t = localStorage.getItem(SAVE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } };
+  // Cards the game data renamed or replaced since a save was made (v0.114: Rapid Shot became Twin Shot).
+  const RENAMED_CARDS = { RAPID_REEDS: 'TWIN_REEDS' };
+  const readSave = () => {
+    try {
+      let t = localStorage.getItem(SAVE_KEY);
+      if (!t) return null;
+      for (const [a, b] of Object.entries(RENAMED_CARDS)) t = t.split(`"${a}"`).join(`"${b}"`);
+      return JSON.parse(t);
+    } catch (e) { return null; }
+  };
   // Co-op runs are never saved, so ending one must leave the solo run waiting on the title screen alone.
   const clearSave = () => { if (S.coop) return; try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage unavailable */ } };
   // Saved outside combat on every render, and once at the start of each combat (resuming restarts that fight).

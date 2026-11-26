@@ -1,6 +1,6 @@
 # HallowDeep
 
-A browser deckbuilding roguelike that mirrors Slay the Spire 2 (v0.111, cards on the v0.113.1 beta) mechanically: every number, rule and monster
+A browser deckbuilding roguelike that mirrors Slay the Spire 2 (v0.111, cards on the newest beta, v0.114.0) mechanically: every number, rule and monster
 pattern matches the game data, while names, text, art and UI are original. A toggle shows the original game's names.
 One self-contained HTML file, no framework, no runtime dependencies.
 
@@ -20,10 +20,12 @@ One self-contained HTML file, no framework, no runtime dependencies.
 - Mechanics and numbers come from the v0.111 data (Spire Codex export). Data wins over wikis and guides.
 - The game follows v0.111 only (the stable/beta switch was removed). Cards first written from older data get their
   v0.111 changes in src/versions.js, applied once at load.
-- Cards follow the newest beta (v0.113.1, Nov 2026): its card changes (Expect a Fight, Forgotten Ritual, Expertise,
-  Memento Mori, Speedster, Phantom Blades, Minion Dive Bomb, Salvo, Enlightenment, Tracking, Dowsing) are in
-  src/versions.js beside the v0.111 ones, and My Shinies is in colorless.js. Monsters, relics and events stay on v0.111.
-- The Fool (the Minstrel) first appears in the v0.113 beta and is built from the v0.113.0 export (src/fool_data.js).
+- Cards follow the newest beta (v0.114.0, Nov 24 2026): the v0.113 card changes (Expect a Fight, Forgotten Ritual,
+  Expertise, Memento Mori, Speedster, Phantom Blades, Minion Dive Bomb, Salvo, Enlightenment, Tracking, Dowsing) are in
+  src/versions.js beside the v0.111 ones, and My Shinies (reworked in v0.114) is in colorless.js. Monsters, relics and
+  events stay on v0.111.
+- The Fool (the Minstrel) first appears in the v0.113 beta and is built from the newest export, v0.114.0 (src/fool_data.js).
+  Cards the data renames or removes keep old saves loading through RENAMED_CARDS in ui.js (Rapid Shot became Twin Shot).
 - HallowDeep names and text are original. dev/namemap.json maps original IDs to ours; src/names.js (generated) holds the
   original names and term swaps used by the "Original names" mode.
 - Any guess or approximation goes in FIDELITY.md.
@@ -85,7 +87,7 @@ One self-contained HTML file, no framework, no runtime dependencies.
     python3 test/extra/bot.py [seed]         # clicks through a whole run; seeds starting "veil" play the Silent, "crown" the Regent, "wire" the Defect, "necro" the Necrobinder
 
 Generators: dev/gen_names.py (names.js), dev/gen_ascension.py (ascension_data.js), dev/gen_regent.py (regent_data.js),
-dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js), dev/gen_fool.py (fool_data.js, from the v0.113 export); the character generators
+dev/gen_defect.py (defect_data.js), dev/gen_necro.py (necro_data.js), dev/gen_fool.py (fool_data.js, from the newest beta export); the character generators
 share dev/charlib.py.
 
 ## Before committing
@@ -135,7 +137,7 @@ dev/gen_necro.py.
 
 ## The Fool (sixth roster slot)
 
-Research is in dev/FOOL.md. The Fool arrived in the v0.113 beta, so this one character is built from the v0.113.0 export
+Research is in dev/FOOL.md. The Fool arrived in the v0.113 beta and is built from the newest export (v0.114.0)
 while everything else stays on v0.111. HallowDeep names: the Fool is "The Minstrel" (id MINSTREL, color minstrel);
 Arrow is "Reed", Shoot "Loose", Impaled "Transfixed", Dislodge "Wrench", Aim "Sight", Stretch "Limber", Melody
 "Refrain", Wah, Cho and Ki "Fa", "Sol" and "La", Sadness "Woe", Joy "Glee", Tarot "Omen". All names are in

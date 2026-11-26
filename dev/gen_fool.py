@@ -1,6 +1,6 @@
-# Builds src/fool_data.js (the Fool's card numbers from the v0.113 beta data, where the character first appears) and
+# Builds src/fool_data.js (the Fool's card numbers from the newest beta data; the character first appeared in v0.113) and
 # adds the Fool to dev/namemap.json.
-# Usage: python3 dev/gen_fool.py <v0.113 eng dir>
+# Usage: python3 dev/gen_fool.py <v0.114 eng dir>
 import sys
 from charlib import generate, SOURCES
 
@@ -13,14 +13,14 @@ CARD_NAMES = {
   'ALL_IS_WELL': 'All Is Fine', 'ANGUISH': 'Heartache', 'ARCHERY': 'Bowcraft', 'BLOSSOM_SHOT': 'Blossom Reed', 'BLOT_OUT_THE_SKY': 'Darken the Sky',
   'BRACE': 'Draw Taut', 'CHO_KI': 'Sol La', 'CHO_LIMBS': 'Sol Boughs', 'COMPOST': 'Mulch', 'DISLIKE_YOU': 'No Love Lost', 'ENRAPTURE': 'Enthrall',
   'EPIC_RETRIEVAL': 'Heroic Fetch', 'GROWTH': 'Sprout', 'HARMONIC_SHIELD': 'Chord Wall', 'HIDDEN_ROOTS': 'Deep Roots', 'HOBBLING_SHOT': 'Hobbling Reed',
-  'KI_REST': 'La Pause', 'LOCKED_IN': 'Dead Set', 'MOTIF': 'Theme', 'PUNCH_OF_JOY': 'Fist of Glee', 'RAPID_SHOT': 'Rapid Reeds',
+  'KI_REST': 'La Pause', 'LOCKED_IN': 'Dead Set', 'MOTIF': 'Theme', 'PUNCH_OF_JOY': 'Fist of Glee', 'TWIN_SHOT': 'Twin Reeds',
   'RHYTHM_STRIKE': 'Rhythm Pluck', 'RUMMAGE': 'Root Around', 'SERRATED_ARROWS': 'Barbed Reeds', 'SONG_PATH': 'Song Trail', 'STEADY_CADENCE': 'Even Tempo',
   'TIMBER': 'Felling', 'TRICK_SHOT': 'Trick Reed', 'TUNE': 'In Tune', 'UPROOT': 'Tear Out', 'VIOLENT_CHORD': 'Harsh Chord', 'VITRIOL': 'Spite',
   'WAH_BLAST': 'Fa Blare', 'WAH_CHO': 'Fa Sol', 'WAH_KI': 'Fa La', 'WHISTLING_ARROWS': 'Whistling Reeds', 'WREST': 'Yank', 'YOGA': 'Morning Bends',
   'BOUNCE': 'Spring Back', 'BRIGHTEN_UP': 'Lighten Up', 'CHO_CHORUS': 'Sol Choir', 'CODA': 'Finale', 'COVERING_FIRE': 'Covering Flight',
   'ECSTASY': 'Rapture', 'ENCORE': 'One More Song', 'ENNUI': 'Listless', 'ENSEMBLE': 'Full Band', 'EXPLOSIVE_ARROWS': 'Bursting Reeds',
   'FLORESCENCE': 'Full Bloom', 'HONING': 'Whetting', 'KI_VERSE': 'La Stanza', 'LULLABY': 'Cradle Song', 'MELODIC_SHOT': 'Singing Reed',
-  'MYTHIC_FORM': 'Fabled Form', 'NAIL': 'Nail Down', 'QUIETUS': 'Last Rest', 'QUIVER': 'Spare Reed', 'REPEAT_SHOT': 'Reed after Reed',
+  'MYTHIC_FORM': 'Fabled Form', 'NAIL': 'Nail Down', 'OPTIMISM': 'Bright Side', 'QUIETUS': 'Last Rest', 'QUIVER': 'Spare Reed', 'REPEAT_SHOT': 'Reed after Reed',
   'SELF_DEPRECATE': 'Self Mockery', 'SHOW_OFF': 'Flaunt', 'SIMPLETON': 'Dullard', 'SKY_SHOT': 'Skyward Reed', 'WAH_CHO_KI': 'Fa Sol La',
   'WAH_SYMPHONY': 'Fa Opus', 'YAH': 'Hup!',
   'DIVINE_SHOT': 'Hallowed Reed', 'LOST_LUTE': 'Lost Lyre',
@@ -44,4 +44,4 @@ generate(sys.argv[-1], 'FOOL_DATA', 'fool_data.js', CARD_NAMES, RELIC_NAMES, POT
   {'The Fool': 'The Minstrel', 'an Arrow': 'a Reed', 'An Arrow': 'A Reed', 'Arrows': 'Reeds', 'Arrow': 'Reed', 'Shoot': 'Loose', 'Impaled': 'Transfixed', 'Impale': 'Transfix',
    'Dislodged': 'Wrenched', 'Dislodge': 'Wrench', 'Aim': 'Sight', 'Stretch': 'Limber', 'Melodies': 'Refrains', 'Melody': 'Refrain',
    'Wah': 'Fa', 'Cho': 'Sol', 'Ki': 'La', 'Tarot': 'Omen'},
-  SOURCES + ['regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro'], ver='0.113')
+  SOURCES + ['regent_data', 'regent', 'orbs', 'defect_data', 'defect', 'osty', 'necro_data', 'necro'], ver='0.114')

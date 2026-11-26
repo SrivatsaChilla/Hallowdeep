@@ -109,7 +109,7 @@ const count = (pile, id) => pile.filter((c) => c.id === id).length;
   { const { g, a } = await party(['MINSTREL', OB, OB]); await play(g, a, 'MORNING_BENDS'); eq('Yoga: every player gains 6 Stretch', g.seats.map((s) => s.p.pw.stretch), [6, 6, 6]); }
   { const { g, e, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'COVERING_FLIGHT'); await play(g, a, 'CARELESS_REED', { at: e }); eq('Covering Fire: Shooting gives the other players 8 Block', [a.p.block, b.p.block], [0, 8]); }
   { const { g, e, a, b } = await party(['MINSTREL', OB]); await play(g, a, 'FULL_BAND'); const en = b.energy; await play(g, b, 'CUT', { at: e }); eq('Ensemble: the next 4 cards other players play are free', [b.energy - en, a.p.pw.ensemble], [0, 3]); }
-  { const { g, a, b } = await party(['MINSTREL', OB]); a.hand = []; b.hand = []; await play(g, a, 'SELF_MOCKERY'); eq('Self Deprecate: a Sadness for you, 2 Joy for every other player', [ids(a.hand), ids(b.hand)], [['WOE'], ['GLEE', 'GLEE']]); }
+  { const { g, a, b } = await party(['MINSTREL', OB]); a.hand = []; b.hand = []; await play(g, a, 'SELF_MOCKERY'); eq('Self Deprecate: a Sadness for you, 1 Joy for every other player (v0.114)', [ids(a.hand), ids(b.hand)], [['WOE'], ['GLEE']]); }
   // ---------- colorless ----------
   { const { g, a, b } = await party([OB, OB]); await play(g, a, 'HOPE_BEACON'); await g.withSeat(a, () => g.gainBlock(10, false)); eq('Hope Beacon: others gain half your Guard on your turn', b.p.block, 5); }
   { const { g, a, b } = await party([OB, OB]); const en = b.energy; await play(g, a, 'OWN_BELIEF', { ally: b }); eq('Belief: another player gains 2 Energy', b.energy - en, 2); }

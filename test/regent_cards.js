@@ -31,6 +31,16 @@ const blade = (g) => g.hand.find((c) => c.id === 'REGAL_BLADE');
   g = await fight({ noStarter: true, relics: ['FATED_CIRCLET'] }); await g.rh('battleStart');
   eq('Fated Circlet: 7 Glints at combat start', g.stars, 7);
 
+  {
+    // A pick screen asked for more cards than there are has no Confirm; it must ask for what is left (phone playtest softlock).
+    const asked = [];
+    const r = new HD.Run('rc', 'CROWNED'); r.pending.length = 0;
+    const gm = new HD.Combat(r, 'RIPJAW', { choose: async (g, o) => { asked.push([o.n, o.min]); return o.from.slice(0, o.n); } }, 'monster'); await gm.start();
+    gm.energy = 9; gm.hand = [gm.makeCard('MUSTER', false)]; gm.draw = [gm.makeCard('SMITE', false)];
+    await gm.playCard(gm.hand[0], null);
+    eq('Charge with 1 card in the draw pile asks the screen for 1 pick, not 2, and transforms it', [asked, gm.draw.map((c) => c.id)], [[[1, 1]], ['THRALL_PLUNGE']]);
+  }
+
   // ---------- the Regal Blade ----------
   g = await fight({ hand: ['USURPER'] }); await play(g, 'USURPER'); await play(g, 'REGAL_BLADE');
   eq('Usurper: Temper 3, then the Blade deals double to that enemy this turn (13 x 2)', dealt(g), 26);

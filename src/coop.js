@@ -80,7 +80,7 @@
     play: (g, c, t, v) => g.asAlly(t, () => { g.addPw(g.p, 'vigor', v.vigor); g.addPw(g.p, 'stretch', v.stretch); }) });
   coop('MORNING_BENDS', 'minstrel', { text: (v) => `EVERY player gains ${v.stretch} Limber.`, play: (g, c, t, v) => g.everyone(() => g.addPw(g.p, 'stretch', v.stretch)) });
   coop('COVERING_FLIGHT', 'minstrel', { text: (v) => `Whenever you Loose, the other players gain ${v.coveringFire} Guard.`, play: async (g, c, t, v) => { g.addPw(g.p, 'coveringFire', v.coveringFire); } });
-  coop('FULL_BAND', 'minstrel', { text: (v) => `The next ${v.draw} cards played by other players are free to play.`, play: async (g, c, t, v) => { g.addPw(g.p, 'ensemble', v.draw); } });
+  coop('FULL_BAND', 'minstrel', { text: (v) => `The next ${v.draw} cards played by other players cost 0.`, play: async (g, c, t, v) => { g.addPw(g.p, 'ensemble', v.draw); } });
   coop('SELF_MOCKERY', 'minstrel', { text: (v) => `Add a Woe to your hand. Add ${v.joy} Glee to every other player's hand.`,
     play: async (g, c, t, v) => { await g.addWoe(v.sadness); for (const x of g.allies()) await g.withSeat(x, async () => { for (let i = 0; i < v.joy; i++) await g.create(g.makeCard('GLEE', false), 'hand'); }); } });
 

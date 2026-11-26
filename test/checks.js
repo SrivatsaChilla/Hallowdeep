@@ -108,7 +108,7 @@ const eq=(name,a,b)=>{ if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console
   { const g = await mk('RIPJAW', []); g.run.gold = 105; g.energy = 9; const e = g.enemies[0], hp0 = e.hp; e.block = 0;
     const c = g.makeCard('COIN_HOARD', false), cu = g.makeCard('COIN_HOARD', true); g.hand.push(c, cu);
     await g.playCard(c, e); await g.playCard(cu, e);
-    eq('v0.113: My Shinies deals 1 per 20 Gold (1 per 10 upgraded)', hp0 - e.hp, 5 + 10); }
+    eq('v0.114: My Shinies deals 2 (3 upgraded), plus one more hit for every 25 Gold (105 Gold: 5 hits each)', hp0 - e.hp, 2 * 5 + 3 * 5); }
   { const g = await mk('RIPJAW', []); const c = g.makeCard('PRACTICED', false); g.hand.push(c); g.energy = 3; await g.playCard(c, null);
     eq('v0.113: Expertise retains the whole hand this turn', g.handKept(), true); }
   { const g = await mk('RIPJAW', []); const c = g.makeCard('OLD_RITE', false); g.hand.push(c); g.energy = 1; g.t.burned = 0; await g.playCard(c, null);

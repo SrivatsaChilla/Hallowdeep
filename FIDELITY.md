@@ -66,7 +66,7 @@ Ancients between acts: Act 2 meets Orobas, Pael or Tezcatara and Act 3 meets Non
 
 ## Colorless cards
 
-53 of the 54 solo colorless cards (My Shinies is from the v0.113 beta), with every number checked against the data (and the v0.111 changes to Rend and Salvo in the beta set). Splash waits for the other characters, whose Attacks it offers. The 11 multiplayer-only colorless cards are defined but never offered in solo, as in the original. Alchemize, Hand of Greed and Hidden Gem are never generated mid-combat, per the data. The shop sells 1 Uncommon and 1 Rare colorless card at a 15% markup; Dingy Rug mixes colorless cards into card rewards; Toolbox, Lead Paperweight, the Colorless Potion and Brain Leech's Rip option all work. Approximation: colorless card rewards (Lead Paperweight, Brain Leech) roll Rare 3% of the time, otherwise Uncommon.
+53 of the 54 solo colorless cards (My Shinies is from the v0.113 beta, reworked in v0.114), with every number checked against the data (and the v0.111 changes to Rend and Salvo in the beta set). Splash waits for the other characters, whose Attacks it offers. The 11 multiplayer-only colorless cards are defined but never offered in solo, as in the original. Alchemize, Hand of Greed and Hidden Gem are never generated mid-combat, per the data. The shop sells 1 Uncommon and 1 Rare colorless card at a 15% markup; Dingy Rug mixes colorless cards into card rewards; Toolbox, Lead Paperweight, the Colorless Potion and Brain Leech's Rip option all work. Approximation: colorless card rewards (Lead Paperweight, Brain Leech) roll Rare 3% of the time, otherwise Uncommon.
 
 ## Enchantments
 
@@ -131,7 +131,7 @@ Approximations:
 
 ## The Minstrel (the Fool)
 
-Built from the v0.113.0 beta data (Spire Codex, fetched Nov 13 2026), the first version with the Fool. Every other character stays on v0.111. 77 HP, 99 Gold, 3 Energy, 1 Arrow, 5 Strikes, 4 Defends, Foolish Shot, Song Bow. All 84 solo cards and 6 co-op cards, Sadness, Joy, The Shot, the 22 Tarot cards, 9 relics and 3 potions, with every cost, number, keyword, target and type from the generated src/fool_data.js (dev/gen_fool.py). The character is in beta and its makers have said it will change. The data gives the keywords only one line of hover text each, so more of this section is judgment than for the other characters.
+Built from the newest beta data, v0.114.0 (Spire Codex, fetched Nov 25 2026; the Fool first appeared in v0.113.0). Every other character stays on v0.111. 77 HP, 99 Gold, 3 Energy, 1 Arrow, 5 Strikes, 4 Defends, Foolish Shot, Song Bow. All 85 solo cards and 6 co-op cards, Sadness, Joy, The Shot, the 22 Tarot cards, 9 relics and 3 potions, with every cost, number, keyword, target and type from the generated src/fool_data.js (dev/gen_fool.py). The character is in beta and its makers have said it will change. The data gives the keywords only one line of hover text each, so more of this section is judgment than for the other characters.
 
 From the data and its hover text: Shoot cards fire an Arrow that Impales the target; the Arrow is Dislodged after you hit that enemy 3 more times; Aim makes the next Arrow deal more; Stretch adds to the next Block a card gives; a Melody is active if you played a card with that word this turn.
 
@@ -151,6 +151,10 @@ Approximations (guesses):
 - Tarot: Judgement kills outright, like a Doom death; The Lovers draws from the other five characters' reward pools; The Hierophant's cards cost 1 less for the turn.
 - Other characters have no Arrow, so they cannot Shoot unless Quiver gives them one, and Prism Glass does not offer them Fool cards. Adding the Fool left their runs unchanged (the sim fingerprints of all five matched the build before the Fool); the v0.113 card update below changed them on purpose.
 - Co-op: Compost, Covering Fire, Enrapture, Ensemble, Self Deprecate and Yoga are the Fool's multiplayer-only cards. Ensemble makes other players' next cards cost 0 Energy.
+
+## Beta card update (v0.114.0)
+
+v0.114.0 (Nov 24 2026) reworks much of the Fool and My Shinies. Every number, cost, rarity and keyword comes from the regenerated src/fool_data.js; every Fool card's text matches the data's numbers (the only differences are Anguish+, noted above, and Energy icons). Where the patch notes and the data disagree, the data wins: Wah Ki deals 3(4) damage 2 times (the notes say 4 damage 3(4) times), The Shot is a 0-cost Exhaust that deals 20(25) (the notes describe extra hits per Exhausted card), Cho Ready is 7(9) Block and 3(4) Aim, and Show Off now costs 0 (not in the notes). Reworked rules: Arrow Stab, Growth, Florescence and The Shot, Tune, Recall, Trick Shot, Harmonic Shield, Wah Ki, Wah Symphony (Cho and Ki cards only), Ki Verse (Wah and Cho only), Simpleton+, Mythic Form (Ethereal until upgraded, no upgraded Tarot cards), Quietus (keeps the Arrow), Quiver+ (Innate), Punch of Joy+, Vitriol, The Sun, The Hierophant, Honing (double damage). New: Optimism and Twin Shot (Rapid Shot is gone; saved runs turn it into Twin Shot). My Shinies: 2(3) damage, one more hit for every 25 Gold. Hard to Kill already only capped HP loss here, which is what v0.114 changed it to. Not built: the Epoch change (no Epochs) and the Fool's new Ancient dialogue.
 
 ## Beta card update (v0.113.1)
 

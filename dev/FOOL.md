@@ -1,11 +1,11 @@
 # The Fool: research for the sixth character (HallowDeep: the Minstrel)
 
-Sources: the Spire Codex export for the v0.113.0 beta (cards, powers, relics, potions, glossary, characters and the
+Sources: the Spire Codex export for the v0.113.0 beta (now regenerated from v0.114.0) (cards, powers, relics, potions, glossary, characters and the
 hover text in messages.json), fetched on Nov 13 2026, one day after the Fool went live on the beta branch. Sri's
 starting point was the card list at sts2.untapped.gg/en/cards/fool, which matches the export card for card. The
 keyword rules below that are not in the data come from early guides and are marked as guesses in FIDELITY.md.
 
-The rest of the game follows v0.111. Only this character reads the v0.113 export (src/fool_data.js).
+The rest of the game follows v0.111. Only this character reads the beta export (src/fool_data.js, now v0.114.0).
 
 ## Character
 
@@ -39,7 +39,7 @@ The rest of the game follows v0.111. Only this character reads the v0.113 export
   `stretch`).
 - combat.js hook points: `HD.ATK_MULT`, `HD.PLAY_MODS`, `HD.REPLAY_MODS`, the `playing` hook (a card is about to take
   effect) and the `hitEnemy` hook (each Attack hit).
-- Names are in dev/gen_fool.py. Regenerate: `python3 dev/gen_fool.py <v0.113 eng dir>`, then dev/gen_names.py with the
-  usual two folders plus the v0.113 one.
+- Names are in dev/gen_fool.py. Regenerate: `python3 dev/gen_fool.py <newest beta eng dir>`, then dev/gen_names.py with the
+  v0.111 folder plus the newest beta one.
 - Checks: `node test/fool_cards.js` (67), `CHAR=MINSTREL node test/sim.js 200`, and the Fool's 6 cards in
   test/coop_cards.js.
